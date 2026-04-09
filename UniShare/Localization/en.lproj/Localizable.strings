@@ -1,0 +1,121 @@
+// MARK: - General
+"app.name" = "UniShare";
+"ok" = "OK";
+"cancel" = "Cancel";
+"save" = "Save";
+"done" = "Done";
+"next" = "Next";
+"back" = "Back";
+"skip" = "Skip";
+"delete" = "Delete";
+"edit" = "Edit";
+"search" = "Search";
+"loading" = "Loading...";
+"error.generic" = "Something went wrong";
+"error.network" = "Check your internet connection";
+
+// MARK: - Auth
+"auth.login" = "Log In";
+"auth.register" = "Sign Up";
+"auth.email" = "Email";
+"auth.password" = "Password";
+"auth.email.placeholder" = "Enter your email";
+"auth.password.placeholder" = "Enter your password";
+"auth.login.button" = "Log In";
+"auth.register.button" = "Create Account";
+"auth.switch.register" = "Don't have an account? Sign up";
+"auth.switch.login" = "Already have an account? Log in";
+"auth.error.invalid" = "Invalid email or password";
+"auth.welcome" = "Welcome to UniShare";
+"auth.subtitle" = "Connect with gamers worldwide";
+
+// MARK: - Onboarding
+"onboarding.title.username" = "Choose a username";
+"onboarding.title.avatar" = "Set your avatar";
+"onboarding.title.platform" = "Select your platform";
+"onboarding.title.games" = "Add your games";
+"onboarding.title.skills" = "Your gaming skills";
+"onboarding.title.subscriptions" = "Your subscriptions";
+"onboarding.username.placeholder" = "Username";
+"onboarding.skills.placeholder" = "e.g. sniper, strategist, healer...";
+"onboarding.skip.games" = "I'll add games later";
+"onboarding.complete" = "Start exploring!";
+
+// MARK: - Tabs
+"tab.feed" = "Feed";
+"tab.chats" = "Chats";
+"tab.ai" = "AI";
+"tab.profile" = "Profile";
+
+// MARK: - Feed
+"feed.segment.exchange" = "Exchange";
+"feed.segment.skills" = "Skills";
+"feed.search.placeholder" = "Search by game...";
+"feed.empty" = "No more profiles";
+"feed.empty.subtitle" = "Come back later for new matches";
+"feed.undo" = "Undo";
+"feed.undo.limit" = "No more undos today";
+
+// MARK: - Chat
+"chat.placeholder" = "Message...";
+"chat.send" = "Send";
+"chat.empty" = "No messages yet";
+"chat.empty.subtitle" = "Start the conversation!";
+"chats.empty" = "No chats yet";
+"chats.empty.subtitle" = "Swipe right to start matching";
+"chats.requests" = "Requests";
+"chats.accept" = "Accept";
+"chats.decline" = "Decline";
+"chats.segment.exchange" = "Exchange";
+"chats.segment.skills" = "Skills";
+"chat.online" = "Online";
+"chat.offline" = "Offline";
+"chat.report" = "Report user";
+
+// MARK: - AI
+"ai.title" = "AI Assistant";
+"ai.placeholder" = "Ask about games...";
+"ai.send" = "Ask";
+"ai.thinking" = "Thinking...";
+"ai.limit" = "Message is too long (max 100 characters)";
+"ai.command.recommend" = "Recommend games";
+"ai.command.exchange" = "Help with exchange";
+"ai.command.skill" = "Improve my skills";
+"ai.command.trending" = "Trending games";
+
+// MARK: - AirShare
+"airshare.title" = "AirShare";
+"airshare.searching" = "Searching...";
+"airshare.hold" = "Hold phones together";
+"airshare.shake" = "Shake to connect!";
+"airshare.found" = "Found nearby user";
+"airshare.success" = "Profile shared!";
+"airshare.match" = "It's a match!";
+"airshare.description" = "Hold your phones together and shake to exchange profiles with nearby players";
+
+// MARK: - Profile
+"profile.edit" = "Edit Profile";
+"profile.games" = "Games";
+"profile.subscriptions" = "Subscriptions";
+"profile.platforms" = "Platforms";
+"profile.skills" = "Skills";
+"profile.wanted" = "Wanted Games";
+"profile.status.placeholder" = "#hashtags about yourself";
+"profile.change.avatar" = "Change Avatar";
+"profile.add.game" = "Add Game";
+"profile.add.subscription" = "Add Subscription";
+"profile.settings" = "Settings";
+"profile.logout" = "Log Out";
+"profile.theme" = "Theme";
+"profile.language" = "Language";
+
+// MARK: - Greeting
+"greeting.welcome" = "Welcome back,";
+
+// MARK: - Widgets
+"widget.likes" = "Likes";
+"widget.chats" = "Chats";
+"widget.open.chats" = "Open Chats";
+"widget.open.airshare" = "AirShare";
+"widget.open.ai" = "AI";
+"widget.open.profile" = "Profile";

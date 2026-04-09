@@ -1,0 +1,121 @@
+// MARK: - General
+"app.name" = "UniShare";
+"ok" = "ОК";
+"cancel" = "Отмена";
+"save" = "Сохранить";
+"done" = "Готово";
+"next" = "Далее";
+"back" = "Назад";
+"skip" = "Пропустить";
+"delete" = "Удалить";
+"edit" = "Изменить";
+"search" = "Поиск";
+"loading" = "Загрузка...";
+"error.generic" = "Что-то пошло не так";
+"error.network" = "Проверьте подключение к интернету";
+
+// MARK: - Auth
+"auth.login" = "Войти";
+"auth.register" = "Регистрация";
+"auth.email" = "Email";
+"auth.password" = "Пароль";
+"auth.email.placeholder" = "Введите email";
+"auth.password.placeholder" = "Введите пароль";
+"auth.login.button" = "Войти";
+"auth.register.button" = "Создать аккаунт";
+"auth.switch.register" = "Нет аккаунта? Зарегистрируйтесь";
+"auth.switch.login" = "Уже есть аккаунт? Войдите";
+"auth.error.invalid" = "Неверный email или пароль";
+"auth.welcome" = "Добро пожаловать в UniShare";
+"auth.subtitle" = "Находи геймеров по всему миру";
+
+// MARK: - Onboarding
+"onboarding.title.username" = "Выбери никнейм";
+"onboarding.title.avatar" = "Установи аватар";
+"onboarding.title.platform" = "Выбери платформу";
+"onboarding.title.games" = "Добавь игры";
+"onboarding.title.skills" = "Твои игровые навыки";
+"onboarding.title.subscriptions" = "Твои подписки";
+"onboarding.username.placeholder" = "Никнейм";
+"onboarding.skills.placeholder" = "например: снайпер, стратег, хилер...";
+"onboarding.skip.games" = "Добавлю игры позже";
+"onboarding.complete" = "Начать!";
+
+// MARK: - Tabs
+"tab.feed" = "Лента";
+"tab.chats" = "Чаты";
+"tab.ai" = "ИИ";
+"tab.profile" = "Профиль";
+
+// MARK: - Feed
+"feed.segment.exchange" = "Обмен";
+"feed.segment.skills" = "Навыки";
+"feed.search.placeholder" = "Поиск по игре...";
+"feed.empty" = "Анкеты закончились";
+"feed.empty.subtitle" = "Зайди позже — появятся новые";
+"feed.undo" = "Отменить";
+"feed.undo.limit" = "Отмены на сегодня закончились";
+
+// MARK: - Chat
+"chat.placeholder" = "Сообщение...";
+"chat.send" = "Отправить";
+"chat.empty" = "Пока нет сообщений";
+"chat.empty.subtitle" = "Начни общение!";
+"chats.empty" = "Чатов пока нет";
+"chats.empty.subtitle" = "Свайпай вправо, чтобы найти совпадения";
+"chats.requests" = "Заявки";
+"chats.accept" = "Принять";
+"chats.decline" = "Отклонить";
+"chats.segment.exchange" = "Обмен";
+"chats.segment.skills" = "Навыки";
+"chat.online" = "Онлайн";
+"chat.offline" = "Оффлайн";
+"chat.report" = "Пожаловаться";
+
+// MARK: - AI
+"ai.title" = "ИИ Ассистент";
+"ai.placeholder" = "Спроси об играх...";
+"ai.send" = "Спросить";
+"ai.thinking" = "Думаю...";
+"ai.limit" = "Сообщение слишком длинное (макс. 100 символов)";
+"ai.command.recommend" = "Посоветуй игры";
+"ai.command.exchange" = "Помоги с обменом";
+"ai.command.skill" = "Улучши мои навыки";
+"ai.command.trending" = "Популярные игры";
+
+// MARK: - AirShare
+"airshare.title" = "AirShare";
+"airshare.searching" = "Поиск...";
+"airshare.hold" = "Держите телефоны рядом";
+"airshare.shake" = "Потрясите для подключения!";
+"airshare.found" = "Найден пользователь рядом";
+"airshare.success" = "Профиль отправлен!";
+"airshare.match" = "Это совпадение!";
+"airshare.description" = "Держите телефоны рядом и потрясите, чтобы обменяться профилями с ближайшими игроками";
+
+// MARK: - Profile
+"profile.edit" = "Редактировать";
+"profile.games" = "Игры";
+"profile.subscriptions" = "Подписки";
+"profile.platforms" = "Платформы";
+"profile.skills" = "Навыки";
+"profile.wanted" = "Желаемые игры";
+"profile.status.placeholder" = "#хэштеги о себе";
+"profile.change.avatar" = "Изменить фото";
+"profile.add.game" = "Добавить игру";
+"profile.add.subscription" = "Добавить подписку";
+"profile.settings" = "Настройки";
+"profile.logout" = "Выйти";
+"profile.theme" = "Тема";
+"profile.language" = "Язык";
+
+// MARK: - Greeting
+"greeting.welcome" = "Привет,";
+
+// MARK: - Widgets
+"widget.likes" = "Лайки";
+"widget.chats" = "Чаты";
+"widget.open.chats" = "Открыть чаты";
+"widget.open.airshare" = "AirShare";
+"widget.open.ai" = "ИИ";
+"widget.open.profile" = "Профиль";
