@@ -56,9 +56,6 @@ targets:
         NSBluetoothAlwaysUsageDescription: "UniShare uses Bluetooth to find nearby users with AirShare"
         NSLocalNetworkUsageDescription: "UniShare uses local networking to connect with nearby users"
         NSMotionUsageDescription: "UniShare detects shake gestures for AirShare"
-        UIBackgroundModes:
-          - bluetooth-central
-          - bluetooth-peripheral
         UIAppFonts:
           - Manrope-Regular.ttf
           - Manrope-Medium.ttf
@@ -77,7 +74,6 @@ targets:
       properties:
         com.apple.security.application-groups:
           - group.com.CHULANOV.UniShare
-        com.apple.developer.networking.multicast: true
     dependencies:
       - package: FirebaseAnalytics
         product: FirebaseAnalytics
