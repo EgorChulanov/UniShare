@@ -5,20 +5,14 @@ struct LoginView: View {
     @EnvironmentObject var theme: ThemeManager
     @EnvironmentObject var localization: LocalizationManager
 
-    @StateObject private var vm: AuthViewModel
-
-    init() {
-        // We can't access @EnvironmentObject in init, so we use a placeholder
-        // The actual env is set via onAppear
-        _vm = StateObject(wrappedValue: AuthViewModel(
-            auth: FirebaseAuthService(),
-            firestore: FirestoreService()
-        ))
-    }
+    @State private var email = ""
+    @State private var password = ""
+    @State private var isLoading = false
+    @State private var errorMessage: String?
+    @State private var isLoginMode = true
 
     var body: some View {
         ZStack {
-            // Background gradient
             LinearGradient(
                 colors: [theme.effectiveBackground, theme.effectiveTertiary.opacity(0.3)],
                 startPoint: .topLeading,
@@ -29,7 +23,7 @@ struct LoginView: View {
             VStack(spacing: 0) {
                 Spacer()
 
-                // Logo area
+                // Logo
                 VStack(spacing: 12) {
                     ZStack {
                         Circle()
@@ -55,12 +49,11 @@ struct LoginView: View {
 
                 // Form
                 VStack(spacing: 16) {
-                    // Email
                     HStack {
                         Image(systemName: "envelope")
                             .foregroundColor(theme.effectiveSecondaryTextColor)
                             .frame(width: 20)
-                        TextField("auth.email.placeholder".localized, text: $vm.email)
+                        TextField("auth.email.placeholder".localized, text: $email)
                             .autocapitalization(.none)
                             .keyboardType(.emailAddress)
                             .foregroundColor(theme.effectiveTextColor)
@@ -69,36 +62,33 @@ struct LoginView: View {
                     .padding()
                     .glass(cornerRadius: 14)
 
-                    // Password
                     HStack {
                         Image(systemName: "lock")
                             .foregroundColor(theme.effectiveSecondaryTextColor)
                             .frame(width: 20)
-                        SecureField("auth.password.placeholder".localized, text: $vm.password)
+                        SecureField("auth.password.placeholder".localized, text: $password)
                             .foregroundColor(theme.effectiveTextColor)
                             .accentColor(theme.effectivePrimary)
                     }
                     .padding()
                     .glass(cornerRadius: 14)
 
-                    // Error
-                    if let error = vm.errorMessage {
+                    if let error = errorMessage {
                         Text(error)
                             .font(.system(size: 13))
                             .foregroundColor(theme.effectivePrimary)
                             .multilineTextAlignment(.center)
                     }
 
-                    // Submit button
                     Button {
                         HapticsManager.shared.impact(.medium)
-                        Task { await vm.submit() }
+                        Task { await submit() }
                     } label: {
                         ZStack {
-                            if vm.isLoading {
+                            if isLoading {
                                 ProgressView().tint(.white)
                             } else {
-                                Text(vm.isLoginMode ? "auth.login.button".localized : "auth.register.button".localized)
+                                Text(isLoginMode ? "auth.login.button".localized : "auth.register.button".localized)
                                     .font(.system(size: 16, weight: .semibold))
                                     .foregroundColor(.white)
                             }
@@ -114,13 +104,12 @@ struct LoginView: View {
                         )
                         .cornerRadius(14)
                     }
-                    .disabled(vm.isLoading || vm.email.isEmpty || vm.password.isEmpty)
+                    .disabled(isLoading || email.isEmpty || password.isEmpty)
 
-                    // Toggle mode
                     Button {
-                        vm.toggleMode()
+                        withAnimation { isLoginMode.toggle(); errorMessage = nil }
                     } label: {
-                        Text(vm.isLoginMode ? "auth.switch.register".localized : "auth.switch.login".localized)
+                        Text(isLoginMode ? "auth.switch.register".localized : "auth.switch.login".localized)
                             .font(.system(size: 14))
                             .foregroundColor(theme.effectivePrimary)
                     }
@@ -130,6 +119,27 @@ struct LoginView: View {
                 Spacer()
                 Spacer()
             }
+        }
+    }
+
+    private func submit() async {
+        isLoading = true
+        errorMessage = nil
+        defer { isLoading = false }
+
+        do {
+            if isLoginMode {
+                try await env.auth.signIn(email: email, password: password)
+            } else {
+                let uid = try await env.auth.signUp(email: email, password: password)
+                let profile = UserProfile(
+                    uid: uid,
+                    username: email.components(separatedBy: "@").first ?? "user"
+                )
+                try await env.firestore.createUser(profile)
+            }
+        } catch {
+            errorMessage = error.localizedDescription
         }
     }
 }
