@@ -112,7 +112,8 @@ struct ProfileCard: Identifiable {
 
 // MARK: - UserProfile (Firestore document)
 
-struct UserProfile: Codable {
+struct UserProfile: Codable, Identifiable {
+    var id: String { uid }
     var uid: String
     var username: String
     var avatarUrl: String?
