@@ -106,7 +106,7 @@ struct SwipeCard: View {
             .gesture(isTop ? dragGesture(size: geo.size) : nil)
             .animation(.spring(response: 0.5, dampingFraction: 0.8), value: isTop)
         }
-        .frame(height: 520)
+        .frame(height: 460)
     }
 
     private func dragGesture(size: CGSize) -> some Gesture {

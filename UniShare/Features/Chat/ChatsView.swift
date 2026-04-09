@@ -7,6 +7,7 @@ struct ChatsView: View {
 
     @StateObject private var vm: ChatsViewModel
     @State private var selectedChat: Chat?
+    @State private var previewProfile: UserProfile?
 
     init() {
         _vm = StateObject(wrappedValue: ChatsViewModel(
@@ -60,8 +61,14 @@ struct ChatsView: View {
                     }
                 }
             }
+            .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar(.hidden, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar)
+            .sheet(item: $previewProfile) { profile in
+                ProfilePreviewSheet(profile: profile)
+                    .environmentObject(theme)
+            }
         }
         .onAppear { vm.startListening() }
     }
@@ -113,7 +120,12 @@ struct ChatsView: View {
     private func requestRow(_ request: LikeRequest) -> some View {
         let profile = vm.partnerProfiles[request.from]
         return HStack(spacing: 14) {
-            AvatarView(url: profile?.avatarUrl, size: 48, showBorder: true)
+            // Tap avatar/name to preview profile
+            Button {
+                if let p = profile { previewProfile = p }
+            } label: {
+                AvatarView(url: profile?.avatarUrl, size: 48, showBorder: true)
+            }
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(profile?.username ?? request.from.prefix(8).description)
@@ -229,5 +241,118 @@ struct ChatsView: View {
                 .multilineTextAlignment(.center)
         }
         .padding(.top, 60)
+    }
+}
+
+// MARK: - Profile Preview Sheet
+
+struct ProfilePreviewSheet: View {
+    let profile: UserProfile
+    @EnvironmentObject var theme: ThemeManager
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationView {
+            ZStack {
+                theme.effectiveBackground.ignoresSafeArea()
+                ScrollView {
+                    VStack(spacing: 20) {
+                        // Card
+                        ZStack(alignment: .bottomLeading) {
+                            Group {
+                                if let url = profile.avatarUrl {
+                                    AsyncImageView(url: url)
+                                        .frame(maxWidth: .infinity)
+                                        .clipped()
+                                } else {
+                                    LinearGradient(colors: [theme.effectiveTertiary, theme.effectiveCardColor],
+                                                   startPoint: .topLeading, endPoint: .bottomTrailing)
+                                    Image(systemName: "person.fill")
+                                        .resizable().scaledToFit().padding(70)
+                                        .foregroundColor(theme.effectiveSecondaryTextColor)
+                                }
+                            }
+                            .frame(height: 300)
+
+                            LinearGradient(colors: [.clear, .black.opacity(0.8)], startPoint: .center, endPoint: .bottom)
+
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text(profile.username)
+                                    .font(.system(size: 22, weight: .bold))
+                                    .foregroundColor(.white)
+                                if let status = profile.status, !status.isEmpty {
+                                    Text(status).font(.system(size: 13)).foregroundColor(.white.opacity(0.8))
+                                }
+                                HStack(spacing: 6) {
+                                    ForEach(profile.platforms.compactMap { Platform(rawValue: $0) }, id: \.rawValue) { p in
+                                        PlatformBadge(platform: p, size: 22)
+                                    }
+                                }
+                            }
+                            .padding(16)
+                        }
+                        .frame(height: 300)
+                        .cornerRadius(20)
+                        .padding(.horizontal, 16)
+
+                        // Games per platform
+                        ForEach(profile.platforms.compactMap { Platform(rawValue: $0) }, id: \.rawValue) { platform in
+                            let games = profile.platformGames[platform.rawValue] ?? []
+                            if !games.isEmpty {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    HStack(spacing: 8) {
+                                        PlatformBadge(platform: platform, size: 20)
+                                        Text(platform.rawValue)
+                                            .font(.system(size: 14, weight: .semibold))
+                                            .foregroundColor(theme.effectiveTextColor)
+                                    }
+                                    .padding(.horizontal, 16)
+                                    ScrollView(.horizontal, showsIndicators: false) {
+                                        HStack(spacing: 8) {
+                                            ForEach(games, id: \.self) { game in
+                                                Text(game)
+                                                    .font(.system(size: 13))
+                                                    .foregroundColor(theme.effectiveTextColor)
+                                                    .padding(.horizontal, 12).padding(.vertical, 7)
+                                                    .background(platform.color.opacity(0.15))
+                                                    .cornerRadius(14)
+                                                    .overlay(RoundedRectangle(cornerRadius: 14).stroke(platform.color.opacity(0.4), lineWidth: 1))
+                                            }
+                                        }
+                                        .padding(.horizontal, 16)
+                                    }
+                                }
+                            }
+                        }
+
+                        // Skills
+                        if !profile.skills.isEmpty {
+                            FlowLayout(spacing: 8) {
+                                ForEach(profile.skills, id: \.self) { skill in
+                                    Text(skill)
+                                        .font(.system(size: 13))
+                                        .foregroundColor(theme.effectiveTextColor)
+                                        .padding(.horizontal, 12).padding(.vertical, 7)
+                                        .background(theme.effectiveTertiary.opacity(0.3))
+                                        .cornerRadius(20)
+                                }
+                            }
+                            .padding(.horizontal, 16)
+                        }
+                    }
+                    .padding(.bottom, 32)
+                }
+            }
+            .navigationTitle(profile.username)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button { dismiss() } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundColor(theme.effectiveSecondaryTextColor)
+                    }
+                }
+            }
+        }
     }
 }

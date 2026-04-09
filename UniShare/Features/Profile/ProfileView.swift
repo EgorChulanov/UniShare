@@ -429,8 +429,15 @@ struct EditProfileSheet: View {
                                 ForEach(Platform.allCases, id: \.rawValue) { platform in
                                     let selected = vm.editPlatforms.contains(platform)
                                     Button {
-                                        if selected { vm.editPlatforms.remove(platform) }
-                                        else { vm.editPlatforms.insert(platform) }
+                                        if selected {
+                                            vm.editPlatforms.remove(platform)
+                                            if vm.editActiveGamePlatform == platform {
+                                                vm.editActiveGamePlatform = vm.editPlatforms.first
+                                            }
+                                        } else {
+                                            vm.editPlatforms.insert(platform)
+                                            if vm.editActiveGamePlatform == nil { vm.editActiveGamePlatform = platform }
+                                        }
                                     } label: {
                                         HStack(spacing: 12) {
                                             PlatformBadge(platform: platform, size: 28)
@@ -448,6 +455,11 @@ struct EditProfileSheet: View {
                                     }
                                 }
                             }
+                        }
+
+                        // Games per platform
+                        if !vm.editPlatforms.isEmpty {
+                            gamesEditor
                         }
                     }
                     .padding(.horizontal, 16)
@@ -475,6 +487,110 @@ struct EditProfileSheet: View {
                         }
                     }
                     .disabled(vm.isLoading)
+                }
+            }
+        }
+    }
+
+    private var gamesEditor: some View {
+        let sortedPlatforms = Platform.allCases.filter { vm.editPlatforms.contains($0) }
+        return editField(title: "profile.games".localized) {
+            VStack(spacing: 12) {
+                // Platform tabs
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(sortedPlatforms, id: \.rawValue) { platform in
+                            let isActive = vm.editActiveGamePlatform == platform
+                            Button { vm.editActiveGamePlatform = platform } label: {
+                                HStack(spacing: 6) {
+                                    PlatformBadge(platform: platform, size: 18)
+                                    Text(platform.rawValue)
+                                        .font(.system(size: 13, weight: .semibold))
+                                        .foregroundColor(isActive ? .white : theme.effectiveTextColor)
+                                        .lineLimit(1)
+                                }
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 8)
+                                .background(isActive ? LinearGradient(colors: [theme.effectivePrimary, theme.effectiveTertiary], startPoint: .leading, endPoint: .trailing) : LinearGradient(colors: [theme.effectiveCardColor, theme.effectiveCardColor], startPoint: .leading, endPoint: .trailing))
+                                .cornerRadius(20)
+                            }
+                        }
+                    }
+                }
+
+                if let activePlatform = vm.editActiveGamePlatform {
+                    // Search field
+                    HStack {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundColor(theme.effectiveSecondaryTextColor)
+                        TextField("onboarding.games.search".localized, text: $vm.gameSearchQuery)
+                            .foregroundColor(theme.effectiveTextColor)
+                            .autocapitalization(.none)
+                            .onChange(of: vm.gameSearchQuery) { vm.searchGames($0) }
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .glass(cornerRadius: 12)
+
+                    // Selected games for this platform
+                    let selectedGames = vm.editGamesByPlatform[activePlatform] ?? []
+                    if !selectedGames.isEmpty {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
+                                ForEach(selectedGames) { tag in
+                                    Button { vm.toggleGame(tag, for: activePlatform) } label: {
+                                        HStack(spacing: 6) {
+                                            Text(tag.name)
+                                                .font(.system(size: 13))
+                                                .foregroundColor(.white)
+                                                .lineLimit(1)
+                                            Image(systemName: "xmark")
+                                                .font(.system(size: 10, weight: .bold))
+                                                .foregroundColor(.white.opacity(0.8))
+                                        }
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 7)
+                                        .background(activePlatform.color.opacity(0.85))
+                                        .cornerRadius(16)
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Search results
+                    if vm.isSearchingGames {
+                        HStack { Spacer(); ProgressView().tint(theme.effectivePrimary); Spacer() }
+                    } else if !vm.gameSearchResults.isEmpty && !vm.gameSearchQuery.isEmpty {
+                        VStack(spacing: 6) {
+                            ForEach(vm.gameSearchResults.prefix(5)) { tag in
+                                let isAdded = (vm.editGamesByPlatform[activePlatform] ?? []).contains(where: { $0.name == tag.name })
+                                Button { vm.toggleGame(tag, for: activePlatform) } label: {
+                                    HStack(spacing: 12) {
+                                        if let url = tag.coverUrl {
+                                            AsyncImageView(url: url)
+                                                .frame(width: 44, height: 30)
+                                                .clipShape(RoundedRectangle(cornerRadius: 6))
+                                        } else {
+                                            RoundedRectangle(cornerRadius: 6)
+                                                .fill(theme.effectiveCardColor)
+                                                .frame(width: 44, height: 30)
+                                        }
+                                        Text(tag.name)
+                                            .font(.system(size: 14))
+                                            .foregroundColor(theme.effectiveTextColor)
+                                            .lineLimit(1)
+                                        Spacer()
+                                        Image(systemName: isAdded ? "checkmark.circle.fill" : "plus.circle")
+                                            .foregroundColor(isAdded ? theme.effectivePrimary : theme.effectiveSecondaryTextColor)
+                                    }
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 8)
+                                    .glass(cornerRadius: 12)
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
