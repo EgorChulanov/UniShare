@@ -18,7 +18,8 @@ final class OnboardingViewModel: ObservableObject {
     @Published var username = ""
     @Published var selectedAvatar: UIImage?
     @Published var selectedPlatforms: Set<Platform> = []
-    @Published var selectedGames: [GameTag] = []
+    @Published var gamesByPlatform: [Platform: [GameTag]] = [:]
+    @Published var activePlatformTab: Platform? = nil
     @Published var skillInput = ""
     @Published var skills: [String] = []
     @Published var selectedSubscriptions: Set<String> = []
@@ -60,6 +61,12 @@ final class OnboardingViewModel: ObservableObject {
         guard canAdvance else { return }
         let nextRaw = currentStep.rawValue + 1
         if let next = OnboardingStep(rawValue: nextRaw) {
+            if next == .games {
+                // Reset search and set first platform tab
+                gameSearchQuery = ""
+                gameSearchResults = []
+                activePlatformTab = Platform.allCases.first { selectedPlatforms.contains($0) }
+            }
             withAnimation(.easeInOut(duration: 0.3)) {
                 currentStep = next
             }
@@ -75,6 +82,24 @@ final class OnboardingViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Games per platform
+
+    func gamesForPlatform(_ platform: Platform) -> [GameTag] {
+        gamesByPlatform[platform] ?? []
+    }
+
+    func toggleGame(_ tag: GameTag, for platform: Platform) {
+        var games = gamesByPlatform[platform] ?? []
+        if games.contains(where: { $0.name == tag.name }) {
+            games.removeAll { $0.name == tag.name }
+        } else {
+            games.append(tag)
+        }
+        gamesByPlatform[platform] = games
+    }
+
+    // MARK: - Skills
+
     func addSkill() {
         let trimmed = skillInput.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, !skills.contains(trimmed) else { return }
@@ -85,6 +110,8 @@ final class OnboardingViewModel: ObservableObject {
     func removeSkill(_ skill: String) {
         skills.removeAll { $0 == skill }
     }
+
+    // MARK: - Game search
 
     func searchGames(_ query: String) {
         searchTask?.cancel()
@@ -105,18 +132,10 @@ final class OnboardingViewModel: ObservableObject {
         }
     }
 
-    func toggleGame(_ tag: GameTag) {
-        if selectedGames.contains(where: { $0.name == tag.name }) {
-            selectedGames.removeAll { $0.name == tag.name }
-        } else {
-            selectedGames.append(tag)
-        }
-    }
+    // MARK: - Complete
 
     func complete(onComplete: @escaping () -> Void) {
-        Task {
-            await saveProfile(onComplete: onComplete)
-        }
+        Task { await saveProfile(onComplete: onComplete) }
     }
 
     private func saveProfile(onComplete: @escaping () -> Void) async {
@@ -133,7 +152,18 @@ final class OnboardingViewModel: ObservableObject {
             var profile = UserProfile(uid: uid, username: username)
             profile.avatarUrl = avatarUrl
             profile.platforms = selectedPlatforms.map { $0.rawValue }
-            profile.games = selectedGames.map { $0.name }
+
+            // Save games per platform
+            var platformGamesDict: [String: [String]] = [:]
+            for (platform, tags) in gamesByPlatform {
+                let names = tags.map { $0.name }
+                if !names.isEmpty {
+                    platformGamesDict[platform.rawValue] = names
+                }
+            }
+            profile.platformGames = platformGamesDict
+            profile.games = platformGamesDict.values.flatMap { $0 }
+
             profile.skills = skills
             profile.subscriptions = selectedSubscriptions.compactMap { name in
                 LocalUserSubscription.available.first { $0.name == name }

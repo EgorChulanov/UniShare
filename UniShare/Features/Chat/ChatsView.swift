@@ -60,8 +60,8 @@ struct ChatsView: View {
                     }
                 }
             }
-            .navigationTitle("tab.chats".localized)
-            .navigationBarTitleDisplayMode(.large)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar(.hidden, for: .navigationBar)
         }
         .onAppear { vm.startListening() }
     }

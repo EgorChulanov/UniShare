@@ -120,11 +120,13 @@ struct UserProfile: Codable {
     var games: [String]
     var wantedGames: [String]
     var platforms: [String]
+    var platformGames: [String: [String]]   // platform rawValue → game names
     var skills: [String]
     var subscriptions: [LocalUserSubscription]
     var onboardingComplete: Bool
     var isOnline: Bool
     var lastSeen: Date?
+    var rating: Double
 
     init(uid: String, username: String) {
         self.uid = uid
@@ -132,10 +134,12 @@ struct UserProfile: Codable {
         self.games = []
         self.wantedGames = []
         self.platforms = []
+        self.platformGames = [:]
         self.skills = []
         self.subscriptions = []
         self.onboardingComplete = false
         self.isOnline = true
+        self.rating = 0.0
     }
 
     var firestoreData: [String: Any] {
@@ -145,9 +149,11 @@ struct UserProfile: Codable {
             "games": games,
             "wantedGames": wantedGames,
             "platforms": platforms,
+            "platformGames": platformGames,
             "skills": skills,
             "onboardingComplete": onboardingComplete,
-            "isOnline": isOnline
+            "isOnline": isOnline,
+            "rating": rating
         ]
         if let avatarUrl { data["avatarUrl"] = avatarUrl }
         if let status { data["status"] = status }
@@ -164,9 +170,11 @@ struct UserProfile: Codable {
         profile.games = data["games"] as? [String] ?? []
         profile.wantedGames = data["wantedGames"] as? [String] ?? []
         profile.platforms = data["platforms"] as? [String] ?? []
+        profile.platformGames = data["platformGames"] as? [String: [String]] ?? [:]
         profile.skills = data["skills"] as? [String] ?? []
         profile.onboardingComplete = data["onboardingComplete"] as? Bool ?? false
         profile.isOnline = data["isOnline"] as? Bool ?? false
+        profile.rating = data["rating"] as? Double ?? 0.0
         if let subs = data["subscriptions"] as? [[String: String]] {
             profile.subscriptions = subs.compactMap { dict in
                 guard let name = dict["name"], let iconName = dict["iconName"] else { return nil }

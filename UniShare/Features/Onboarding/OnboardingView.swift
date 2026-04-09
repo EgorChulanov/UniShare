@@ -25,10 +25,7 @@ struct OnboardingView: View {
             theme.effectiveBackground.ignoresSafeArea()
 
             VStack(spacing: 0) {
-                // Progress indicator
                 progressBar
-
-                // Step content
                 ScrollView {
                     VStack(spacing: 24) {
                         stepTitle
@@ -37,8 +34,6 @@ struct OnboardingView: View {
                     .padding(.horizontal, 24)
                     .padding(.top, 24)
                 }
-
-                // Navigation
                 navigationButtons
             }
         }
@@ -63,12 +58,10 @@ struct OnboardingView: View {
     // MARK: - Step Title
 
     private var stepTitle: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(titleForStep(vm.currentStep))
-                .font(.system(size: 26, weight: .bold))
-                .foregroundColor(theme.effectiveTextColor)
-                .frame(maxWidth: .infinity, alignment: .leading)
-        }
+        Text(titleForStep(vm.currentStep))
+            .font(.system(size: 26, weight: .bold))
+            .foregroundColor(theme.effectiveTextColor)
+            .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func titleForStep(_ step: OnboardingStep) -> String {
@@ -87,28 +80,16 @@ struct OnboardingView: View {
     @ViewBuilder
     private var stepContent: some View {
         switch vm.currentStep {
-        case .username:
-            usernameStep
-        case .avatar:
-            AvatarPickerView(selectedImage: $vm.selectedAvatar)
-        case .platform:
-            platformStep
-        case .games:
-            GameSearchPickerView(
-                selectedGames: $vm.selectedGames,
-                searchQuery: $vm.gameSearchQuery,
-                searchResults: vm.gameSearchResults,
-                isSearching: vm.isSearchingGames,
-                onSearch: { vm.searchGames($0) }
-            )
-        case .skills:
-            skillsStep
-        case .subscriptions:
-            subscriptionsStep
+        case .username: usernameStep
+        case .avatar: AvatarPickerView(selectedImage: $vm.selectedAvatar)
+        case .platform: platformStep
+        case .games: gamesPerPlatformStep
+        case .skills: skillsStep
+        case .subscriptions: subscriptionsStep
         }
     }
 
-    // MARK: - Username Step
+    // MARK: - Username
 
     private var usernameStep: some View {
         VStack(spacing: 16) {
@@ -132,10 +113,10 @@ struct OnboardingView: View {
         }
     }
 
-    // MARK: - Platform Step
+    // MARK: - Platform (single-column, lineLimit fix)
 
     private var platformStep: some View {
-        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+        VStack(spacing: 10) {
             ForEach(Platform.allCases, id: \.rawValue) { platform in
                 let selected = vm.selectedPlatforms.contains(platform)
                 Button {
@@ -143,18 +124,19 @@ struct OnboardingView: View {
                     if selected { vm.selectedPlatforms.remove(platform) }
                     else { vm.selectedPlatforms.insert(platform) }
                 } label: {
-                    HStack(spacing: 12) {
-                        PlatformBadge(platform: platform, size: 36)
+                    HStack(spacing: 14) {
+                        PlatformBadge(platform: platform, size: 32)
                         Text(platform.rawValue)
                             .font(.system(size: 15, weight: .medium))
                             .foregroundColor(theme.effectiveTextColor)
+                            .lineLimit(1)
                         Spacer()
-                        if selected {
-                            Image(systemName: "checkmark.circle.fill")
-                                .foregroundColor(theme.effectivePrimary)
-                        }
+                        Image(systemName: selected ? "checkmark.circle.fill" : "circle")
+                            .foregroundColor(selected ? theme.effectivePrimary : theme.effectiveSecondaryTextColor)
+                            .font(.system(size: 20))
                     }
-                    .padding(12)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 14)
                     .glass(cornerRadius: 14)
                     .overlay(
                         RoundedRectangle(cornerRadius: 14)
@@ -165,7 +147,146 @@ struct OnboardingView: View {
         }
     }
 
-    // MARK: - Skills Step
+    // MARK: - Games per platform
+
+    private var gamesPerPlatformStep: some View {
+        VStack(spacing: 16) {
+            // Platform tabs
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(Platform.allCases.filter { vm.selectedPlatforms.contains($0) }, id: \.rawValue) { platform in
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                vm.activePlatformTab = platform
+                                vm.gameSearchQuery = ""
+                                vm.gameSearchResults = []
+                            }
+                        } label: {
+                            HStack(spacing: 6) {
+                                PlatformBadge(platform: platform, size: 16)
+                                Text(platform.rawValue)
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundColor(vm.activePlatformTab == platform ? .white : theme.effectiveTextColor)
+                                let count = vm.gamesForPlatform(platform).count
+                                if count > 0 {
+                                    Text("\(count)")
+                                        .font(.system(size: 11, weight: .bold))
+                                        .foregroundColor(vm.activePlatformTab == platform ? .white.opacity(0.8) : theme.effectivePrimary)
+                                }
+                            }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 9)
+                            .background(
+                                vm.activePlatformTab == platform
+                                    ? LinearGradient(colors: [theme.effectivePrimary, theme.effectiveTertiary], startPoint: .leading, endPoint: .trailing)
+                                    : LinearGradient(colors: [theme.effectiveCardColor, theme.effectiveCardColor], startPoint: .leading, endPoint: .trailing)
+                            )
+                            .cornerRadius(20)
+                        }
+                    }
+                }
+                .padding(.horizontal, 2)
+            }
+
+            if let activePlatform = vm.activePlatformTab {
+                // Search field
+                HStack {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundColor(theme.effectiveSecondaryTextColor)
+                    TextField("Search games...", text: $vm.gameSearchQuery)
+                        .foregroundColor(theme.effectiveTextColor)
+                        .accentColor(theme.effectivePrimary)
+                        .onChange(of: vm.gameSearchQuery) { query in
+                            vm.searchGames(query)
+                        }
+                    if vm.isSearchingGames {
+                        ProgressView().scaleEffect(0.8).tint(theme.effectivePrimary)
+                    }
+                    if !vm.gameSearchQuery.isEmpty {
+                        Button { vm.gameSearchQuery = "" } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundColor(theme.effectiveSecondaryTextColor)
+                        }
+                    }
+                }
+                .padding()
+                .glass(cornerRadius: 14)
+
+                // Selected games for this platform
+                let selectedGames = vm.gamesForPlatform(activePlatform)
+                if !selectedGames.isEmpty {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Selected: \(selectedGames.count)")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(theme.effectiveSecondaryTextColor)
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
+                                ForEach(selectedGames) { game in
+                                    HStack(spacing: 4) {
+                                        Text(game.name)
+                                            .font(.system(size: 13, weight: .medium))
+                                            .foregroundColor(theme.effectiveTextColor)
+                                            .lineLimit(1)
+                                        Button {
+                                            vm.toggleGame(game, for: activePlatform)
+                                        } label: {
+                                            Image(systemName: "xmark.circle.fill")
+                                                .font(.system(size: 14))
+                                                .foregroundColor(theme.effectivePrimary)
+                                        }
+                                    }
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 6)
+                                    .background(theme.effectivePrimary.opacity(0.15))
+                                    .cornerRadius(16)
+                                }
+                            }
+                            .padding(.horizontal, 2)
+                        }
+                    }
+                }
+
+                // Search results
+                if !vm.gameSearchResults.isEmpty {
+                    LazyVStack(spacing: 8) {
+                        ForEach(vm.gameSearchResults) { game in
+                            let isSelected = vm.gamesForPlatform(activePlatform).contains(where: { $0.name == game.name })
+                            Button {
+                                HapticsManager.shared.impact(.light)
+                                vm.toggleGame(game, for: activePlatform)
+                            } label: {
+                                HStack {
+                                    GameTagView(tag: game)
+                                    Spacer()
+                                    Image(systemName: isSelected ? "checkmark.circle.fill" : "plus.circle")
+                                        .foregroundColor(theme.effectivePrimary)
+                                        .font(.system(size: 18))
+                                }
+                                .padding(10)
+                                .glass(cornerRadius: 12)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(isSelected ? theme.effectivePrimary : Color.clear, lineWidth: 1.5)
+                                )
+                            }
+                        }
+                    }
+                } else if vm.gameSearchQuery.isEmpty {
+                    Text("Search games for \(activePlatform.rawValue)")
+                        .font(.system(size: 14))
+                        .foregroundColor(theme.effectiveSecondaryTextColor)
+                        .padding(.top, 12)
+                } else if !vm.isSearchingGames {
+                    Text("No games found")
+                        .font(.system(size: 14))
+                        .foregroundColor(theme.effectiveSecondaryTextColor)
+                        .padding(.top, 12)
+                }
+            }
+        }
+    }
+
+    // MARK: - Skills
 
     private var skillsStep: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -174,10 +295,7 @@ struct OnboardingView: View {
                     .foregroundColor(theme.effectiveTextColor)
                     .accentColor(theme.effectivePrimary)
                     .onSubmit { vm.addSkill() }
-
-                Button {
-                    vm.addSkill()
-                } label: {
+                Button { vm.addSkill() } label: {
                     Image(systemName: "plus.circle.fill")
                         .foregroundColor(theme.effectivePrimary)
                         .font(.system(size: 22))
@@ -192,9 +310,7 @@ struct OnboardingView: View {
                         Text(skill)
                             .font(.system(size: 14, weight: .medium))
                             .foregroundColor(theme.effectiveTextColor)
-                        Button {
-                            vm.removeSkill(skill)
-                        } label: {
+                        Button { vm.removeSkill(skill) } label: {
                             Image(systemName: "xmark")
                                 .font(.system(size: 11, weight: .bold))
                                 .foregroundColor(theme.effectiveSecondaryTextColor)
@@ -209,7 +325,7 @@ struct OnboardingView: View {
         }
     }
 
-    // MARK: - Subscriptions Step
+    // MARK: - Subscriptions
 
     private var subscriptionsStep: some View {
         VStack(spacing: 10) {
@@ -227,11 +343,10 @@ struct OnboardingView: View {
                         Text(sub.name)
                             .font(.system(size: 15))
                             .foregroundColor(theme.effectiveTextColor)
+                            .lineLimit(1)
                         Spacer()
-                        if selected {
-                            Image(systemName: "checkmark.circle.fill")
-                                .foregroundColor(theme.effectivePrimary)
-                        }
+                        Image(systemName: selected ? "checkmark.circle.fill" : "circle")
+                            .foregroundColor(selected ? theme.effectivePrimary : theme.effectiveSecondaryTextColor)
                     }
                     .padding()
                     .glass(cornerRadius: 14)
@@ -281,20 +396,18 @@ struct OnboardingView: View {
                 .frame(maxWidth: .infinity)
                 .frame(height: 52)
                 .background(
-                    vm.canAdvance ?
-                    LinearGradient(colors: [theme.effectivePrimary, theme.effectiveTertiary], startPoint: .leading, endPoint: .trailing) :
-                    LinearGradient(colors: [theme.effectiveCardColor, theme.effectiveCardColor], startPoint: .leading, endPoint: .trailing)
+                    vm.canAdvance
+                        ? LinearGradient(colors: [theme.effectivePrimary, theme.effectiveTertiary], startPoint: .leading, endPoint: .trailing)
+                        : LinearGradient(colors: [theme.effectiveCardColor, theme.effectiveCardColor], startPoint: .leading, endPoint: .trailing)
                 )
                 .cornerRadius(14)
             }
             .disabled(!vm.canAdvance || vm.isLoading)
 
             if vm.currentStep == .games {
-                Button("skip".localized) {
-                    vm.advance()
-                }
-                .font(.system(size: 14))
-                .foregroundColor(theme.effectiveSecondaryTextColor)
+                Button("skip".localized) { vm.advance() }
+                    .font(.system(size: 14))
+                    .foregroundColor(theme.effectiveSecondaryTextColor)
             }
         }
         .padding(.horizontal, 24)
