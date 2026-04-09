@@ -83,6 +83,7 @@ final class ProfileViewModel: ObservableObject {
             p.platforms = editPlatforms.map { $0.rawValue }
             p.skills = editSkills
             p.subscriptions = editSubscriptions
+            // Keep existing platformGames when editing basic profile info
 
             try await firestore.updateUser(uid: uid, data: p.firestoreData)
             profile = p

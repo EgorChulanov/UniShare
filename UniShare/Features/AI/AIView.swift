@@ -122,22 +122,25 @@ struct AIView: View {
     // MARK: - Input Bar
 
     private var inputBar: some View {
-        VStack(spacing: 0) {
+        VStack(spacing: 8) {
             if vm.inputText.count > 80 {
                 Text("\(vm.inputText.count)/\(AppConstants.AI.maxMessageLength)")
                     .font(.system(size: 11))
                     .foregroundColor(vm.inputText.count >= AppConstants.AI.maxMessageLength ? .red : theme.effectiveSecondaryTextColor)
                     .frame(maxWidth: .infinity, alignment: .trailing)
                     .padding(.horizontal, 20)
-                    .padding(.top, 4)
             }
 
-            HStack(spacing: 10) {
+            HStack(alignment: .bottom, spacing: 10) {
                 TextField("ai.placeholder".localized, text: $vm.inputText, axis: .vertical)
                     .font(.system(size: 15))
                     .foregroundColor(theme.effectiveTextColor)
                     .accentColor(theme.effectivePrimary)
-                    .lineLimit(4)
+                    .lineLimit(1...5)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 11)
+                    .background(theme.effectiveCardColor)
+                    .cornerRadius(22)
                     .onChange(of: vm.inputText) { text in
                         if text.count > AppConstants.AI.maxMessageLength {
                             vm.inputText = String(text.prefix(AppConstants.AI.maxMessageLength))
@@ -147,21 +150,33 @@ struct AIView: View {
                 Button {
                     Task { await vm.sendMessage() }
                 } label: {
-                    if vm.isThinking {
-                        ProgressView().scaleEffect(0.8).tint(.white)
-                    } else {
-                        Image(systemName: "arrow.up.circle.fill")
-                            .font(.system(size: 30))
-                            .foregroundColor(vm.inputIsValid ? theme.effectivePrimary : theme.effectiveSecondaryTextColor)
+                    ZStack {
+                        if vm.isThinking {
+                            Circle()
+                                .fill(theme.effectivePrimary.opacity(0.3))
+                                .frame(width: 40, height: 40)
+                            ProgressView().scaleEffect(0.7).tint(theme.effectivePrimary)
+                        } else {
+                            Circle()
+                                .fill(vm.inputIsValid
+                                    ? LinearGradient(colors: [theme.effectivePrimary, theme.effectiveTertiary], startPoint: .topLeading, endPoint: .bottomTrailing)
+                                    : LinearGradient(colors: [theme.effectiveCardColor, theme.effectiveCardColor], startPoint: .topLeading, endPoint: .bottomTrailing))
+                                .frame(width: 40, height: 40)
+                            Image(systemName: "arrow.up")
+                                .font(.system(size: 16, weight: .bold))
+                                .foregroundColor(vm.inputIsValid ? .white : theme.effectiveSecondaryTextColor)
+                        }
                     }
                 }
                 .disabled(!vm.inputIsValid || vm.isThinking)
             }
             .padding(.horizontal, 16)
-            .padding(.vertical, 12)
+            .padding(.vertical, 10)
         }
-        .glass(cornerRadius: 0)
-        .overlay(Divider().background(theme.effectiveCardColor), alignment: .top)
+        .background(
+            theme.effectiveBackground
+                .shadow(color: .black.opacity(0.15), radius: 10, x: 0, y: -4)
+        )
     }
 }
 

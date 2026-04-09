@@ -9,6 +9,9 @@ final class FirebaseAuthService: ObservableObject {
     private var authListener: AuthStateDidChangeListenerHandle?
 
     init() {
+        // Sync load so uid is available immediately (important for VMs created in View.init)
+        self.currentUser = Auth.auth().currentUser
+        self.isAuthenticated = Auth.auth().currentUser != nil
         authListener = Auth.auth().addStateDidChangeListener { [weak self] _, user in
             DispatchQueue.main.async {
                 self?.currentUser = user
