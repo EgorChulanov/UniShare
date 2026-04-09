@@ -86,12 +86,12 @@ struct ChatView: View {
     // MARK: - Input Bar
 
     private var inputBar: some View {
-        HStack(spacing: 10) {
-            // Photo picker
+        HStack(alignment: .bottom, spacing: 10) {
             PhotosPicker(selection: $photoItem, matching: .images) {
                 Image(systemName: "photo")
                     .foregroundColor(theme.effectivePrimary)
                     .font(.system(size: 20))
+                    .frame(width: 36, height: 36)
             }
             .onChange(of: photoItem) { item in
                 Task {
@@ -107,27 +107,39 @@ struct ChatView: View {
                 .font(.system(size: 15))
                 .foregroundColor(theme.effectiveTextColor)
                 .accentColor(theme.effectivePrimary)
-                .lineLimit(5)
+                .lineLimit(1...5)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                .background(theme.effectiveCardColor)
+                .cornerRadius(20)
 
             Button {
                 Task { await vm.sendText() }
             } label: {
-                if vm.isSending {
-                    ProgressView().scaleEffect(0.8).tint(.white)
-                } else {
-                    Image(systemName: "arrow.up.circle.fill")
-                        .font(.system(size: 30))
-                        .foregroundColor(vm.inputText.isEmpty ? theme.effectiveSecondaryTextColor : theme.effectivePrimary)
+                ZStack {
+                    Circle()
+                        .fill(vm.inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                              ? theme.effectiveCardColor
+                              : LinearGradient(colors: [theme.effectivePrimary, theme.effectiveTertiary],
+                                               startPoint: .topLeading, endPoint: .bottomTrailing))
+                        .frame(width: 38, height: 38)
+                    if vm.isSending {
+                        ProgressView().scaleEffect(0.7).tint(.white)
+                    } else {
+                        Image(systemName: "arrow.up")
+                            .font(.system(size: 15, weight: .bold))
+                            .foregroundColor(vm.inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                                             ? theme.effectiveSecondaryTextColor : .white)
+                    }
                 }
             }
             .disabled(vm.inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || vm.isSending)
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, 14)
         .padding(.vertical, 10)
-        .glass(cornerRadius: 0)
-        .overlay(
-            Divider().background(theme.effectiveCardColor),
-            alignment: .top
+        .background(
+            theme.effectiveBackground
+                .shadow(color: .black.opacity(0.12), radius: 8, x: 0, y: -3)
         )
     }
 }

@@ -15,6 +15,8 @@ final class ProfileViewModel: ObservableObject {
     @Published var editGames: [GameTag] = []
     @Published var editWantedGames: [GameTag] = []
     @Published var editPlatforms: Set<Platform> = []
+    @Published var editGamesByPlatform: [Platform: [GameTag]] = [:]
+    @Published var editActiveGamePlatform: Platform?
     @Published var editSkills: [String] = []
     @Published var editSubscriptions: [LocalUserSubscription] = []
     @Published var editAvatar: UIImage?
@@ -53,7 +55,17 @@ final class ProfileViewModel: ObservableObject {
         editStatus = p.status ?? ""
         editGames = p.games.map { GameTag(name: $0) }
         editWantedGames = p.wantedGames.map { GameTag(name: $0) }
-        editPlatforms = Set(p.platforms.compactMap { Platform(rawValue: $0) })
+        let platforms = Set(p.platforms.compactMap { Platform(rawValue: $0) })
+        editPlatforms = platforms
+        // Restore per-platform games
+        editGamesByPlatform = [:]
+        for platform in platforms {
+            let names = p.platformGames[platform.rawValue] ?? []
+            if !names.isEmpty {
+                editGamesByPlatform[platform] = names.map { GameTag(name: $0) }
+            }
+        }
+        editActiveGamePlatform = platforms.first
         editSkills = p.skills
         editSubscriptions = p.subscriptions
         editAvatar = nil
@@ -78,12 +90,20 @@ final class ProfileViewModel: ObservableObject {
 
             p.username = editUsername
             p.status = editStatus.isEmpty ? nil : editStatus
-            p.games = editGames.map { $0.name }
-            p.wantedGames = editWantedGames.map { $0.name }
             p.platforms = editPlatforms.map { $0.rawValue }
             p.skills = editSkills
             p.subscriptions = editSubscriptions
-            // Keep existing platformGames when editing basic profile info
+            // Build platformGames and flat games list from editGamesByPlatform
+            var newPlatformGames: [String: [String]] = [:]
+            var allGames: [String] = []
+            for platform in editPlatforms {
+                let names = (editGamesByPlatform[platform] ?? []).map { $0.name }
+                newPlatformGames[platform.rawValue] = names
+                allGames.append(contentsOf: names)
+            }
+            p.platformGames = newPlatformGames
+            p.games = Array(Set(allGames))
+            p.wantedGames = editWantedGames.map { $0.name }
 
             try await firestore.updateUser(uid: uid, data: p.firestoreData)
             profile = p
@@ -100,6 +120,16 @@ final class ProfileViewModel: ObservableObject {
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+
+    func toggleGame(_ tag: GameTag, for platform: Platform) {
+        var list = editGamesByPlatform[platform] ?? []
+        if let idx = list.firstIndex(where: { $0.name == tag.name }) {
+            list.remove(at: idx)
+        } else {
+            list.append(tag)
+        }
+        editGamesByPlatform[platform] = list
     }
 
     func searchGames(_ query: String) {

@@ -9,6 +9,7 @@ struct UniShareApp: App {
 
     init() {
         FirebaseApp.configure()
+        ManropeFontSwizzle.apply()
     }
 
     var body: some Scene {

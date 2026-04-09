@@ -38,6 +38,7 @@ struct TabBarView: View {
         .accentColor(theme.effectivePrimary)
         .onAppear {
             theme.applyTabBarAppearance()
+            ShakeDetectionService.shared.start()
         }
         .onChange(of: theme.currentCardColor) { _ in
             theme.applyTabBarAppearance()

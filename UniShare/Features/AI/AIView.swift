@@ -17,52 +17,48 @@ struct AIView: View {
     }
 
     var body: some View {
-        NavigationView {
-            ZStack {
-                theme.effectiveBackground.ignoresSafeArea()
+        ZStack {
+            theme.effectiveBackground.ignoresSafeArea()
 
-                VStack(spacing: 0) {
-                    // Quick commands auto-scroll
-                    quickCommandsRow
+            VStack(spacing: 0) {
+                // Quick commands auto-scroll
+                quickCommandsRow
 
-                    // Messages
-                    ScrollViewReader { proxy in
-                        ScrollView {
-                            LazyVStack(spacing: 16) {
-                                if vm.messages.isEmpty {
-                                    emptyState
-                                }
-                                ForEach(vm.messages) { msg in
-                                    AIMessageView(message: msg)
-                                        .id(msg.id)
-                                }
-                                if vm.isThinking {
-                                    HStack {
-                                        ThinkingBubble()
-                                        Spacer()
-                                    }
-                                    .padding(.horizontal, 16)
-                                    .id("thinking")
-                                }
+                // Messages
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        LazyVStack(spacing: 16) {
+                            if vm.messages.isEmpty {
+                                emptyState
                             }
-                            .padding(.vertical, 12)
-                        }
-                        .onChange(of: vm.messages.count) { _ in
-                            withAnimation {
-                                if let last = vm.messages.last { proxy.scrollTo(last.id, anchor: .bottom) }
+                            ForEach(vm.messages) { msg in
+                                AIMessageView(message: msg)
+                                    .id(msg.id)
+                            }
+                            if vm.isThinking {
+                                HStack {
+                                    ThinkingBubble()
+                                    Spacer()
+                                }
+                                .padding(.horizontal, 16)
+                                .id("thinking")
                             }
                         }
-                        .onChange(of: vm.isThinking) { thinking in
-                            if thinking { withAnimation { proxy.scrollTo("thinking", anchor: .bottom) } }
+                        .padding(.vertical, 12)
+                    }
+                    .onChange(of: vm.messages.count) { _ in
+                        withAnimation {
+                            if let last = vm.messages.last { proxy.scrollTo(last.id, anchor: .bottom) }
                         }
                     }
-
-                    // Input bar
-                    inputBar
+                    .onChange(of: vm.isThinking) { thinking in
+                        if thinking { withAnimation { proxy.scrollTo("thinking", anchor: .bottom) } }
+                    }
                 }
+
+                // Input bar
+                inputBar
             }
-            .navigationTitle("ai.title".localized)
-            .navigationBarTitleDisplayMode(.large)
         }
     }
 

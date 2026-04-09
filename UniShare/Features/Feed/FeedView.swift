@@ -20,10 +20,10 @@ struct FeedView: View {
             theme.effectiveBackground.ignoresSafeArea()
 
             VStack(spacing: 0) {
-                // Top segment picker (Exchange / Skills)
+                // Top segment picker (Exchange / Skills) — extra top padding avoids Dynamic Island
                 segmentPicker
                     .padding(.horizontal, 16)
-                    .padding(.top, 12)
+                    .padding(.top, 20)
                     .padding(.bottom, 8)
 
                 // Cards
