@@ -30,12 +30,12 @@ final class DynamicIslandService {
         )
 
         do {
-            let content = ActivityContent(state: state, staleDate: Date().addingTimeInterval(30))
-            activity = try Activity.request(
-                attributes: attributes,
-                content: content,
-                pushType: nil
-            )
+            if #available(iOS 16.2, *) {
+                let content = ActivityContent(state: state, staleDate: Date().addingTimeInterval(30))
+                activity = try Activity.request(attributes: attributes, content: content, pushType: nil)
+            } else {
+                activity = try Activity.request(attributes: attributes, contentState: state, pushType: nil)
+            }
         } catch {
             print("Live Activity failed: \(error)")
         }
@@ -45,8 +45,12 @@ final class DynamicIslandService {
         guard let activity else { return }
         let state = UniShareLiveActivityAttributes.ContentState(message: message, emoji: emoji)
         Task {
-            let content = ActivityContent(state: state, staleDate: Date().addingTimeInterval(30))
-            await activity.update(content)
+            if #available(iOS 16.2, *) {
+                let content = ActivityContent(state: state, staleDate: Date().addingTimeInterval(30))
+                await activity.update(content)
+            } else {
+                await activity.update(using: state)
+            }
         }
     }
 
@@ -54,8 +58,12 @@ final class DynamicIslandService {
         guard let activity else { return }
         Task {
             let state = UniShareLiveActivityAttributes.ContentState(message: "Done!", emoji: "🎉")
-            let content = ActivityContent(state: state, staleDate: nil)
-            await activity.end(content, dismissalPolicy: .after(Date().addingTimeInterval(3)))
+            if #available(iOS 16.2, *) {
+                let content = ActivityContent(state: state, staleDate: nil)
+                await activity.end(content, dismissalPolicy: .after(Date().addingTimeInterval(3)))
+            } else {
+                await activity.end(using: state, dismissalPolicy: .after(Date().addingTimeInterval(3)))
+            }
             self.activity = nil
         }
     }
