@@ -53,7 +53,7 @@ struct SwipeCard: View {
 
     @EnvironmentObject var theme: ThemeManager
 
-    private static let SwipeCard.swipeThreshold: CGFloat = 100
+    private static let swipeThreshold: CGFloat = 100
 
     var body: some View {
         GeometryReader { geo in
