@@ -6,7 +6,5 @@
     <array>
         <string>group.com.CHULANOV.UniShare</string>
     </array>
-    <key>com.apple.developer.networking.multicast</key>
-    <true/>
 </dict>
 </plist>
