@@ -119,9 +119,8 @@ struct ChatView: View {
                 ZStack {
                     Circle()
                         .fill(vm.inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                              ? theme.effectiveCardColor
-                              : LinearGradient(colors: [theme.effectivePrimary, theme.effectiveTertiary],
-                                               startPoint: .topLeading, endPoint: .bottomTrailing))
+                              ? LinearGradient(colors: [theme.effectiveCardColor, theme.effectiveCardColor], startPoint: .topLeading, endPoint: .bottomTrailing)
+                              : LinearGradient(colors: [theme.effectivePrimary, theme.effectiveTertiary], startPoint: .topLeading, endPoint: .bottomTrailing))
                         .frame(width: 38, height: 38)
                     if vm.isSending {
                         ProgressView().scaleEffect(0.7).tint(.white)
