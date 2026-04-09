@@ -53,7 +53,7 @@ struct SwipeCard: View {
 
     @EnvironmentObject var theme: ThemeManager
 
-    private static let swipeThreshold: CGFloat = 100
+    private static let SwipeCard.swipeThreshold: CGFloat = 100
 
     var body: some View {
         GeometryReader { geo in
@@ -116,9 +116,9 @@ struct SwipeCard: View {
                 rotation = Double(value.translation.width / size.width) * 15
             }
             .onEnded { value in
-                if value.translation.width > swipeThreshold {
+                if value.translation.width > SwipeCard.swipeThreshold {
                     flyOff(direction: .right)
-                } else if value.translation.width < -swipeThreshold {
+                } else if value.translation.width < -SwipeCard.swipeThreshold {
                     flyOff(direction: .left)
                 } else {
                     withAnimation(.spring()) {
@@ -189,7 +189,7 @@ struct SwipeCard: View {
             .rotationEffect(.degrees(-15))
             .padding(16)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            .opacity(Double(min(offset.width / swipeThreshold, 1.0)))
+            .opacity(Double(min(offset.width / SwipeCard.swipeThreshold, 1.0)))
     }
 
     private var dislikeIndicator: some View {
@@ -205,7 +205,7 @@ struct SwipeCard: View {
             .rotationEffect(.degrees(15))
             .padding(16)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
-            .opacity(Double(min(-offset.width / swipeThreshold, 1.0)))
+            .opacity(Double(min(-offset.width / SwipeCard.swipeThreshold, 1.0)))
     }
 }
 
