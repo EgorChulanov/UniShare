@@ -1,0 +1,119 @@
+name: UniShare
+options:
+  bundleIdPrefix: com.CHULANOV
+  deploymentTarget:
+    iOS: "16.1"
+  xcodeVersion: "15.0"
+  generateEmptyDirectories: true
+  createIntermediateGroups: true
+
+packages:
+  FirebaseAnalytics:
+    url: https://github.com/firebase/firebase-ios-sdk
+    exactVersion: "10.25.0"
+  FirebaseAuth:
+    url: https://github.com/firebase/firebase-ios-sdk
+    exactVersion: "10.25.0"
+  FirebaseFirestore:
+    url: https://github.com/firebase/firebase-ios-sdk
+    exactVersion: "10.25.0"
+  FirebaseStorage:
+    url: https://github.com/firebase/firebase-ios-sdk
+    exactVersion: "10.25.0"
+
+configFiles:
+  Debug: Config/Debug.xcconfig
+  Release: Config/Release.xcconfig
+
+targets:
+  UniShare:
+    type: application
+    platform: iOS
+    sources:
+      - path: UniShare
+        excludes:
+          - "**/*.xcassets"
+      - path: UniShare/Resources/Assets.xcassets
+        type: folder
+    resources:
+      - path: UniShare/Resources/Assets.xcassets
+      - path: UniShare/Resources/Fonts
+        type: folder
+    info:
+      path: UniShare/Info.plist
+      properties:
+        UILaunchScreen:
+          UIColorName: ""
+          UIImageName: ""
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        CFBundleURLTypes:
+          - CFBundleURLSchemes:
+              - unishare
+            CFBundleURLName: com.CHULANOV.UniShare
+        NSCameraUsageDescription: "UniShare needs camera access to set your profile photo"
+        NSPhotoLibraryUsageDescription: "UniShare needs photo library access to share images in chats"
+        NSBluetoothAlwaysUsageDescription: "UniShare uses Bluetooth to find nearby users with AirShare"
+        NSLocalNetworkUsageDescription: "UniShare uses local networking to connect with nearby users"
+        NSMotionUsageDescription: "UniShare detects shake gestures for AirShare"
+        UIBackgroundModes:
+          - bluetooth-central
+          - bluetooth-peripheral
+        UIAppFonts:
+          - Manrope-Regular.ttf
+          - Manrope-Medium.ttf
+          - Manrope-SemiBold.ttf
+          - Manrope-Bold.ttf
+          - Manrope-ExtraBold.ttf
+          - PlusJakartaSans-Regular.ttf
+          - PlusJakartaSans-Medium.ttf
+          - PlusJakartaSans-SemiBold.ttf
+          - PlusJakartaSans-Bold.ttf
+        OPENAI_API_KEY: "$(OPENAI_API_KEY)"
+        RAWG_API_KEY: "$(RAWG_API_KEY)"
+        APP_GROUP_ID: "$(APP_GROUP_ID)"
+    entitlements:
+      path: UniShare/UniShare.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.CHULANOV.UniShare
+        com.apple.developer.networking.multicast: true
+    dependencies:
+      - package: FirebaseAnalytics
+        product: FirebaseAnalytics
+      - package: FirebaseAuth
+        product: FirebaseAuth
+      - package: FirebaseFirestore
+        product: FirebaseFirestore
+      - package: FirebaseStorage
+        product: FirebaseStorage
+    settings:
+      base:
+        PRODUCT_NAME: UniShare
+        SWIFT_VERSION: "5.9"
+        DEVELOPMENT_TEAM: ""
+        CODE_SIGN_STYLE: Automatic
+
+  UniShareWidget:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: UniShareWidget
+    info:
+      path: UniShareWidget/Info.plist
+      properties:
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    entitlements:
+      path: UniShareWidget/UniShareWidget.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.CHULANOV.UniShare
+    settings:
+      base:
+        PRODUCT_NAME: UniShareWidget
+        SWIFT_VERSION: "5.9"
+        DEVELOPMENT_TEAM: ""
+        CODE_SIGN_STYLE: Automatic
+        SKIP_INSTALL: YES
+        EXTENSION_ATTRIBUTES: WidgetKitExtension

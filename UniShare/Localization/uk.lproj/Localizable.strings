@@ -1,0 +1,121 @@
+// MARK: - General
+"app.name" = "UniShare";
+"ok" = "OK";
+"cancel" = "Скасувати";
+"save" = "Зберегти";
+"done" = "Готово";
+"next" = "Далі";
+"back" = "Назад";
+"skip" = "Пропустити";
+"delete" = "Видалити";
+"edit" = "Редагувати";
+"search" = "Пошук";
+"loading" = "Завантаження...";
+"error.generic" = "Щось пішло не так";
+"error.network" = "Перевірте підключення до інтернету";
+
+// MARK: - Auth
+"auth.login" = "Увійти";
+"auth.register" = "Реєстрація";
+"auth.email" = "Email";
+"auth.password" = "Пароль";
+"auth.email.placeholder" = "Введіть email";
+"auth.password.placeholder" = "Введіть пароль";
+"auth.login.button" = "Увійти";
+"auth.register.button" = "Створити акаунт";
+"auth.switch.register" = "Немає акаунту? Зареєструйтесь";
+"auth.switch.login" = "Вже є акаунт? Увійдіть";
+"auth.error.invalid" = "Невірний email або пароль";
+"auth.welcome" = "Ласкаво просимо до UniShare";
+"auth.subtitle" = "Знаходь геймерів по всьому світу";
+
+// MARK: - Onboarding
+"onboarding.title.username" = "Обери нікнейм";
+"onboarding.title.avatar" = "Встанови аватар";
+"onboarding.title.platform" = "Обери платформу";
+"onboarding.title.games" = "Додай ігри";
+"onboarding.title.skills" = "Твої ігрові навички";
+"onboarding.title.subscriptions" = "Твої підписки";
+"onboarding.username.placeholder" = "Нікнейм";
+"onboarding.skills.placeholder" = "наприклад: снайпер, стратег, хілер...";
+"onboarding.skip.games" = "Додам ігри пізніше";
+"onboarding.complete" = "Почати!";
+
+// MARK: - Tabs
+"tab.feed" = "Стрічка";
+"tab.chats" = "Чати";
+"tab.ai" = "ШІ";
+"tab.profile" = "Профіль";
+
+// MARK: - Feed
+"feed.segment.exchange" = "Обмін";
+"feed.segment.skills" = "Навички";
+"feed.search.placeholder" = "Пошук по грі...";
+"feed.empty" = "Анкети закінчились";
+"feed.empty.subtitle" = "Зайди пізніше — з'являться нові";
+"feed.undo" = "Скасувати";
+"feed.undo.limit" = "Скасування на сьогодні закінчились";
+
+// MARK: - Chat
+"chat.placeholder" = "Повідомлення...";
+"chat.send" = "Надіслати";
+"chat.empty" = "Поки немає повідомлень";
+"chat.empty.subtitle" = "Почни спілкування!";
+"chats.empty" = "Чатів поки немає";
+"chats.empty.subtitle" = "Свайпай вправо, щоб знайти збіги";
+"chats.requests" = "Заявки";
+"chats.accept" = "Прийняти";
+"chats.decline" = "Відхилити";
+"chats.segment.exchange" = "Обмін";
+"chats.segment.skills" = "Навички";
+"chat.online" = "Онлайн";
+"chat.offline" = "Офлайн";
+"chat.report" = "Поскаржитись";
+
+// MARK: - AI
+"ai.title" = "ШІ Асистент";
+"ai.placeholder" = "Запитай про ігри...";
+"ai.send" = "Запитати";
+"ai.thinking" = "Думаю...";
+"ai.limit" = "Повідомлення надто довге (макс. 100 символів)";
+"ai.command.recommend" = "Порадь ігри";
+"ai.command.exchange" = "Допоможи з обміном";
+"ai.command.skill" = "Покращи мої навички";
+"ai.command.trending" = "Популярні ігри";
+
+// MARK: - AirShare
+"airshare.title" = "AirShare";
+"airshare.searching" = "Пошук...";
+"airshare.hold" = "Тримайте телефони поряд";
+"airshare.shake" = "Потрусіть для підключення!";
+"airshare.found" = "Знайдено користувача поряд";
+"airshare.success" = "Профіль надіслано!";
+"airshare.match" = "Це збіг!";
+"airshare.description" = "Тримайте телефони поряд і потрусіть, щоб обмінятися профілями з найближчими гравцями";
+
+// MARK: - Profile
+"profile.edit" = "Редагувати";
+"profile.games" = "Ігри";
+"profile.subscriptions" = "Підписки";
+"profile.platforms" = "Платформи";
+"profile.skills" = "Навички";
+"profile.wanted" = "Бажані ігри";
+"profile.status.placeholder" = "#хештеги про себе";
+"profile.change.avatar" = "Змінити фото";
+"profile.add.game" = "Додати гру";
+"profile.add.subscription" = "Додати підписку";
+"profile.settings" = "Налаштування";
+"profile.logout" = "Вийти";
+"profile.theme" = "Тема";
+"profile.language" = "Мова";
+
+// MARK: - Greeting
+"greeting.welcome" = "Привіт,";
+
+// MARK: - Widgets
+"widget.likes" = "Лайки";
+"widget.chats" = "Чати";
+"widget.open.chats" = "Відкрити чати";
+"widget.open.airshare" = "AirShare";
+"widget.open.ai" = "ШІ";
+"widget.open.profile" = "Профіль";
