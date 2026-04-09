@@ -29,6 +29,8 @@ A modern iOS social app for exchanging gaming accounts, subscriptions, and skill
 - **Swift** 5.9+
 - Homebrew (for XcodeGen)
 
+---
+
 ## Setup
 
 ### 1. Clone
@@ -38,40 +40,59 @@ git clone https://github.com/egorchulanov/unishare.git
 cd unishare
 ```
 
-### 2. Bootstrap
+### 2. Install XcodeGen & generate project
 
 ```bash
-make bootstrap
+brew install xcodegen
+xcodegen generate
 ```
 
-This installs XcodeGen, creates `Config/Secrets.xcconfig` from the template, and generates the Xcode project.
+### 3. Configure API Keys
 
-### 3. Configure Firebase
+```bash
+cp Config/Secrets.xcconfig.template Config/Secrets.xcconfig
+```
 
-1. Create a Firebase project at [console.firebase.google.com](https://console.firebase.google.com)
-2. Add an iOS app with bundle ID `com.CHULANOV.UniShare`
-3. Download `GoogleService-Info.plist` and place it in `UniShare/`
-4. Enable **Authentication** (Email/Password), **Firestore**, and **Storage**
-
-### 4. Configure API Keys
-
-Edit `Config/Secrets.xcconfig`:
+Edit `Config/Secrets.xcconfig` — **этот файл не попадёт в git**:
 
 ```
 OPENAI_API_KEY = sk-...your-key...
 RAWG_API_KEY = your-rawg-key
 ```
 
-- **OpenAI key**: [platform.openai.com/api-keys](https://platform.openai.com/api-keys)
-- **Rawg key**: [rawg.io/apidocs](https://rawg.io/apidocs) (free tier available)
+- **OpenAI key**: https://platform.openai.com/api-keys
+- **Rawg key**: https://rawg.io/apidocs (free tier)
 
-### 5. Open & Run
+### 4. Configure Firebase
+
+1. Create a Firebase project at https://console.firebase.google.com
+2. Add an iOS app with bundle ID `com.CHULANOV.UniShare`
+3. Download `GoogleService-Info.plist` → place it in `UniShare/` folder
+4. Enable **Authentication** (Email/Password), **Firestore**, and **Storage**
+
+> `GoogleService-Info.plist` is gitignored and will never be committed.
+
+### 5. Open in Xcode
 
 ```bash
-make open
+open UniShare.xcodeproj
 ```
 
-Select your device/simulator and press `Command+R`.
+Select your **Development Team** in Signing & Capabilities, then press `Command+R`.
+
+---
+
+## Security — для контрибьюторов
+
+| Файл | Статус |
+|---|---|
+| `Config/Secrets.xcconfig` | Gitignored — **никогда не коммитить** |
+| `GoogleService-Info.plist` | Gitignored — **никогда не коммитить** |
+| `Config/Secrets.xcconfig.template` | Коммитится — только с placeholder значениями |
+
+Если случайно закоммитил ключи — немедленно отзови их в соответствующей консоли.
+
+---
 
 ## Architecture
 
@@ -120,7 +141,8 @@ service cloud.firestore {
 
 ## Contributing
 
-PRs welcome. Please follow existing code style and SwiftUI patterns.
+PRs welcome. Please follow existing code style and SwiftUI patterns.  
+Never commit secrets — see Security section above.
 
 ## License
 

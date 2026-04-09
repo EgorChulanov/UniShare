@@ -21,11 +21,19 @@ Package.resolved
 Pods/
 Podfile.lock
 
-# Secrets — NEVER commit this file
+# ─── SECRETS — НИКОГДА НЕ КОММИТИТЬ ─────────────────────────────────────────
 Config/Secrets.xcconfig
+**/Secrets.xcconfig
 
-# Firebase
+# Firebase — скачать из Firebase консоли и положить локально
 GoogleService-Info.plist
+**/GoogleService-Info.plist
+
+# Любые файлы с ключами
+*.p8
+*.p12
+*.mobileprovision
+AuthKey_*.p8
 
 # macOS
 .DS_Store
