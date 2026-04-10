@@ -34,12 +34,10 @@ struct ChatsView: View {
 
                     ScrollView {
                         LazyVStack(spacing: 0) {
-                            // Like requests
                             if !currentRequests.isEmpty {
                                 requestsSection
                             }
 
-                            // Chat list
                             if currentChats.isEmpty && currentRequests.isEmpty {
                                 emptyState
                             } else {
@@ -56,9 +54,7 @@ struct ChatsView: View {
                             }
                         }
                     }
-                    .refreshable {
-                        // Listeners handle real-time updates; pull to refresh is cosmetic
-                    }
+                    .refreshable {}
                 }
             }
             .navigationTitle("")
@@ -73,32 +69,51 @@ struct ChatsView: View {
         .onAppear { vm.startListening() }
     }
 
-    // MARK: - Segment Picker
+    // MARK: - Pill Segment Picker
 
     private var segmentPicker: some View {
-        HStack(spacing: 0) {
+        HStack(spacing: 8) {
             ForEach(ChatsSegment.allCases, id: \.localizedKey) { seg in
                 Button {
-                    withAnimation { vm.selectedSegment = seg }
+                    withAnimation(.easeInOut(duration: 0.2)) { vm.selectedSegment = seg }
                 } label: {
                     Text(seg.localizedKey.localized)
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(.system(size: 13, weight: .semibold))
                         .foregroundColor(vm.selectedSegment == seg ? .white : theme.effectiveSecondaryTextColor)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 40)
+                        .padding(.horizontal, 18)
+                        .padding(.vertical, 8)
                         .background(
-                            vm.selectedSegment == seg ?
-                            LinearGradient(colors: [theme.effectivePrimary, theme.effectiveTertiary], startPoint: .leading, endPoint: .trailing) :
-                            LinearGradient(colors: [Color.clear, Color.clear], startPoint: .leading, endPoint: .trailing)
+                            Group {
+                                if vm.selectedSegment == seg {
+                                    LinearGradient(
+                                        colors: [theme.effectivePrimary, theme.effectiveTertiary],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                } else {
+                                    LinearGradient(
+                                        colors: [Color.clear, Color.clear],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                }
+                            }
                         )
-                        .cornerRadius(10)
+                        .clipShape(Capsule())
+                        .overlay(
+                            Capsule().stroke(
+                                vm.selectedSegment == seg
+                                    ? Color.clear
+                                    : theme.effectiveSecondaryTextColor.opacity(0.35),
+                                lineWidth: 1
+                            )
+                        )
                 }
+                .buttonStyle(.plain)
             }
         }
-        .padding(4)
-        .glass(cornerRadius: 14)
         .padding(.horizontal, 16)
-        .padding(.vertical, 8)
+        .padding(.vertical, 10)
     }
 
     // MARK: - Requests Section
@@ -120,7 +135,6 @@ struct ChatsView: View {
     private func requestRow(_ request: LikeRequest) -> some View {
         let profile = vm.partnerProfiles[request.from]
         return HStack(spacing: 14) {
-            // Tap avatar/name to preview profile
             Button {
                 if let p = profile { previewProfile = p }
             } label: {
@@ -183,7 +197,6 @@ struct ChatsView: View {
             ZStack(alignment: .bottomTrailing) {
                 AvatarView(url: profile?.avatarUrl, size: 52)
 
-                // Online indicator
                 if chat.partnerStatus == "online" {
                     Circle()
                         .fill(Color.green)
@@ -257,7 +270,7 @@ struct ProfilePreviewSheet: View {
                 theme.effectiveBackground.ignoresSafeArea()
                 ScrollView {
                     VStack(spacing: 20) {
-                        // Card
+                        // Hero card
                         ZStack(alignment: .bottomLeading) {
                             Group {
                                 if let url = profile.avatarUrl {
@@ -265,18 +278,25 @@ struct ProfilePreviewSheet: View {
                                         .frame(maxWidth: .infinity)
                                         .clipped()
                                 } else {
-                                    LinearGradient(colors: [theme.effectiveTertiary, theme.effectiveCardColor],
-                                                   startPoint: .topLeading, endPoint: .bottomTrailing)
+                                    LinearGradient(
+                                        colors: [theme.effectiveTertiary, theme.effectiveCardColor],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
                                     Image(systemName: "person.fill")
                                         .resizable().scaledToFit().padding(70)
                                         .foregroundColor(theme.effectiveSecondaryTextColor)
                                 }
                             }
-                            .frame(height: 300)
+                            .frame(height: 280)
 
-                            LinearGradient(colors: [.clear, .black.opacity(0.8)], startPoint: .center, endPoint: .bottom)
+                            LinearGradient(
+                                colors: [.clear, .black.opacity(0.8)],
+                                startPoint: .center,
+                                endPoint: .bottom
+                            )
 
-                            VStack(alignment: .leading, spacing: 8) {
+                            VStack(alignment: .leading, spacing: 6) {
                                 Text(profile.username)
                                     .font(.system(size: 22, weight: .bold))
                                     .foregroundColor(.white)
@@ -291,56 +311,68 @@ struct ProfilePreviewSheet: View {
                             }
                             .padding(16)
                         }
-                        .frame(height: 300)
+                        .frame(height: 280)
                         .cornerRadius(20)
                         .padding(.horizontal, 16)
 
                         // Games per platform
-                        ForEach(profile.platforms.compactMap { Platform(rawValue: $0) }, id: \.rawValue) { platform in
-                            let games = profile.platformGames[platform.rawValue] ?? []
-                            if !games.isEmpty {
-                                VStack(alignment: .leading, spacing: 8) {
-                                    HStack(spacing: 8) {
-                                        PlatformBadge(platform: platform, size: 20)
-                                        Text(platform.rawValue)
-                                            .font(.system(size: 14, weight: .semibold))
-                                            .foregroundColor(theme.effectiveTextColor)
-                                    }
-                                    .padding(.horizontal, 16)
-                                    ScrollView(.horizontal, showsIndicators: false) {
-                                        HStack(spacing: 8) {
-                                            ForEach(games, id: \.self) { game in
-                                                Text(game)
-                                                    .font(.system(size: 13))
-                                                    .foregroundColor(theme.effectiveTextColor)
-                                                    .padding(.horizontal, 12).padding(.vertical, 7)
-                                                    .background(platform.color.opacity(0.15))
-                                                    .cornerRadius(14)
-                                                    .overlay(RoundedRectangle(cornerRadius: 14).stroke(platform.color.opacity(0.4), lineWidth: 1))
+                        let platformList = profile.platforms.compactMap { Platform(rawValue: $0) }
+                        if !platformList.isEmpty {
+                            VStack(spacing: 0) {
+                                ForEach(Array(platformList.enumerated()), id: \.1.rawValue) { idx, platform in
+                                    let games = profile.platformGames[platform.rawValue] ?? []
+                                    if !games.isEmpty {
+                                        VStack(alignment: .leading, spacing: 8) {
+                                            HStack(spacing: 8) {
+                                                PlatformBadge(platform: platform, size: 18)
+                                                Text(platform.rawValue)
+                                                    .font(.system(size: 13, weight: .semibold))
+                                                    .foregroundColor(platform.color)
                                             }
+                                            .padding(.horizontal, 16)
+
+                                            GameCirclesRow(games: games, color: platform.color, isTrailing: false)
                                         }
-                                        .padding(.horizontal, 16)
+                                        .padding(.vertical, 12)
+
+                                        if idx < platformList.count - 1 {
+                                            Divider().padding(.horizontal, 16)
+                                        }
                                     }
                                 }
                             }
+                            .background(theme.effectiveCardColor)
+                            .clipShape(RoundedRectangle(cornerRadius: 20))
+                            .padding(.horizontal, 16)
                         }
 
                         // Skills
                         if !profile.skills.isEmpty {
-                            FlowLayout(spacing: 8) {
-                                ForEach(profile.skills, id: \.self) { skill in
-                                    Text(skill)
-                                        .font(.system(size: 13))
-                                        .foregroundColor(theme.effectiveTextColor)
-                                        .padding(.horizontal, 12).padding(.vertical, 7)
-                                        .background(theme.effectiveTertiary.opacity(0.3))
-                                        .cornerRadius(20)
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Skills")
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundColor(theme.effectiveSecondaryTextColor)
+                                    .padding(.horizontal, 16)
+
+                                FlowLayout(spacing: 8) {
+                                    ForEach(profile.skills, id: \.self) { skill in
+                                        Text(skill)
+                                            .font(.system(size: 13))
+                                            .foregroundColor(theme.effectiveTextColor)
+                                            .padding(.horizontal, 12).padding(.vertical, 7)
+                                            .background(theme.effectiveTertiary.opacity(0.3))
+                                            .cornerRadius(20)
+                                    }
                                 }
+                                .padding(.horizontal, 16)
                             }
+                            .padding(.vertical, 12)
+                            .background(theme.effectiveCardColor)
+                            .clipShape(RoundedRectangle(cornerRadius: 20))
                             .padding(.horizontal, 16)
                         }
                     }
-                    .padding(.bottom, 32)
+                    .padding(.bottom, 40)
                 }
             }
             .navigationTitle(profile.username)

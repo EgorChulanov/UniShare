@@ -7,7 +7,7 @@ struct ChatView: View {
     @EnvironmentObject var theme: ThemeManager
     @StateObject private var vm: ChatViewModel
     @State private var photoItem: PhotosPickerItem?
-    @State private var showReportAlert = false
+    @State private var showReportSheet = false
 
     init(chat: Chat) {
         self.chat = chat
@@ -24,7 +24,6 @@ struct ChatView: View {
             theme.effectiveBackground.ignoresSafeArea()
 
             VStack(spacing: 0) {
-                // Messages
                 ScrollViewReader { proxy in
                     ScrollView {
                         LazyVStack(spacing: 8) {
@@ -46,7 +45,6 @@ struct ChatView: View {
                     }
                 }
 
-                // Input bar
                 inputBar
             }
         }
@@ -66,7 +64,7 @@ struct ChatView: View {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Menu {
                     Button(role: .destructive) {
-                        showReportAlert = true
+                        showReportSheet = true
                     } label: {
                         Label("chat.report".localized, systemImage: "flag")
                     }
@@ -77,9 +75,9 @@ struct ChatView: View {
             }
         }
         .task { await vm.start() }
-        .alert("Report User", isPresented: $showReportAlert) {
-            Button("cancel".localized, role: .cancel) {}
-            Button("Report", role: .destructive) {}
+        .sheet(isPresented: $showReportSheet) {
+            ReportSheet(username: vm.partnerProfile?.username ?? "")
+                .environmentObject(theme)
         }
     }
 
@@ -118,17 +116,23 @@ struct ChatView: View {
             } label: {
                 ZStack {
                     Circle()
-                        .fill(vm.inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                              ? LinearGradient(colors: [theme.effectiveCardColor, theme.effectiveCardColor], startPoint: .topLeading, endPoint: .bottomTrailing)
-                              : LinearGradient(colors: [theme.effectivePrimary, theme.effectiveTertiary], startPoint: .topLeading, endPoint: .bottomTrailing))
+                        .fill(
+                            vm.inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                                ? LinearGradient(colors: [theme.effectiveCardColor, theme.effectiveCardColor],
+                                                 startPoint: .topLeading, endPoint: .bottomTrailing)
+                                : LinearGradient(colors: [theme.effectivePrimary, theme.effectiveTertiary],
+                                                 startPoint: .topLeading, endPoint: .bottomTrailing)
+                        )
                         .frame(width: 38, height: 38)
                     if vm.isSending {
                         ProgressView().scaleEffect(0.7).tint(.white)
                     } else {
                         Image(systemName: "arrow.up")
                             .font(.system(size: 15, weight: .bold))
-                            .foregroundColor(vm.inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                                             ? theme.effectiveSecondaryTextColor : .white)
+                            .foregroundColor(
+                                vm.inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                                    ? theme.effectiveSecondaryTextColor : .white
+                            )
                     }
                 }
             }
@@ -136,10 +140,155 @@ struct ChatView: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
-        .background(
-            theme.effectiveBackground
-                .shadow(color: .black.opacity(0.12), radius: 8, x: 0, y: -3)
-        )
+        .background(theme.effectiveBackground)
+        .overlay(alignment: .top) { Divider() }
+    }
+}
+
+// MARK: - Report Sheet
+
+struct ReportSheet: View {
+    let username: String
+
+    @EnvironmentObject var theme: ThemeManager
+    @Environment(\.dismiss) private var dismiss
+
+    private let reasons = [
+        ("exclamationmark.bubble", "Spam"),
+        ("hand.raised", "Inappropriate content"),
+        ("person.fill.xmark", "Harassment or bullying"),
+        ("questionmark.circle", "Fake profile"),
+        ("person.badge.minus", "Underage user"),
+        ("ellipsis.circle", "Other reason")
+    ]
+
+    @State private var selectedReason: String? = nil
+    @State private var otherText = ""
+    @State private var submitted = false
+
+    var body: some View {
+        NavigationView {
+            ZStack {
+                theme.effectiveBackground.ignoresSafeArea()
+
+                if submitted {
+                    submittedView
+                } else {
+                    reasonsList
+                }
+            }
+            .navigationTitle("Report \(username)")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("cancel".localized) { dismiss() }
+                        .foregroundColor(theme.effectiveSecondaryTextColor)
+                }
+                if !submitted {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button("Send") {
+                            submitted = true
+                        }
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(selectedReason != nil ? theme.effectivePrimary : theme.effectiveSecondaryTextColor)
+                        .disabled(selectedReason == nil)
+                    }
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+    }
+
+    private var reasonsList: some View {
+        ScrollView {
+            VStack(spacing: 0) {
+                Text("Why are you reporting this user?")
+                    .font(.system(size: 14))
+                    .foregroundColor(theme.effectiveSecondaryTextColor)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 24)
+                    .padding(.top, 16)
+                    .padding(.bottom, 12)
+
+                VStack(spacing: 1) {
+                    ForEach(reasons, id: \.1) { icon, reason in
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.15)) {
+                                selectedReason = reason
+                            }
+                        } label: {
+                            HStack(spacing: 14) {
+                                Image(systemName: icon)
+                                    .font(.system(size: 18))
+                                    .foregroundColor(theme.effectivePrimary)
+                                    .frame(width: 28)
+
+                                Text(reason)
+                                    .font(.system(size: 15))
+                                    .foregroundColor(theme.effectiveTextColor)
+
+                                Spacer()
+
+                                if selectedReason == reason {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundColor(theme.effectivePrimary)
+                                        .transition(.scale.combined(with: .opacity))
+                                }
+                            }
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 14)
+                            .background(
+                                selectedReason == reason
+                                    ? theme.effectivePrimary.opacity(0.08)
+                                    : theme.effectiveCardColor
+                            )
+                        }
+                        .buttonStyle(.plain)
+
+                        Divider().padding(.leading, 62)
+                    }
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+                .padding(.horizontal, 16)
+
+                // Extra text field when "Other reason" is selected
+                if selectedReason == "Other reason" {
+                    TextField("Add details (optional)", text: $otherText, axis: .vertical)
+                        .font(.system(size: 14))
+                        .foregroundColor(theme.effectiveTextColor)
+                        .lineLimit(3...6)
+                        .padding(14)
+                        .background(theme.effectiveCardColor)
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                        .padding(.horizontal, 16)
+                        .padding(.top, 12)
+                        .transition(.opacity.combined(with: .move(edge: .top)))
+                }
+            }
+            .padding(.bottom, 32)
+        }
+    }
+
+    private var submittedView: some View {
+        VStack(spacing: 20) {
+            Image(systemName: "checkmark.seal.fill")
+                .font(.system(size: 56))
+                .foregroundColor(.green)
+            Text("Report submitted")
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundColor(theme.effectiveTextColor)
+            Text("Thank you. We'll review your report and take action if needed.")
+                .font(.system(size: 14))
+                .foregroundColor(theme.effectiveSecondaryTextColor)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 32)
+            Button("Done") { dismiss() }
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundColor(.white)
+                .padding(.horizontal, 32).padding(.vertical, 12)
+                .background(theme.effectivePrimary)
+                .clipShape(Capsule())
+        }
     }
 }
 
@@ -169,9 +318,11 @@ struct MessageBubble: View {
                         .padding(.horizontal, 14)
                         .padding(.vertical, 10)
                         .background(
-                            isFromMe ?
-                            LinearGradient(colors: [theme.effectivePrimary, theme.effectiveTertiary], startPoint: .topLeading, endPoint: .bottomTrailing) :
-                            LinearGradient(colors: [theme.effectiveCardColor, theme.effectiveCardColor], startPoint: .leading, endPoint: .trailing)
+                            isFromMe
+                                ? LinearGradient(colors: [theme.effectivePrimary, theme.effectiveTertiary],
+                                                 startPoint: .topLeading, endPoint: .bottomTrailing)
+                                : LinearGradient(colors: [theme.effectiveCardColor, theme.effectiveCardColor],
+                                                 startPoint: .leading, endPoint: .trailing)
                         )
                         .clipShape(RoundedRectangle(cornerRadius: 18))
                 }
