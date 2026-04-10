@@ -8,8 +8,7 @@ struct ProfileView: View {
 
     @StateObject private var vm: ProfileViewModel
     @State private var showEditProfile = false
-    @State private var showThemeSettings = false
-    @State private var showLanguageSettings = false
+    @State private var showSettings = false
 
     init() {
         _vm = StateObject(wrappedValue: ProfileViewModel(
@@ -28,31 +27,42 @@ struct ProfileView: View {
                 ProgressView().tint(theme.effectivePrimary)
             } else {
                 ScrollView {
-                    VStack(spacing: 0) {
-                        profileHeaderSection
-                            .padding(.top, 20)
-
-                        profileCardSection
-                            .padding(.top, 20)
-
+                    VStack(spacing: 20) {
+                        // Profile card (same layout as feed)
                         if let profile = vm.profile {
-                            platformGamesSections(profile: profile)
-                                .padding(.top, 24)
+                            profileCard(profile: profile)
+                                .padding(.top, 16)
 
                             if !profile.skills.isEmpty {
                                 skillsSection(profile.skills)
-                                    .padding(.top, 20)
                             }
 
                             if !profile.subscriptions.isEmpty {
                                 subsSection(profile.subscriptions)
-                                    .padding(.top, 20)
                             }
                         }
 
-                        settingsSection
-                            .padding(.top, 28)
-                            .padding(.bottom, 40)
+                        // Settings button
+                        Button {
+                            showSettings = true
+                        } label: {
+                            HStack(spacing: 14) {
+                                Image(systemName: "gearshape.fill")
+                                    .foregroundColor(theme.effectivePrimary)
+                                    .frame(width: 22)
+                                Text("profile.settings".localized)
+                                    .font(.system(size: 15))
+                                    .foregroundColor(theme.effectiveTextColor)
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(theme.effectiveSecondaryTextColor)
+                            }
+                            .padding()
+                            .glass(cornerRadius: 14)
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 32)
                     }
                 }
             }
@@ -63,200 +73,161 @@ struct ProfileView: View {
                 .environmentObject(theme)
                 .environmentObject(localization)
         }
-        .sheet(isPresented: $showThemeSettings) {
-            NavigationView { ThemeSettingsView() }
-                .environmentObject(theme)
-                .environmentObject(localization)
-        }
-        .sheet(isPresented: $showLanguageSettings) {
-            NavigationView { LanguageSettingsView() }
+        .sheet(isPresented: $showSettings) {
+            SettingsSheet(vm: vm)
                 .environmentObject(theme)
                 .environmentObject(localization)
         }
     }
 
-    // MARK: - Header
+    // MARK: - Profile Card (feed-style)
 
-    private var profileHeaderSection: some View {
-        VStack(spacing: 12) {
-            // Avatar with camera button
-            ZStack(alignment: .bottomTrailing) {
-                AvatarView(url: vm.profile?.avatarUrl, size: 90, showBorder: true)
-
-                Button {
-                    vm.startEditing()
-                    showEditProfile = true
-                } label: {
-                    Circle()
-                        .fill(theme.effectivePrimary)
-                        .frame(width: 28, height: 28)
-                        .overlay(
-                            Image(systemName: "camera.fill")
-                                .font(.system(size: 12))
-                                .foregroundColor(.white)
-                        )
-                }
-                .offset(x: 2, y: 2)
-            }
-
-            // Username + pencil
-            HStack(spacing: 8) {
-                Text(vm.profile?.username ?? "")
-                    .font(.system(size: 22, weight: .bold))
-                    .foregroundColor(theme.effectiveTextColor)
-
-                Button {
-                    vm.startEditing()
-                    showEditProfile = true
-                } label: {
-                    Image(systemName: "pencil.circle.fill")
-                        .font(.system(size: 20))
-                        .foregroundColor(theme.effectivePrimary.opacity(0.8))
-                }
-            }
-
-            if let status = vm.profile?.status, !status.isEmpty {
-                Text(status)
-                    .font(.system(size: 14))
-                    .foregroundColor(theme.effectiveSecondaryTextColor)
-                    .multilineTextAlignment(.center)
-            }
-
-            ratingRow
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.horizontal, 16)
-    }
-
-    private var ratingRow: some View {
-        let rating = vm.profile?.rating ?? 0.0
-        return Group {
-            if rating > 0 {
-                HStack(spacing: 4) {
-                    ForEach(1...5, id: \.self) { star in
-                        Image(systemName: Double(star) <= rating ? "star.fill" : (Double(star) - 0.5 <= rating ? "star.leadinghalf.filled" : "star"))
-                            .font(.system(size: 14))
-                            .foregroundColor(.yellow)
+    private func profileCard(profile: UserProfile) -> some View {
+        VStack(spacing: 0) {
+            // ── Top: avatar + info ──
+            HStack(alignment: .top, spacing: 14) {
+                ZStack(alignment: .bottomTrailing) {
+                    AvatarView(url: profile.avatarUrl, size: 68, showBorder: true)
+                    Button {
+                        vm.startEditing()
+                        showEditProfile = true
+                    } label: {
+                        Circle()
+                            .fill(theme.effectivePrimary)
+                            .frame(width: 24, height: 24)
+                            .overlay(
+                                Image(systemName: "camera.fill")
+                                    .font(.system(size: 10))
+                                    .foregroundColor(.white)
+                            )
                     }
-                    Text(String(format: "%.1f", rating))
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundColor(theme.effectiveSecondaryTextColor)
+                    .offset(x: 2, y: 2)
                 }
-            } else {
-                Text("No ratings yet")
-                    .font(.system(size: 13))
-                    .foregroundColor(theme.effectiveSecondaryTextColor)
-            }
-        }
-    }
 
-    // MARK: - Profile Card (feed style)
+                VStack(alignment: .leading, spacing: 5) {
+                    HStack(spacing: 8) {
+                        Text(profile.username)
+                            .font(.system(size: 18, weight: .bold))
+                            .foregroundColor(theme.effectiveTextColor)
+                            .lineLimit(1)
+                        Button {
+                            vm.startEditing()
+                            showEditProfile = true
+                        } label: {
+                            Image(systemName: "pencil.circle.fill")
+                                .font(.system(size: 16))
+                                .foregroundColor(theme.effectivePrimary.opacity(0.8))
+                        }
+                    }
 
-    private var profileCardSection: some View {
-        ZStack(alignment: .bottomLeading) {
-            // Background
-            Group {
-                if let url = vm.profile?.avatarUrl {
-                    AsyncImageView(url: url)
-                        .frame(maxWidth: .infinity)
-                        .clipped()
-                } else {
-                    LinearGradient(
-                        colors: [theme.effectiveTertiary, theme.effectiveCardColor],
-                        startPoint: .topLeading, endPoint: .bottomTrailing
-                    )
-                    Image(systemName: "person.fill")
-                        .resizable()
-                        .scaledToFit()
-                        .padding(70)
-                        .foregroundColor(theme.effectiveSecondaryTextColor)
-                }
-            }
-            .frame(height: 260)
+                    if let status = profile.status, !status.isEmpty {
+                        Text(status)
+                            .font(.system(size: 13))
+                            .foregroundColor(theme.effectiveSecondaryTextColor)
+                            .lineLimit(1)
+                    }
 
-            // Gradient overlay
-            LinearGradient(
-                colors: [Color.clear, Color.black.opacity(0.8)],
-                startPoint: .center, endPoint: .bottom
-            )
+                    // Rating
+                    HStack(spacing: 3) {
+                        ForEach(1...5, id: \.self) { i in
+                            Image(systemName: "star.fill")
+                                .font(.system(size: 10))
+                                .foregroundColor(Double(i) <= profile.rating ? .yellow : theme.effectiveSecondaryTextColor.opacity(0.3))
+                        }
+                        if profile.rating > 0 {
+                            Text(String(format: "%.1f", profile.rating))
+                                .font(.system(size: 11))
+                                .foregroundColor(theme.effectiveSecondaryTextColor)
+                        }
+                    }
 
-            // Info
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Text(vm.profile?.username ?? "")
-                        .font(.system(size: 20, weight: .bold))
-                        .foregroundColor(.white)
-                    Spacer()
-                    HStack(spacing: 6) {
-                        ForEach(vm.profile?.platforms.compactMap { Platform(rawValue: $0) } ?? [], id: \.rawValue) { p in
-                            PlatformBadge(platform: p, size: 22)
+                    // Platform badges
+                    HStack(spacing: 5) {
+                        ForEach(profile.platforms.compactMap { Platform(rawValue: $0) }, id: \.rawValue) { p in
+                            PlatformBadge(platform: p, size: 17)
                         }
                     }
                 }
-
-                if let status = vm.profile?.status, !status.isEmpty {
-                    Text(status)
-                        .font(.system(size: 13))
-                        .foregroundColor(.white.opacity(0.8))
-                        .lineLimit(1)
-                }
+                Spacer()
             }
             .padding(16)
-        }
-        .frame(height: 260)
-        .cornerRadius(20)
-        .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.1), lineWidth: 1))
-        .shadow(color: .black.opacity(0.25), radius: 10, x: 0, y: 4)
-        .padding(.horizontal, 16)
-    }
 
-    // MARK: - Platform Games
+            // ── Per-platform game rows ──
+            let platforms = profile.platforms.compactMap { Platform(rawValue: $0) }
 
-    private func platformGamesSections(profile: UserProfile) -> some View {
-        VStack(alignment: .leading, spacing: 20) {
-            ForEach(profile.platforms.compactMap { Platform(rawValue: $0) }, id: \.rawValue) { platform in
-                let games = gamesForPlatform(platform, profile: profile)
-                if !games.isEmpty {
-                    VStack(alignment: .leading, spacing: 10) {
-                        HStack(spacing: 8) {
-                            PlatformBadge(platform: platform, size: 22)
-                            Text(platform.rawValue)
-                                .font(.system(size: 15, weight: .semibold))
-                                .foregroundColor(theme.effectiveTextColor)
-                        }
-                        .padding(.horizontal, 16)
-
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 8) {
-                                ForEach(games, id: \.self) { gameName in
-                                    Text(gameName)
-                                        .font(.system(size: 13, weight: .medium))
-                                        .foregroundColor(theme.effectiveTextColor)
-                                        .lineLimit(1)
-                                        .padding(.horizontal, 14)
-                                        .padding(.vertical, 8)
-                                        .background(platform.color.opacity(0.15))
-                                        .cornerRadius(16)
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 16)
-                                                .stroke(platform.color.opacity(0.4), lineWidth: 1)
-                                        )
-                                }
-                            }
-                            .padding(.horizontal, 16)
-                        }
-                    }
+            if platforms.isEmpty {
+                Text("onboarding.title.platform".localized)
+                    .font(.system(size: 13))
+                    .foregroundColor(theme.effectiveSecondaryTextColor)
+                    .padding()
+            } else {
+                ForEach(Array(platforms.enumerated()), id: \.1.rawValue) { idx, platform in
+                    Divider().padding(.horizontal, 16).background(theme.effectiveBackground.opacity(0.4))
+                    profilePlatformRow(
+                        platform: platform,
+                        games: profile.platformGames[platform.rawValue] ?? [],
+                        isTrailing: idx % 2 == 0
+                    )
                 }
             }
         }
+        .background(theme.effectiveCardColor)
+        .cornerRadius(20)
+        .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.08), lineWidth: 1))
+        .shadow(color: .black.opacity(0.2), radius: 10, x: 0, y: 4)
+        .padding(.horizontal, 16)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            vm.startEditing()
+            showEditProfile = true
+        }
     }
 
-    private func gamesForPlatform(_ platform: Platform, profile: UserProfile) -> [String] {
-        let byPlatform = profile.platformGames[platform.rawValue] ?? []
-        if !byPlatform.isEmpty { return byPlatform }
-        // Fallback: show all games for the first platform only (old profiles)
-        if profile.platforms.first == platform.rawValue { return profile.games }
-        return []
+    private func profilePlatformRow(platform: Platform, games: [String], isTrailing: Bool) -> some View {
+        VStack(alignment: isTrailing ? .trailing : .leading, spacing: 8) {
+            Text(platform.rawValue)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundColor(platform.color)
+                .padding(.horizontal, 16)
+
+            HStack(spacing: 0) {
+                if isTrailing { Spacer(minLength: 0) }
+                HStack(spacing: 10) {
+                    if games.isEmpty {
+                        Text("Tap to add games")
+                            .font(.system(size: 12))
+                            .foregroundColor(theme.effectiveSecondaryTextColor)
+                    } else {
+                        ForEach(games.prefix(5), id: \.self) { name in
+                            profileGameCircle(name: name, color: platform.color)
+                        }
+                    }
+                }
+                .padding(.horizontal, 16)
+                if !isTrailing { Spacer(minLength: 0) }
+            }
+        }
+        .padding(.vertical, 12)
+    }
+
+    private func profileGameCircle(name: String, color: Color) -> some View {
+        VStack(spacing: 3) {
+            ZStack {
+                Circle()
+                    .fill(color.opacity(0.18))
+                    .overlay(Circle().stroke(color.opacity(0.45), lineWidth: 1))
+                Text(String(name.prefix(2)).uppercased())
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundColor(color)
+            }
+            .frame(width: 44, height: 44)
+
+            Text(name.components(separatedBy: " ").first ?? name)
+                .font(.system(size: 8))
+                .foregroundColor(theme.effectiveSecondaryTextColor)
+                .lineLimit(1)
+                .frame(width: 44)
+        }
     }
 
     // MARK: - Skills
@@ -273,8 +244,7 @@ struct ProfileView: View {
                     Text(skill)
                         .font(.system(size: 13, weight: .medium))
                         .foregroundColor(theme.effectiveTextColor)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 7)
+                        .padding(.horizontal, 12).padding(.vertical, 7)
                         .background(theme.effectiveTertiary.opacity(0.3))
                         .cornerRadius(20)
                 }
@@ -303,49 +273,12 @@ struct ProfileView: View {
                             .foregroundColor(theme.effectiveTextColor)
                         Spacer()
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
+                    .padding(.horizontal, 16).padding(.vertical, 10)
                     .glass(cornerRadius: 12)
                     .padding(.horizontal, 16)
                 }
             }
         }
-    }
-
-    // MARK: - Settings
-
-    private var settingsSection: some View {
-        VStack(spacing: 10) {
-            Button { showThemeSettings = true } label: {
-                settingsRow(icon: "paintpalette.fill", title: "profile.theme".localized)
-            }
-            Button { showLanguageSettings = true } label: {
-                settingsRow(icon: "globe", title: "profile.language".localized)
-            }
-            Button { try? vm.signOut() } label: {
-                settingsRow(icon: "rectangle.portrait.and.arrow.right", title: "profile.logout".localized, isDestructive: true)
-            }
-        }
-        .padding(.horizontal, 16)
-    }
-
-    private func settingsRow(icon: String, title: String, isDestructive: Bool = false) -> some View {
-        HStack(spacing: 14) {
-            Image(systemName: icon)
-                .foregroundColor(isDestructive ? .red : theme.effectivePrimary)
-                .frame(width: 22)
-            Text(title)
-                .font(.system(size: 15))
-                .foregroundColor(isDestructive ? .red : theme.effectiveTextColor)
-            Spacer()
-            if !isDestructive {
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 12))
-                    .foregroundColor(theme.effectiveSecondaryTextColor)
-            }
-        }
-        .padding()
-        .glass(cornerRadius: 14)
     }
 }
 
@@ -492,6 +425,8 @@ struct EditProfileSheet: View {
         }
     }
 
+    // MARK: - Games Editor
+
     private var gamesEditor: some View {
         let sortedPlatforms = Platform.allCases.filter { vm.editPlatforms.contains($0) }
         return editField(title: "profile.games".localized) {
@@ -509,9 +444,12 @@ struct EditProfileSheet: View {
                                         .foregroundColor(isActive ? .white : theme.effectiveTextColor)
                                         .lineLimit(1)
                                 }
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 8)
-                                .background(isActive ? LinearGradient(colors: [theme.effectivePrimary, theme.effectiveTertiary], startPoint: .leading, endPoint: .trailing) : LinearGradient(colors: [theme.effectiveCardColor, theme.effectiveCardColor], startPoint: .leading, endPoint: .trailing))
+                                .padding(.horizontal, 12).padding(.vertical, 8)
+                                .background(
+                                    isActive
+                                        ? LinearGradient(colors: [theme.effectivePrimary, theme.effectiveTertiary], startPoint: .leading, endPoint: .trailing)
+                                        : LinearGradient(colors: [theme.effectiveCardColor, theme.effectiveCardColor], startPoint: .leading, endPoint: .trailing)
+                                )
                                 .cornerRadius(20)
                             }
                         }
@@ -527,17 +465,22 @@ struct EditProfileSheet: View {
                             .foregroundColor(theme.effectiveTextColor)
                             .autocapitalization(.none)
                             .onChange(of: vm.gameSearchQuery) { vm.searchGames($0) }
+                        if !vm.gameSearchQuery.isEmpty {
+                            Button { vm.gameSearchQuery = "" } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundColor(theme.effectiveSecondaryTextColor)
+                            }
+                        }
                     }
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 10)
+                    .padding(.horizontal, 14).padding(.vertical, 10)
                     .glass(cornerRadius: 12)
 
-                    // Selected games for this platform
-                    let selectedGames = vm.editGamesByPlatform[activePlatform] ?? []
-                    if !selectedGames.isEmpty {
+                    // Selected games chips
+                    let selected = vm.editGamesByPlatform[activePlatform] ?? []
+                    if !selected.isEmpty {
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 8) {
-                                ForEach(selectedGames) { tag in
+                                ForEach(selected) { tag in
                                     Button { vm.toggleGame(tag, for: activePlatform) } label: {
                                         HStack(spacing: 6) {
                                             Text(tag.name)
@@ -548,8 +491,7 @@ struct EditProfileSheet: View {
                                                 .font(.system(size: 10, weight: .bold))
                                                 .foregroundColor(.white.opacity(0.8))
                                         }
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 7)
+                                        .padding(.horizontal, 12).padding(.vertical, 7)
                                         .background(activePlatform.color.opacity(0.85))
                                         .cornerRadius(16)
                                     }
@@ -561,32 +503,38 @@ struct EditProfileSheet: View {
                     // Search results
                     if vm.isSearchingGames {
                         HStack { Spacer(); ProgressView().tint(theme.effectivePrimary); Spacer() }
-                    } else if !vm.gameSearchResults.isEmpty && !vm.gameSearchQuery.isEmpty {
-                        VStack(spacing: 6) {
-                            ForEach(vm.gameSearchResults.prefix(5)) { tag in
-                                let isAdded = (vm.editGamesByPlatform[activePlatform] ?? []).contains(where: { $0.name == tag.name })
-                                Button { vm.toggleGame(tag, for: activePlatform) } label: {
-                                    HStack(spacing: 12) {
-                                        if let url = tag.coverUrl {
-                                            AsyncImageView(url: url)
-                                                .frame(width: 44, height: 30)
-                                                .clipShape(RoundedRectangle(cornerRadius: 6))
-                                        } else {
-                                            RoundedRectangle(cornerRadius: 6)
-                                                .fill(theme.effectiveCardColor)
-                                                .frame(width: 44, height: 30)
+                    } else if !vm.gameSearchQuery.isEmpty {
+                        if vm.gameSearchResults.isEmpty {
+                            Text("No results — check RAWG_API_KEY in Secrets.xcconfig")
+                                .font(.system(size: 12))
+                                .foregroundColor(theme.effectiveSecondaryTextColor)
+                                .padding(.top, 4)
+                        } else {
+                            VStack(spacing: 6) {
+                                ForEach(vm.gameSearchResults.prefix(5)) { tag in
+                                    let isAdded = (vm.editGamesByPlatform[activePlatform] ?? []).contains { $0.name == tag.name }
+                                    Button { vm.toggleGame(tag, for: activePlatform) } label: {
+                                        HStack(spacing: 12) {
+                                            if let url = tag.coverUrl {
+                                                AsyncImageView(url: url)
+                                                    .frame(width: 44, height: 30)
+                                                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                                            } else {
+                                                RoundedRectangle(cornerRadius: 6)
+                                                    .fill(theme.effectiveCardColor)
+                                                    .frame(width: 44, height: 30)
+                                            }
+                                            Text(tag.name)
+                                                .font(.system(size: 14))
+                                                .foregroundColor(theme.effectiveTextColor)
+                                                .lineLimit(1)
+                                            Spacer()
+                                            Image(systemName: isAdded ? "checkmark.circle.fill" : "plus.circle")
+                                                .foregroundColor(isAdded ? theme.effectivePrimary : theme.effectiveSecondaryTextColor)
                                         }
-                                        Text(tag.name)
-                                            .font(.system(size: 14))
-                                            .foregroundColor(theme.effectiveTextColor)
-                                            .lineLimit(1)
-                                        Spacer()
-                                        Image(systemName: isAdded ? "checkmark.circle.fill" : "plus.circle")
-                                            .foregroundColor(isAdded ? theme.effectivePrimary : theme.effectiveSecondaryTextColor)
+                                        .padding(.horizontal, 12).padding(.vertical, 8)
+                                        .glass(cornerRadius: 12)
                                     }
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 8)
-                                    .glass(cornerRadius: 12)
                                 }
                             }
                         }
@@ -606,85 +554,93 @@ struct EditProfileSheet: View {
     }
 }
 
-// MARK: - Theme Settings
+// MARK: - Settings Sheet
 
-struct ThemeSettingsView: View {
+struct SettingsSheet: View {
+    @ObservedObject var vm: ProfileViewModel
     @EnvironmentObject var theme: ThemeManager
     @EnvironmentObject var localization: LocalizationManager
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        ZStack {
-            theme.effectiveBackground.ignoresSafeArea()
-            List {
-                Section("Color Theme") {
-                    ForEach(CardColorTheme.all) { ct in
-                        Button {
-                            theme.setCardColor(ct)
+        NavigationView {
+            ZStack {
+                theme.effectiveBackground.ignoresSafeArea()
+                List {
+                    Section("Color Theme") {
+                        ForEach(CardColorTheme.all) { ct in
+                            Button {
+                                theme.setCardColor(ct)
+                            } label: {
+                                HStack {
+                                    Circle().fill(ct.primary).frame(width: 24, height: 24)
+                                    Text(ct.name).foregroundColor(theme.effectiveTextColor)
+                                    Spacer()
+                                    if theme.currentCardColor.id == ct.id {
+                                        Image(systemName: "checkmark").foregroundColor(theme.effectivePrimary)
+                                    }
+                                }
+                            }
+                            .listRowBackground(theme.effectiveCardColor)
+                        }
+                    }
+                    Section("App Theme") {
+                        ForEach(AppTheme.allCases, id: \.rawValue) { appTheme in
+                            Button {
+                                theme.setTheme(appTheme)
+                            } label: {
+                                HStack {
+                                    Text(appTheme.displayName).foregroundColor(theme.effectiveTextColor)
+                                    Spacer()
+                                    if theme.currentTheme == appTheme {
+                                        Image(systemName: "checkmark").foregroundColor(theme.effectivePrimary)
+                                    }
+                                }
+                            }
+                            .listRowBackground(theme.effectiveCardColor)
+                        }
+                    }
+                    Section("Language") {
+                        ForEach([("ru", "Русский"), ("en", "English"), ("uk", "Українська"), ("be", "Беларуская")], id: \.0) { code, name in
+                            Button {
+                                localization.setLanguage(code)
+                            } label: {
+                                HStack {
+                                    Text(name).foregroundColor(theme.effectiveTextColor)
+                                    Spacer()
+                                    if localization.currentLanguage == code {
+                                        Image(systemName: "checkmark").foregroundColor(theme.effectivePrimary)
+                                    }
+                                }
+                            }
+                            .listRowBackground(theme.effectiveCardColor)
+                        }
+                    }
+                    Section {
+                        Button(role: .destructive) {
+                            try? vm.signOut()
+                            dismiss()
                         } label: {
                             HStack {
-                                Circle().fill(ct.primary).frame(width: 24, height: 24)
-                                Text(ct.name).foregroundColor(theme.effectiveTextColor)
-                                Spacer()
-                                if theme.currentCardColor.id == ct.id {
-                                    Image(systemName: "checkmark").foregroundColor(theme.effectivePrimary)
-                                }
+                                Image(systemName: "rectangle.portrait.and.arrow.right")
+                                Text("profile.logout".localized)
                             }
                         }
                         .listRowBackground(theme.effectiveCardColor)
                     }
                 }
-                Section("App Theme") {
-                    ForEach(AppTheme.allCases, id: \.rawValue) { appTheme in
-                        Button {
-                            theme.setTheme(appTheme)
-                        } label: {
-                            HStack {
-                                Text(appTheme.displayName).foregroundColor(theme.effectiveTextColor)
-                                Spacer()
-                                if theme.currentTheme == appTheme {
-                                    Image(systemName: "checkmark").foregroundColor(theme.effectivePrimary)
-                                }
-                            }
-                        }
-                        .listRowBackground(theme.effectiveCardColor)
+                .scrollContentBackground(.hidden)
+            }
+            .navigationTitle("profile.settings".localized)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button { dismiss() } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundColor(theme.effectiveSecondaryTextColor)
                     }
                 }
             }
-            .scrollContentBackground(.hidden)
         }
-        .navigationTitle("profile.theme".localized)
-    }
-}
-
-// MARK: - Language Settings
-
-struct LanguageSettingsView: View {
-    @EnvironmentObject var theme: ThemeManager
-    @EnvironmentObject var localization: LocalizationManager
-
-    private let languages = [("ru", "Русский"), ("en", "English"), ("uk", "Українська"), ("be", "Беларуская")]
-
-    var body: some View {
-        ZStack {
-            theme.effectiveBackground.ignoresSafeArea()
-            List {
-                ForEach(languages, id: \.0) { (code, name) in
-                    Button {
-                        localization.setLanguage(code)
-                    } label: {
-                        HStack {
-                            Text(name).foregroundColor(theme.effectiveTextColor)
-                            Spacer()
-                            if localization.currentLanguage == code {
-                                Image(systemName: "checkmark").foregroundColor(theme.effectivePrimary)
-                            }
-                        }
-                    }
-                    .listRowBackground(theme.effectiveCardColor)
-                }
-            }
-            .scrollContentBackground(.hidden)
-        }
-        .navigationTitle("profile.language".localized)
     }
 }

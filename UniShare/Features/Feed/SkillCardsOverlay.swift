@@ -53,32 +53,72 @@ struct SkillSwipeCard: View {
 
     var body: some View {
         GeometryReader { geo in
-            ZStack(alignment: .bottomLeading) {
-                // Background
-                LinearGradient(
-                    colors: [theme.effectiveTertiary.opacity(0.6), theme.effectiveBackground],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-
-                // Avatar top
-                if let url = card.avatarUrl {
-                    VStack {
-                        AsyncImageView(url: url)
-                            .frame(height: geo.size.height * 0.5)
-                            .clipped()
+            ZStack {
+                VStack(spacing: 0) {
+                    // Top info
+                    HStack(alignment: .top, spacing: 14) {
+                        AvatarView(url: card.avatarUrl, size: 64, showBorder: true)
+                        VStack(alignment: .leading, spacing: 5) {
+                            Text(card.username)
+                                .font(.system(size: 18, weight: .bold))
+                                .foregroundColor(theme.effectiveTextColor)
+                                .lineLimit(1)
+                            if let status = card.status, !status.isEmpty {
+                                Text(status)
+                                    .font(.system(size: 13))
+                                    .foregroundColor(theme.effectiveSecondaryTextColor)
+                                    .lineLimit(1)
+                            }
+                            HStack(spacing: 5) {
+                                ForEach(card.platforms, id: \.rawValue) { p in PlatformBadge(platform: p, size: 16) }
+                            }
+                        }
                         Spacer()
                     }
+                    .padding(16)
+
+                    Divider().background(theme.effectiveBackground.opacity(0.4))
+
+                    // Skills section
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 12) {
+                            if !card.skills.isEmpty {
+                                Text("Skills")
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .foregroundColor(theme.effectiveTertiary)
+                                    .padding(.horizontal, 16)
+                                FlowLayout(spacing: 8) {
+                                    ForEach(card.skills, id: \.self) { skill in
+                                        Text(skill)
+                                            .font(.system(size: 13, weight: .medium))
+                                            .foregroundColor(theme.effectiveTextColor)
+                                            .padding(.horizontal, 12).padding(.vertical, 7)
+                                            .background(theme.effectiveTertiary.opacity(0.2))
+                                            .cornerRadius(20)
+                                    }
+                                }
+                                .padding(.horizontal, 16)
+                            } else {
+                                Text("No skills listed")
+                                    .font(.system(size: 13))
+                                    .foregroundColor(theme.effectiveSecondaryTextColor)
+                                    .padding(16)
+                            }
+                        }
+                        .padding(.vertical, 12)
+                    }
+                    Spacer(minLength: 0)
                 }
+                .background(theme.effectiveCardColor)
+                .clipShape(RoundedRectangle(cornerRadius: 24))
+                .overlay(RoundedRectangle(cornerRadius: 24).stroke(Color.white.opacity(0.08), lineWidth: 1))
+                .shadow(color: .black.opacity(0.28), radius: 12, x: 0, y: 6)
+                .scaleEffect(isTop ? 1.0 : 0.95)
+                .offset(x: isTop ? offset.width : 0, y: isTop ? offset.height * 0.3 : 0)
+                .rotationEffect(.degrees(isTop ? rotation : 0))
+                .gesture(isTop ? dragGesture(size: geo.size) : nil)
+                .animation(.spring(response: 0.5, dampingFraction: 0.8), value: isTop)
 
-                // Gradient overlay
-                LinearGradient(
-                    colors: [Color.clear, Color.black.opacity(0.9)],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-
-                // Swipe indicators
                 if isTop {
                     if offset.width > 30 {
                         Text("MATCH")
@@ -103,46 +143,10 @@ struct SkillSwipeCard: View {
                             .opacity(Double(min(-offset.width / threshold, 1.0)))
                     }
                 }
-
-                // Info
-                VStack(alignment: .leading, spacing: 10) {
-                    HStack {
-                        Text(card.username)
-                            .font(.system(size: 22, weight: .bold))
-                            .foregroundColor(.white)
-                        Spacer()
-                    }
-
-                    if !card.skills.isEmpty {
-                        FlowLayout(spacing: 6) {
-                            ForEach(card.skills.prefix(5), id: \.self) { skill in
-                                Text(skill)
-                                    .font(.system(size: 12, weight: .medium))
-                                    .foregroundColor(.white)
-                                    .padding(.horizontal, 10)
-                                    .padding(.vertical, 5)
-                                    .background(Color.white.opacity(0.2))
-                                    .cornerRadius(16)
-                            }
-                        }
-                    }
-
-                    if !card.platforms.isEmpty {
-                        PlatformBadgeRow(platforms: card.platforms, size: 28)
-                    }
-                }
-                .padding()
             }
             .frame(width: geo.size.width, height: geo.size.height)
-            .cornerRadius(24)
-            .shadow(color: .black.opacity(0.3), radius: 12)
-            .scaleEffect(isTop ? 1.0 : 0.95)
-            .offset(x: isTop ? offset.width : 0, y: isTop ? offset.height * 0.3 : 0)
-            .rotationEffect(.degrees(isTop ? rotation : 0))
-            .gesture(isTop ? dragGesture(size: geo.size) : nil)
-            .animation(.spring(response: 0.5, dampingFraction: 0.8), value: isTop)
         }
-        .frame(height: 520)
+        .frame(height: 460)
     }
 
     private func dragGesture(size: CGSize) -> some Gesture {

@@ -46,6 +46,7 @@ struct AIView: View {
                         }
                         .padding(.vertical, 12)
                     }
+                    .scrollDismissesKeyboard(.immediately)
                     .onChange(of: vm.messages.count) { _ in
                         withAnimation {
                             if let last = vm.messages.last { proxy.scrollTo(last.id, anchor: .bottom) }
@@ -169,10 +170,10 @@ struct AIView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
         }
-        .background(
-            theme.effectiveBackground
-                .shadow(color: .black.opacity(0.15), radius: 10, x: 0, y: -4)
-        )
+        .background(theme.effectiveBackground)
+        .overlay(alignment: .top) {
+            Divider().background(theme.effectiveCardColor.opacity(0.6))
+        }
     }
 }
 

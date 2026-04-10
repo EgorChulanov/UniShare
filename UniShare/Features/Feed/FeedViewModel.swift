@@ -81,11 +81,13 @@ final class FeedViewModel: ObservableObject {
             platform: platforms.first,
             platforms: platforms,
             tags: tags,
+            platformGames: profile.platformGames,
             userId: profile.uid,
             avatarUrl: profile.avatarUrl,
             subscriptions: profile.subscriptions,
             skills: profile.skills,
-            status: profile.status
+            status: profile.status,
+            rating: profile.rating
         )
     }
 

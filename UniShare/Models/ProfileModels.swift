@@ -79,11 +79,13 @@ struct ProfileCard: Identifiable {
     var platform: Platform?
     var platforms: [Platform]
     var tags: [GameTag]
+    var platformGames: [String: [String]]
     var userId: String
     var avatarUrl: String?
     var subscriptions: [LocalUserSubscription]
     var skills: [String]
     var status: String?
+    var rating: Double
 
     init(
         username: String,
@@ -91,22 +93,26 @@ struct ProfileCard: Identifiable {
         platform: Platform? = nil,
         platforms: [Platform] = [],
         tags: [GameTag] = [],
+        platformGames: [String: [String]] = [:],
         userId: String,
         avatarUrl: String? = nil,
         subscriptions: [LocalUserSubscription] = [],
         skills: [String] = [],
-        status: String? = nil
+        status: String? = nil,
+        rating: Double = 0.0
     ) {
         self.username = username
         self.subtitle = subtitle
         self.platform = platform
         self.platforms = platforms
         self.tags = tags
+        self.platformGames = platformGames
         self.userId = userId
         self.avatarUrl = avatarUrl
         self.subscriptions = subscriptions
         self.skills = skills
         self.status = status
+        self.rating = rating
     }
 }
 
