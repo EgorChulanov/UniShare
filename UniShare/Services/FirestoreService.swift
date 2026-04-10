@@ -92,13 +92,18 @@ final class FirestoreService {
     }
 
     func listenToChats(uid: String, completion: @escaping ([Chat]) -> Void) -> ListenerRegistration {
+        // No orderBy — avoids composite Firestore index that causes the listener
+        // to silently error and wipe the list on first real fetch.
         db.collection(AppConstants.Firestore.chats)
             .whereField("participants", arrayContains: uid)
-            .order(by: "lastMessageAt", descending: true)
-            .addSnapshotListener { snapshot, _ in
-                let chats = snapshot?.documents.compactMap { doc in
-                    Chat.from(doc.data(), id: doc.documentID, currentUid: uid)
-                } ?? []
+            .addSnapshotListener { snapshot, error in
+                if let error = error {
+                    print("Chats listener error: \(error)")
+                    return
+                }
+                let chats = (snapshot?.documents ?? [])
+                    .compactMap { Chat.from($0.data(), id: $0.documentID, currentUid: uid) }
+                    .sorted { $0.lastMessageAt > $1.lastMessageAt }
                 completion(chats)
             }
     }

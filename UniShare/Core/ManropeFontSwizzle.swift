@@ -36,7 +36,7 @@ extension UIFont {
 
     private class func _manropeName(for weight: UIFont.Weight) -> String {
         switch weight {
-        case .black, .heavy:        return "Manrope-ExtraBold"
+        case .black, .heavy:        return "ArchivoBlack-Regular"
         case .bold:                 return "Manrope-Bold"
         case .semibold:             return "Manrope-SemiBold"
         case .medium:               return "Manrope-Medium"
