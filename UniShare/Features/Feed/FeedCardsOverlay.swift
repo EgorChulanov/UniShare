@@ -50,6 +50,7 @@ struct SwipeCard: View {
 
     @State private var offset: CGSize = .zero
     @State private var rotation: Double = 0
+    @State private var showDetail = false
 
     @EnvironmentObject var theme: ThemeManager
 
@@ -81,6 +82,10 @@ struct SwipeCard: View {
             .frame(width: geo.size.width, height: geo.size.height)
         }
         .frame(height: 460)
+        .sheet(isPresented: $showDetail) {
+            ProfileDetailSheet(card: card)
+                .environmentObject(theme)
+        }
     }
 
     // MARK: - Top Info
@@ -102,7 +107,6 @@ struct SwipeCard: View {
                         .lineLimit(1)
                 }
 
-                // Rating
                 HStack(spacing: 3) {
                     ForEach(1...5, id: \.self) { i in
                         Image(systemName: "star.fill")
@@ -116,14 +120,24 @@ struct SwipeCard: View {
                     }
                 }
 
-                // Platform badges
                 HStack(spacing: 5) {
                     ForEach(card.platforms, id: \.rawValue) { p in
                         PlatformBadge(platform: p, size: 16)
                     }
                 }
             }
+
             Spacer()
+
+            // Info button — tap to open full profile detail
+            Button {
+                showDetail = true
+            } label: {
+                Image(systemName: "info.circle.fill")
+                    .font(.system(size: 22))
+                    .foregroundColor(theme.effectivePrimary.opacity(0.85))
+            }
+            .buttonStyle(.plain)
         }
         .padding(16)
     }
@@ -139,65 +153,33 @@ struct SwipeCard: View {
                     .foregroundColor(theme.effectiveSecondaryTextColor)
                 Spacer()
             } else {
-                VStack(spacing: 0) {
-                    ForEach(Array(card.platforms.enumerated()), id: \.1.rawValue) { idx, platform in
-                        let games = card.platformGames[platform.rawValue] ?? []
-                        platformRow(platform: platform, games: games, isTrailing: idx % 2 == 0)
-                        if idx < card.platforms.count - 1 {
-                            Divider().padding(.horizontal, 16).background(theme.effectiveBackground.opacity(0.3))
+                ScrollView(.vertical, showsIndicators: false) {
+                    VStack(spacing: 0) {
+                        ForEach(Array(card.platforms.enumerated()), id: \.1.rawValue) { idx, platform in
+                            let games = card.platformGames[platform.rawValue] ?? []
+                            platformRow(platform: platform, games: games, isTrailing: idx % 2 == 0)
+                            if idx < card.platforms.count - 1 {
+                                Divider()
+                                    .padding(.horizontal, 16)
+                                    .background(theme.effectiveBackground.opacity(0.3))
+                            }
                         }
                     }
-                    Spacer(minLength: 0)
                 }
             }
         }
     }
 
     private func platformRow(platform: Platform, games: [String], isTrailing: Bool) -> some View {
-        VStack(alignment: isTrailing ? .trailing : .leading, spacing: 8) {
+        VStack(alignment: isTrailing ? .trailing : .leading, spacing: 6) {
             Text(platform.rawValue)
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundColor(platform.color)
                 .padding(.horizontal, 16)
 
-            HStack(spacing: 0) {
-                if isTrailing { Spacer(minLength: 0) }
-                HStack(spacing: 10) {
-                    if games.isEmpty {
-                        Text("—")
-                            .font(.system(size: 12))
-                            .foregroundColor(theme.effectiveSecondaryTextColor)
-                    } else {
-                        ForEach(games.prefix(5), id: \.self) { name in
-                            gameCircle(name: name, color: platform.color)
-                        }
-                    }
-                }
-                .padding(.horizontal, 16)
-                if !isTrailing { Spacer(minLength: 0) }
-            }
+            GameCirclesRow(games: games, color: platform.color, isTrailing: isTrailing)
         }
-        .padding(.vertical, 12)
-    }
-
-    private func gameCircle(name: String, color: Color) -> some View {
-        VStack(spacing: 3) {
-            ZStack {
-                Circle()
-                    .fill(color.opacity(0.18))
-                    .overlay(Circle().stroke(color.opacity(0.45), lineWidth: 1))
-                Text(String(name.prefix(2)).uppercased())
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundColor(color)
-            }
-            .frame(width: 44, height: 44)
-
-            Text(name.components(separatedBy: " ").first ?? name)
-                .font(.system(size: 8))
-                .foregroundColor(theme.effectiveSecondaryTextColor)
-                .lineLimit(1)
-                .frame(width: 44)
-        }
+        .padding(.vertical, 10)
     }
 
     // MARK: - Gesture
@@ -284,5 +266,143 @@ struct AsyncImageView: View {
         .task(id: url) {
             image = await AvatarCacheService.shared.loadImage(from: url)
         }
+    }
+}
+
+// MARK: - Profile Detail Sheet (from feed card)
+
+struct ProfileDetailSheet: View {
+    let card: ProfileCard
+
+    @EnvironmentObject var theme: ThemeManager
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationView {
+            ZStack {
+                theme.effectiveBackground.ignoresSafeArea()
+
+                ScrollView {
+                    VStack(spacing: 20) {
+                        // Hero header
+                        heroHeader
+
+                        // Per-platform game rows
+                        if !card.platforms.isEmpty {
+                            VStack(spacing: 0) {
+                                ForEach(Array(card.platforms.enumerated()), id: \.1.rawValue) { idx, platform in
+                                    let games = card.platformGames[platform.rawValue] ?? []
+                                    if !games.isEmpty {
+                                        VStack(alignment: .leading, spacing: 8) {
+                                            HStack(spacing: 8) {
+                                                PlatformBadge(platform: platform, size: 18)
+                                                Text(platform.rawValue)
+                                                    .font(.system(size: 13, weight: .semibold))
+                                                    .foregroundColor(platform.color)
+                                            }
+                                            .padding(.horizontal, 16)
+
+                                            GameCirclesRow(games: games, color: platform.color, isTrailing: false)
+                                        }
+                                        .padding(.vertical, 12)
+
+                                        if idx < card.platforms.count - 1 {
+                                            Divider().padding(.horizontal, 16)
+                                        }
+                                    }
+                                }
+                            }
+                            .background(theme.effectiveCardColor)
+                            .clipShape(RoundedRectangle(cornerRadius: 20))
+                            .padding(.horizontal, 16)
+                        }
+
+                        // Skills
+                        if !card.skills.isEmpty {
+                            VStack(alignment: .leading, spacing: 10) {
+                                Text("Skills")
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundColor(theme.effectiveSecondaryTextColor)
+                                    .padding(.horizontal, 16)
+
+                                FlowLayout(spacing: 8) {
+                                    ForEach(card.skills, id: \.self) { skill in
+                                        Text(skill)
+                                            .font(.system(size: 13, weight: .medium))
+                                            .foregroundColor(theme.effectiveTextColor)
+                                            .padding(.horizontal, 12).padding(.vertical, 7)
+                                            .background(theme.effectiveTertiary.opacity(0.2))
+                                            .cornerRadius(20)
+                                    }
+                                }
+                                .padding(.horizontal, 16)
+                            }
+                            .padding(.vertical, 12)
+                            .background(theme.effectiveCardColor)
+                            .clipShape(RoundedRectangle(cornerRadius: 20))
+                            .padding(.horizontal, 16)
+                        }
+                    }
+                    .padding(.bottom, 40)
+                }
+            }
+            .navigationTitle(card.username)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button { dismiss() } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundColor(theme.effectiveSecondaryTextColor)
+                    }
+                }
+            }
+        }
+    }
+
+    private var heroHeader: some View {
+        ZStack(alignment: .bottomLeading) {
+            // Background gradient
+            LinearGradient(
+                colors: [theme.effectiveTertiary.opacity(0.6), theme.effectiveCardColor],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .frame(height: 220)
+            .clipShape(RoundedRectangle(cornerRadius: 20))
+
+            // Fade overlay
+            LinearGradient(colors: [.clear, .black.opacity(0.7)], startPoint: .top, endPoint: .bottom)
+                .frame(height: 220)
+                .clipShape(RoundedRectangle(cornerRadius: 20))
+
+            VStack(alignment: .leading, spacing: 6) {
+                AvatarView(url: card.avatarUrl, size: 64, showBorder: true)
+                Text(card.username)
+                    .font(.system(size: 22, weight: .bold))
+                    .foregroundColor(.white)
+                if let status = card.status, !status.isEmpty {
+                    Text(status)
+                        .font(.system(size: 13))
+                        .foregroundColor(.white.opacity(0.8))
+                }
+                HStack(spacing: 4) {
+                    HStack(spacing: 2) {
+                        ForEach(1...5, id: \.self) { i in
+                            Image(systemName: "star.fill")
+                                .font(.system(size: 10))
+                                .foregroundColor(Double(i) <= card.rating ? .yellow : .white.opacity(0.3))
+                        }
+                    }
+                    HStack(spacing: 6) {
+                        ForEach(card.platforms, id: \.rawValue) { p in
+                            PlatformBadge(platform: p, size: 18)
+                        }
+                    }
+                }
+            }
+            .padding(16)
+        }
+        .frame(height: 220)
+        .padding(.horizontal, 16)
     }
 }

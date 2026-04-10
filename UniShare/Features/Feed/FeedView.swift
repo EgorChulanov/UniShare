@@ -20,7 +20,7 @@ struct FeedView: View {
             theme.effectiveBackground.ignoresSafeArea()
 
             VStack(spacing: 0) {
-                // Top segment picker (Exchange / Skills) — extra top padding avoids Dynamic Island
+                // Pill segment picker — small Capsule buttons
                 segmentPicker
                     .padding(.horizontal, 16)
                     .padding(.top, 20)
@@ -57,7 +57,7 @@ struct FeedView: View {
                 .padding(.horizontal, 16)
                 .frame(maxHeight: .infinity)
 
-                // Small AirShare link at bottom
+                // AirShare link
                 Button {
                     TabBarState.shared.showAirShare = true
                 } label: {
@@ -75,10 +75,10 @@ struct FeedView: View {
         .task { await vm.loadInitialCards() }
     }
 
-    // MARK: - Segment Picker
+    // MARK: - Pill Segment Picker
 
     private var segmentPicker: some View {
-        HStack(spacing: 0) {
+        HStack(spacing: 8) {
             ForEach(FeedSegment.allCases, id: \.rawValue) { segment in
                 Button {
                     withAnimation(.easeInOut(duration: 0.2)) {
@@ -86,20 +86,39 @@ struct FeedView: View {
                     }
                 } label: {
                     Text(segment.localizedKey.localized)
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(.system(size: 13, weight: .semibold))
                         .foregroundColor(vm.selectedSegment == segment ? .white : theme.effectiveSecondaryTextColor)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 40)
+                        .padding(.horizontal, 18)
+                        .padding(.vertical, 8)
                         .background(
-                            vm.selectedSegment == segment
-                                ? LinearGradient(colors: [theme.effectivePrimary, theme.effectiveTertiary], startPoint: .leading, endPoint: .trailing)
-                                : LinearGradient(colors: [Color.clear, Color.clear], startPoint: .leading, endPoint: .trailing)
+                            Group {
+                                if vm.selectedSegment == segment {
+                                    LinearGradient(
+                                        colors: [theme.effectivePrimary, theme.effectiveTertiary],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                } else {
+                                    LinearGradient(
+                                        colors: [Color.clear, Color.clear],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                }
+                            }
                         )
-                        .cornerRadius(10)
+                        .clipShape(Capsule())
+                        .overlay(
+                            Capsule().stroke(
+                                vm.selectedSegment == segment
+                                    ? Color.clear
+                                    : theme.effectiveSecondaryTextColor.opacity(0.35),
+                                lineWidth: 1
+                            )
+                        )
                 }
+                .buttonStyle(.plain)
             }
         }
-        .padding(4)
-        .glass(cornerRadius: 14)
     }
 }

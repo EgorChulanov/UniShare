@@ -28,8 +28,19 @@ final class RawgService {
         Bundle.main.infoDictionary?["RAWG_API_KEY"] as? String ?? ""
     }
 
+    // In-memory cache to reduce API quota usage
+    private var searchCache: [String: [RawgGame]] = [:]
+
     func searchGames(_ query: String) async -> [RawgGame] {
-        guard !query.isEmpty, let encoded = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else {
+        let key = query.lowercased().trimmingCharacters(in: .whitespaces)
+        guard !key.isEmpty else { return [] }
+
+        // Return cached result if available
+        if let cached = searchCache[key] {
+            return cached
+        }
+
+        guard let encoded = key.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else {
             return []
         }
         let urlString = "\(baseURL)/games?key=\(apiKey)&search=\(encoded)&page_size=10"
@@ -38,6 +49,7 @@ final class RawgService {
         do {
             let (data, _) = try await URLSession.shared.data(from: url)
             let response = try JSONDecoder().decode(RawgSearchResponse.self, from: data)
+            searchCache[key] = response.results
             return response.results
         } catch {
             print("Rawg search error: \(error)")
