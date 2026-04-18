@@ -10,6 +10,7 @@ struct TabBarView: View {
     @State private var showAirShare = false
 
     var body: some View {
+        ZStack {
         TabView(selection: $tabState.selectedTab) {
             FeedView()
                 .tabItem {
@@ -59,5 +60,9 @@ struct TabBarView: View {
         .sheet(isPresented: $tabState.showAirShare) {
             AirShareView()
         }
+
+        // Global grain texture over all tabs
+        GrainOverlay(opacity: 0.045)
+        } // ZStack
     }
 }
