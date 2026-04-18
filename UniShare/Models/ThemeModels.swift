@@ -72,7 +72,19 @@ struct CardColorTheme: Identifiable, Equatable {
         cardSurface: Color(hex: "#181818")
     )
 
+    // Pantone 2025: Mocha Mousse — warm dark cocoa surfaces
+    static let mochaMousse2025 = CardColorTheme(
+        id: "mocha_mousse_2025",
+        name: "Mocha Mousse 2025",
+        primary: Color(hex: "#A47864"),
+        background: Color(hex: "#120D0A"),
+        tertiary: Color(hex: "#6667AB"),   // Very Peri as secondary accent
+        neutral: Color(hex: "#1F1612"),
+        cardSurface: Color(hex: "#1F1612")
+    )
+
     static let all: [CardColorTheme] = [
+        .mochaMousse2025,
         .liquidNebula,
         .peachFuzz2024,
         .vivaMagenta2023,

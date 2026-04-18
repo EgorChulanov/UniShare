@@ -5,14 +5,14 @@ final class ThemeManager: ObservableObject {
     static let shared = ThemeManager()
 
     @AppStorage("app_theme") private var storedTheme: String = AppTheme.dark.rawValue
-    @AppStorage("card_color_theme") private var storedCardColorId: String = "liquid_nebula"
+    @AppStorage("card_color_theme") private var storedCardColorId: String = "mocha_mousse_2025"
 
     @Published var currentTheme: AppTheme = .dark
-    @Published var currentCardColor: CardColorTheme = .liquidNebula
+    @Published var currentCardColor: CardColorTheme = .mochaMousse2025
 
     private init() {
         currentTheme = AppTheme(rawValue: storedTheme) ?? .dark
-        currentCardColor = CardColorTheme.all.first { $0.id == storedCardColorId } ?? .liquidNebula
+        currentCardColor = CardColorTheme.all.first { $0.id == storedCardColorId } ?? .mochaMousse2025
     }
 
     // MARK: - Computed Appearance

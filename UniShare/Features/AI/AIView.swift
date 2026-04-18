@@ -92,28 +92,24 @@ struct AIView: View {
         .padding(.vertical, 8)
     }
 
-    // MARK: - Empty State
+    // MARK: - Empty State (gradient bubble + prompt)
 
     private var emptyState: some View {
-        VStack(spacing: 16) {
-            ZStack {
-                Circle()
-                    .fill(theme.effectivePrimary.opacity(0.15))
-                    .frame(width: 80, height: 80)
-                Image(systemName: "sparkles")
-                    .font(.system(size: 32))
-                    .foregroundColor(theme.effectivePrimary)
+        VStack(spacing: 24) {
+            AIBubbleView(isThinking: vm.isThinking)
+                .padding(.top, 20)
+
+            VStack(spacing: 8) {
+                Text("ai.title".localized)
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundColor(theme.effectiveTextColor)
+                Text("Tap the bubble or ask anything about games,\nexchange tips, or find teammates!")
+                    .font(.system(size: 14))
+                    .foregroundColor(theme.effectiveSecondaryTextColor)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 32)
             }
-            Text("ai.title".localized)
-                .font(.system(size: 22, weight: .bold))
-                .foregroundColor(theme.effectiveTextColor)
-            Text("Ask me anything about games, exchange tips, or get personalized recommendations!")
-                .font(.system(size: 14))
-                .foregroundColor(theme.effectiveSecondaryTextColor)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 40)
         }
-        .padding(.top, 40)
     }
 
     // MARK: - Input Bar
