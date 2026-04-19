@@ -21,6 +21,7 @@ final class ChatViewModel: ObservableObject {
     private let storage: StorageService
 
     var myUid: String { auth.uid ?? "" }
+    var partnerUid: String? { chat.participants.first { $0 != auth.uid } }
 
     init(chat: Chat, auth: FirebaseAuthService, firestore: FirestoreService, storage: StorageService) {
         self.chat = chat

@@ -13,7 +13,7 @@ struct AirShareView: View {
     var body: some View {
         ZStack {
             theme.effectiveBackground.ignoresSafeArea()
-            GrainOverlay(opacity: 0.05)
+            GrainOverlay(opacity: 0.14)
 
             // Ambient glow behind phones
             Circle()
@@ -246,7 +246,7 @@ struct AirShareProfileCard: View {
     var body: some View {
         ZStack {
             theme.effectiveBackground.ignoresSafeArea()
-            GrainOverlay(opacity: 0.05)
+            GrainOverlay(opacity: 0.14)
 
             VStack(spacing: 0) {
                 Capsule()

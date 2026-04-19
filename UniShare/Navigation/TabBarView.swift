@@ -62,7 +62,7 @@ struct TabBarView: View {
         }
 
         // Global grain texture over all tabs
-        GrainOverlay(opacity: 0.045)
+        GrainOverlay(opacity: 0.12)
         } // ZStack
     }
 }

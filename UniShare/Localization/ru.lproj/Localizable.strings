@@ -61,6 +61,7 @@
 "chat.send" = "Отправить";
 "chat.empty" = "Пока нет сообщений";
 "chat.empty.subtitle" = "Начни общение!";
+"chats.title" = "Сообщения";
 "chats.empty" = "Чатов пока нет";
 "chats.empty.subtitle" = "Свайпай вправо, чтобы найти совпадения";
 "chats.requests" = "Заявки";
@@ -77,6 +78,7 @@
 "ai.placeholder" = "Спроси об играх...";
 "ai.send" = "Спросить";
 "ai.thinking" = "Думаю...";
+"ai.tap" = "Нажми или перетащи меня";
 "ai.limit" = "Сообщение слишком длинное (макс. 100 символов)";
 "ai.command.recommend" = "Посоветуй игры";
 "ai.command.exchange" = "Помоги с обменом";

@@ -1,7 +1,5 @@
 import SwiftUI
-
-// Multi-step questionnaire for creating/editing a Skills profile.
-// On completion sets hasSkillsProfile = true in Firestore.
+import PhotosUI
 
 struct SkillsProfileSetupView: View {
     let existingProfile: UserProfile
@@ -14,6 +12,8 @@ struct SkillsProfileSetupView: View {
     @State private var selectedSkills: Set<String> = []
     @State private var customSkill = ""
     @State private var description = ""
+    @State private var portfolioPhotos: [UIImage] = []
+    @State private var photoPickerItems: [PhotosPickerItem] = []
     @State private var isSaving = false
 
     private let suggestedSkills = [
@@ -23,13 +23,13 @@ struct SkillsProfileSetupView: View {
         "Sound Design", "Concept Art", "Narrative Design", "VR/AR"
     ]
 
-    private let steps = ["Навыки", "О себе", "Готово"]
+    private let steps = ["Навыки", "О себе", "Портфолио", "Готово"]
 
     var body: some View {
         NavigationView {
             ZStack {
                 theme.effectiveBackground.ignoresSafeArea()
-                GrainOverlay(opacity: 0.05)
+                GrainOverlay(opacity: 0.14)
 
                 VStack(spacing: 0) {
                     // Progress bar
@@ -43,6 +43,7 @@ struct SkillsProfileSetupView: View {
                         switch step {
                         case 0: skillsStep
                         case 1: descriptionStep
+                        case 2: portfolioStep
                         default: confirmStep
                         }
                     }
@@ -195,7 +196,95 @@ struct SkillsProfileSetupView: View {
         .padding(.horizontal, 24)
     }
 
-    // MARK: - Step 2: Confirm
+    // MARK: - Step 2: Portfolio photos
+
+    private var portfolioStep: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Портфолио")
+                    .font(.system(size: 22, weight: .bold))
+                    .foregroundColor(theme.effectiveTextColor)
+                Text("Добавь скриншоты работ, стримов или игровых достижений.")
+                    .font(.system(size: 14))
+                    .foregroundColor(theme.effectiveSecondaryTextColor)
+            }
+            .padding(.horizontal, 24)
+
+            // Photo grid
+            if !portfolioPhotos.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 10) {
+                        ForEach(Array(portfolioPhotos.enumerated()), id: \.0) { idx, img in
+                            ZStack(alignment: .topTrailing) {
+                                Image(uiImage: img)
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: 110, height: 110)
+                                    .clipShape(RoundedRectangle(cornerRadius: 12))
+
+                                Button {
+                                    portfolioPhotos.remove(at: idx)
+                                } label: {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .font(.system(size: 20))
+                                        .foregroundColor(.white)
+                                        .shadow(radius: 3)
+                                }
+                                .offset(x: 4, y: -4)
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 24)
+                }
+            }
+
+            // Photo picker
+            PhotosPicker(
+                selection: $photoPickerItems,
+                maxSelectionCount: 6,
+                matching: .images
+            ) {
+                HStack(spacing: 10) {
+                    Image(systemName: "photo.on.rectangle.angled")
+                        .font(.system(size: 18))
+                        .foregroundColor(theme.effectivePrimary)
+                    Text(portfolioPhotos.isEmpty ? "Добавить фото" : "Добавить ещё")
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundColor(theme.effectiveTextColor)
+                    Spacer()
+                    Text("\(portfolioPhotos.count)/6")
+                        .font(.system(size: 13))
+                        .foregroundColor(theme.effectiveSecondaryTextColor)
+                }
+                .padding(16)
+                .background(theme.effectiveCardColor)
+                .clipShape(RoundedRectangle(cornerRadius: 14))
+                .overlay(RoundedRectangle(cornerRadius: 14)
+                    .stroke(theme.effectivePrimary.opacity(0.3), lineWidth: 1))
+            }
+            .padding(.horizontal, 24)
+            .onChange(of: photoPickerItems) { items in
+                Task {
+                    var images: [UIImage] = []
+                    for item in items {
+                        if let data = try? await item.loadTransferable(type: Data.self),
+                           let img = UIImage(data: data) {
+                            images.append(img)
+                        }
+                    }
+                    portfolioPhotos = images
+                    photoPickerItems = []
+                }
+            }
+
+            Text("Фото помогут другим лучше понять твои навыки и опыт.")
+                .font(.system(size: 12))
+                .foregroundColor(theme.effectiveSecondaryTextColor.opacity(0.7))
+                .padding(.horizontal, 24)
+        }
+    }
+
+    // MARK: - Step 3: Confirm
 
     private var confirmStep: some View {
         VStack(spacing: 24) {

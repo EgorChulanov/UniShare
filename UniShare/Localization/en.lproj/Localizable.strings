@@ -61,6 +61,7 @@
 "chat.send" = "Send";
 "chat.empty" = "No messages yet";
 "chat.empty.subtitle" = "Start the conversation!";
+"chats.title" = "Messages";
 "chats.empty" = "No chats yet";
 "chats.empty.subtitle" = "Swipe right to start matching";
 "chats.requests" = "Requests";
@@ -77,6 +78,7 @@
 "ai.placeholder" = "Ask about games...";
 "ai.send" = "Ask";
 "ai.thinking" = "Thinking...";
+"ai.tap" = "Tap or drag me";
 "ai.limit" = "Message is too long (max 100 characters)";
 "ai.command.recommend" = "Recommend games";
 "ai.command.exchange" = "Help with exchange";

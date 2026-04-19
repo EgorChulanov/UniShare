@@ -20,6 +20,9 @@ packages:
   FirebaseStorage:
     url: https://github.com/firebase/firebase-ios-sdk
     exactVersion: "10.25.0"
+  Supabase:
+    url: https://github.com/supabase/supabase-swift
+    from: "2.0.0"
 
 configFiles:
   Debug: Config/Debug.xcconfig
@@ -70,6 +73,8 @@ targets:
         OPENAI_API_KEY: "$(OPENAI_API_KEY)"
         RAWG_API_KEY: "$(RAWG_API_KEY)"
         APP_GROUP_ID: "$(APP_GROUP_ID)"
+        SUPABASE_URL: "$(SUPABASE_URL)"
+        SUPABASE_ANON_KEY: "$(SUPABASE_ANON_KEY)"
     entitlements:
       path: UniShare/UniShare.entitlements
       properties:
@@ -84,6 +89,8 @@ targets:
         product: FirebaseFirestore
       - package: FirebaseStorage
         product: FirebaseStorage
+      - package: Supabase
+        product: Supabase
     settings:
       base:
         PRODUCT_NAME: UniShare

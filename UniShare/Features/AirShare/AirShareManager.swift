@@ -1,101 +1,111 @@
 import Foundation
-import MultipeerConnectivity
-import CoreMotion
-import Combine
+import CoreBluetooth
+
+private let kServiceUUID    = CBUUID(string: "4B4D7F23-3D1B-4E9A-B5F8-2A6C8E0D4F31")
+private let kProfileCharUUID = CBUUID(string: "4B4D7F23-3D1B-4E9A-B5F8-2A6C8E0D4F32")
 
 final class AirShareManager: NSObject, ObservableObject {
     @Published var status: AirShareStatus = .idle
     @Published var discoveredProfiles: [ReceivedProfile] = []
-    @Published var didMatch: ReceivedProfile?
 
-    private var myPeerID: MCPeerID
-    private var session: MCSession
-    private var advertiser: MCNearbyServiceAdvertiser?
-    private var browser: MCNearbyServiceBrowser?
-    private let motionManager = CMMotionManager()
+    private var centralManager: CBCentralManager?
+    private var peripheralManager: CBPeripheralManager?
+    private var profileChar: CBMutableCharacteristic?
+    private var connectedPeripherals: [CBPeripheral] = []
+    private var seenUIDs: Set<String> = []
 
-    private let serviceType = AppConstants.AirShare.serviceType
-
-    var myProfileData: [String: Any]?
-
-    override init() {
-        let name = UIDevice.current.name
-        myPeerID = MCPeerID(displayName: name)
-        session = MCSession(peer: myPeerID, securityIdentity: nil, encryptionPreference: .required)
-        super.init()
-        session.delegate = self
-    }
+    var myProfileData: Data?
 
     // MARK: - Start / Stop
 
     func start(with profile: UserProfile) {
-        myProfileData = profile.firestoreData
+        myProfileData = try? JSONSerialization.data(withJSONObject: profile.firestoreData)
         status = .searching
-
-        advertiser = MCNearbyServiceAdvertiser(peer: myPeerID, discoveryInfo: nil, serviceType: serviceType)
-        advertiser?.delegate = self
-        advertiser?.startAdvertisingPeer()
-
-        browser = MCNearbyServiceBrowser(peer: myPeerID, serviceType: serviceType)
-        browser?.delegate = self
-        browser?.startBrowsingForPeers()
-
-        startShakeDetection()
+        centralManager  = CBCentralManager(delegate: self, queue: .main)
+        peripheralManager = CBPeripheralManager(delegate: self, queue: .main)
     }
 
     func stop() {
-        advertiser?.stopAdvertisingPeer()
-        browser?.stopBrowsingForPeers()
-        session.disconnect()
-        motionManager.stopAccelerometerUpdates()
+        centralManager?.stopScan()
+        peripheralManager?.stopAdvertising()
+        peripheralManager?.removeAllServices()
+        centralManager   = nil
+        peripheralManager = nil
         status = .idle
         discoveredProfiles = []
+        seenUIDs = []
+        connectedPeripherals = []
+    }
+}
+
+// MARK: - Central (scanner → connector)
+
+extension AirShareManager: CBCentralManagerDelegate {
+    func centralManagerDidUpdateState(_ central: CBCentralManager) {
+        guard central.state == .poweredOn else { return }
+        central.scanForPeripherals(
+            withServices: [kServiceUUID],
+            options: [CBCentralManagerScanOptionAllowDuplicatesKey: false]
+        )
     }
 
-    // MARK: - Shake Detection
-
-    private func startShakeDetection() {
-        guard motionManager.isAccelerometerAvailable else { return }
-        motionManager.accelerometerUpdateInterval = 0.1
-        motionManager.startAccelerometerUpdates(to: .main) { [weak self] data, _ in
-            guard let data else { return }
-            let magnitude = sqrt(
-                pow(data.acceleration.x, 2) +
-                pow(data.acceleration.y, 2) +
-                pow(data.acceleration.z, 2)
-            )
-            if magnitude > AppConstants.AirShare.shakeThreshold {
-                self?.handleShake()
-            }
-        }
+    func centralManager(_ central: CBCentralManager,
+                        didDiscover peripheral: CBPeripheral,
+                        advertisementData: [String: Any],
+                        rssi RSSI: NSNumber) {
+        guard !connectedPeripherals.contains(peripheral) else { return }
+        connectedPeripherals.append(peripheral)
+        peripheral.delegate = self
+        central.connect(peripheral, options: nil)
+        status = .holding
+        HapticsManager.shared.impact(.light)
     }
 
-    // Send profile to all connected peers (called automatically on connect + optionally on shake)
-    func sendMyProfile() {
-        guard !session.connectedPeers.isEmpty,
-              let data = try? JSONSerialization.data(withJSONObject: myProfileData ?? [:]) else { return }
-        do {
-            try session.send(data, toPeers: session.connectedPeers, with: .reliable)
-            DispatchQueue.main.async { self.status = .sent }
-            HapticsManager.shared.impact(.heavy)
-        } catch {
-            print("AirShare send error: \(error)")
-        }
+    func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
+        peripheral.discoverServices([kServiceUUID])
     }
 
-    private var lastShakeTime = Date.distantPast
-
-    private func handleShake() {
-        guard Date().timeIntervalSince(lastShakeTime) > 1.0 else { return }
-        lastShakeTime = Date()
-        sendMyProfile()
+    func centralManager(_ central: CBCentralManager,
+                        didDisconnectPeripheral peripheral: CBPeripheral, error: Error?) {
+        connectedPeripherals.removeAll { $0 == peripheral }
+        if discoveredProfiles.isEmpty { status = .searching }
     }
 
-    private func handleReceivedData(_ data: Data, from peerID: MCPeerID) {
-        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+    func centralManager(_ central: CBCentralManager,
+                        didFailToConnect peripheral: CBPeripheral, error: Error?) {
+        connectedPeripherals.removeAll { $0 == peripheral }
+    }
+}
+
+// MARK: - Peripheral delegate (reading remote profile)
+
+extension AirShareManager: CBPeripheralDelegate {
+    func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: Error?) {
+        guard error == nil,
+              let svc = peripheral.services?.first(where: { $0.uuid == kServiceUUID })
+        else { return }
+        peripheral.discoverCharacteristics([kProfileCharUUID], for: svc)
+    }
+
+    func peripheral(_ peripheral: CBPeripheral,
+                    didDiscoverCharacteristicsFor service: CBService, error: Error?) {
+        guard error == nil,
+              let char = service.characteristics?.first(where: { $0.uuid == kProfileCharUUID })
+        else { return }
+        peripheral.readValue(for: char)
+    }
+
+    func peripheral(_ peripheral: CBPeripheral,
+                    didUpdateValueFor characteristic: CBCharacteristic, error: Error?) {
+        guard error == nil,
+              let data = characteristic.value,
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let uid = json["uid"] as? String,
-              let username = json["username"] as? String else { return }
+              let username = json["username"] as? String,
+              !seenUIDs.contains(uid)
+        else { return }
 
+        seenUIDs.insert(uid)
         let profile = ReceivedProfile(
             uid: uid,
             username: username,
@@ -103,7 +113,6 @@ final class AirShareManager: NSObject, ObservableObject {
             games: json["games"] as? [String] ?? [],
             platforms: (json["platforms"] as? [String] ?? []).compactMap { Platform(rawValue: $0) }
         )
-
         DispatchQueue.main.async {
             self.discoveredProfiles.append(profile)
             self.status = .received(profile)
@@ -112,74 +121,60 @@ final class AirShareManager: NSObject, ObservableObject {
     }
 }
 
-// MARK: - MCSession Delegate
+// MARK: - Peripheral Manager (advertising our profile)
 
-extension AirShareManager: MCSessionDelegate {
-    func session(_ session: MCSession, peer peerID: MCPeerID, didChange state: MCSessionState) {
-        DispatchQueue.main.async {
-            switch state {
-            case .connected:
-                self.status = .holding
-                // Auto-send profile as soon as peer connects — no shake needed
-                self.sendMyProfile()
-            case .connecting:
-                self.status = .searching
-            case .notConnected:
-                if case .idle = self.status {} else { self.status = .searching }
-            @unknown default:
-                break
-            }
+extension AirShareManager: CBPeripheralManagerDelegate {
+    func peripheralManagerDidUpdateState(_ peripheral: CBPeripheralManager) {
+        guard peripheral.state == .poweredOn else { return }
+        let char = CBMutableCharacteristic(
+            type: kProfileCharUUID,
+            properties: [.read],
+            value: nil,           // dynamic; served in didReceiveRead
+            permissions: [.readable]
+        )
+        profileChar = char
+        let svc = CBMutableService(type: kServiceUUID, primary: true)
+        svc.characteristics = [char]
+        peripheral.add(svc)
+    }
+
+    func peripheralManager(_ peripheral: CBPeripheralManager,
+                           didAdd service: CBService, error: Error?) {
+        guard error == nil else { return }
+        peripheral.startAdvertising([
+            CBAdvertisementDataServiceUUIDsKey: [kServiceUUID],
+            CBAdvertisementDataLocalNameKey: "UniShare"
+        ])
+    }
+
+    // Offset-aware long-read so large profile JSON transfers cleanly
+    func peripheralManager(_ peripheral: CBPeripheralManager,
+                           didReceiveRead request: CBATTRequest) {
+        guard request.characteristic.uuid == kProfileCharUUID,
+              let data = myProfileData
+        else { peripheral.respond(to: request, withResult: .attributeNotFound); return }
+
+        guard request.offset <= data.count else {
+            peripheral.respond(to: request, withResult: .invalidOffset)
+            return
         }
-    }
-
-    func session(_ session: MCSession, didReceive data: Data, fromPeer peerID: MCPeerID) {
-        handleReceivedData(data, from: peerID)
-    }
-
-    func session(_ session: MCSession, didReceive stream: InputStream, withName streamName: String, fromPeer peerID: MCPeerID) {}
-    func session(_ session: MCSession, didStartReceivingResourceWithName resourceName: String, fromPeer peerID: MCPeerID, with progress: Progress) {}
-    func session(_ session: MCSession, didFinishReceivingResourceWithName resourceName: String, fromPeer peerID: MCPeerID, at localURL: URL?, withError error: Error?) {}
-}
-
-// MARK: - MCNearbyServiceAdvertiser Delegate
-
-extension AirShareManager: MCNearbyServiceAdvertiserDelegate {
-    func advertiser(_ advertiser: MCNearbyServiceAdvertiser, didReceiveInvitationFromPeer peerID: MCPeerID, withContext context: Data?, invitationHandler: @escaping (Bool, MCSession?) -> Void) {
-        invitationHandler(true, session)
-    }
-}
-
-// MARK: - MCNearbyServiceBrowser Delegate
-
-extension AirShareManager: MCNearbyServiceBrowserDelegate {
-    func browser(_ browser: MCNearbyServiceBrowser, foundPeer peerID: MCPeerID, withDiscoveryInfo info: [String: String]?) {
-        browser.invitePeer(peerID, to: session, withContext: nil, timeout: 10)
-        DispatchQueue.main.async { self.status = .holding }
-    }
-
-    func browser(_ browser: MCNearbyServiceBrowser, lostPeer peerID: MCPeerID) {
-        if session.connectedPeers.isEmpty {
-            DispatchQueue.main.async { self.status = .searching }
-        }
+        request.value = data.subdata(in: request.offset ..< data.count)
+        peripheral.respond(to: request, withResult: .success)
     }
 }
 
 // MARK: - Supporting Types
 
 enum AirShareStatus {
-    case idle
-    case searching
-    case holding
-    case sent
+    case idle, searching, holding, sent
     case received(ReceivedProfile)
 
     var description: String {
         switch self {
-        case .idle: return "airshare.searching".localized
-        case .searching: return "airshare.searching".localized
-        case .holding: return "airshare.hold".localized
-        case .sent: return "airshare.success".localized
-        case .received: return "airshare.found".localized
+        case .idle, .searching: return "airshare.searching".localized
+        case .holding:          return "airshare.hold".localized
+        case .sent:             return "airshare.success".localized
+        case .received:         return "airshare.found".localized
         }
     }
 }
