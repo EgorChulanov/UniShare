@@ -51,7 +51,12 @@ final class FirestoreService {
     func sendLikeRequest(_ request: LikeRequest) async throws {
         try await db.collection(AppConstants.Firestore.likeRequests)
             .document(request.id)
-            .setData(request.firestoreData)
+            .setData([
+                "from": request.from,
+                "to": request.to,
+                "requestType": request.requestType,
+                "createdAt": Timestamp(date: request.createdAt)
+            ])
     }
 
     func deleteLikeRequest(id: String) async throws {
@@ -72,8 +77,12 @@ final class FirestoreService {
             .whereField("to", isEqualTo: toUid)
             .whereField("requestType", isEqualTo: requestType)
             .addSnapshotListener { snapshot, _ in
-                let requests = snapshot?.documents.compactMap { doc in
-                    LikeRequest.from(doc.data(), id: doc.documentID)
+                let requests: [LikeRequest] = snapshot?.documents.compactMap { doc in
+                    let d = doc.data()
+                    guard let from = d["from"] as? String, let to = d["to"] as? String else { return nil }
+                    return LikeRequest(id: doc.documentID, from: from, to: to,
+                                       requestType: d["requestType"] as? String ?? "exchange",
+                                       createdAt: (d["createdAt"] as? Timestamp)?.dateValue() ?? Date())
                 } ?? []
                 completion(requests)
             }
@@ -104,8 +113,18 @@ final class FirestoreService {
                     print("Chats listener error: \(error)")
                     return
                 }
-                let chats = (snapshot?.documents ?? [])
-                    .compactMap { Chat.from($0.data(), id: $0.documentID, currentUid: uid) }
+                let chats: [Chat] = (snapshot?.documents ?? [])
+                    .compactMap { doc -> Chat? in
+                        let d = doc.data()
+                        guard let participants = d["participants"] as? [String] else { return nil }
+                        let partnerUid = participants.first { $0 != uid } ?? ""
+                        return Chat(id: doc.documentID, participants: participants,
+                                    lastMessage: d["lastMessage"] as? String ?? "",
+                                    lastMessageAt: (d["lastMessageAt"] as? Timestamp)?.dateValue() ?? Date(),
+                                    chatType: d["chatType"] as? String ?? "exchange",
+                                    unreadCounts: d["unreadCounts"] as? [String: Int] ?? [:],
+                                    partnerStatus: "offline", partnerUid: partnerUid)
+                    }
                     .sorted { $0.lastMessageAt > $1.lastMessageAt }
                 completion(chats)
             }
@@ -137,7 +156,16 @@ final class FirestoreService {
             .document(chatId)
             .collection(AppConstants.Firestore.messages)
             .document(message.id)
-            .setData(message.firestoreData)
+            .setData({
+                var d: [String: Any] = [
+                    "senderId": message.senderId,
+                    "createdAt": Timestamp(date: message.createdAt),
+                    "readBy": message.readBy
+                ]
+                if let text = message.text { d["text"] = text }
+                if let url = message.imageUrl { d["imageUrl"] = url }
+                return d
+            }())
     }
 
     func listenToMessages(chatId: String, completion: @escaping ([Message]) -> Void) -> ListenerRegistration {
@@ -146,8 +174,13 @@ final class FirestoreService {
             .collection(AppConstants.Firestore.messages)
             .order(by: "createdAt")
             .addSnapshotListener { snapshot, _ in
-                let messages = snapshot?.documents.compactMap { doc in
-                    Message.from(doc.data(), id: doc.documentID)
+                let messages: [Message] = snapshot?.documents.compactMap { doc in
+                    let d = doc.data()
+                    guard let senderId = d["senderId"] as? String else { return nil }
+                    return Message(id: doc.documentID, senderId: senderId,
+                                   text: d["text"] as? String, imageUrl: d["imageUrl"] as? String,
+                                   createdAt: (d["createdAt"] as? Timestamp)?.dateValue() ?? Date(),
+                                   readBy: d["readBy"] as? [String] ?? [])
                 } ?? []
                 completion(messages)
             }
