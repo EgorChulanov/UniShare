@@ -99,6 +99,9 @@
 "profile.subscriptions" = "Subscriptions";
 "profile.platforms" = "Platforms";
 "profile.skills" = "Skills";
+"profile.skills.create" = "Create skills profile";
+"profile.skills.edit" = "Edit skills profile";
+"profile.skills.subtitle" = "Appear in skills search";
 "profile.wanted" = "Wanted Games";
 "profile.status.placeholder" = "#hashtags about yourself";
 "profile.change.avatar" = "Change Avatar";

@@ -9,6 +9,7 @@ struct ProfileView: View {
     @StateObject private var vm: ProfileViewModel
     @State private var showEditProfile = false
     @State private var showSettings = false
+    @State private var showSkillsSetup = false
 
     init() {
         _vm = StateObject(wrappedValue: ProfileViewModel(
@@ -22,6 +23,7 @@ struct ProfileView: View {
     var body: some View {
         ZStack {
             theme.effectiveBackground.ignoresSafeArea()
+            GrainOverlay(opacity: 0.05)
 
             if vm.isLoading && vm.profile == nil {
                 ProgressView().tint(theme.effectivePrimary)
@@ -40,6 +42,9 @@ struct ProfileView: View {
                             if !profile.subscriptions.isEmpty {
                                 subsSection(profile.subscriptions)
                             }
+
+                            // Skills profile button
+                            skillsProfileButton(profile: profile)
                         }
 
                         // Settings button
@@ -77,6 +82,14 @@ struct ProfileView: View {
             SettingsSheet(vm: vm)
                 .environmentObject(theme)
                 .environmentObject(localization)
+        }
+        .sheet(isPresented: $showSkillsSetup) {
+            if let profile = vm.profile {
+                SkillsProfileSetupView(existingProfile: profile) { updated in
+                    vm.profile = updated
+                }
+                .environmentObject(theme)
+            }
         }
     }
 
@@ -228,6 +241,55 @@ struct ProfileView: View {
                 .lineLimit(1)
                 .frame(width: 44)
         }
+    }
+
+    // MARK: - Skills Profile Button
+
+    private func skillsProfileButton(profile: UserProfile) -> some View {
+        Button {
+            showSkillsSetup = true
+        } label: {
+            HStack(spacing: 14) {
+                ZStack {
+                    Circle()
+                        .fill(LinearGradient(
+                            colors: [theme.effectivePrimary, theme.effectiveTertiary],
+                            startPoint: .topLeading, endPoint: .bottomTrailing))
+                        .frame(width: 36, height: 36)
+                    Image(systemName: profile.hasSkillsProfile ? "person.crop.circle.badge.checkmark" : "plus.circle")
+                        .font(.system(size: 16))
+                        .foregroundColor(.white)
+                }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(profile.hasSkillsProfile ? "profile.skills.edit".localized : "profile.skills.create".localized)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(theme.effectiveTextColor)
+                    Text(profile.hasSkillsProfile
+                        ? (profile.skills.prefix(3).joined(separator: ", "))
+                        : "profile.skills.subtitle".localized)
+                        .font(.system(size: 12))
+                        .foregroundColor(theme.effectiveSecondaryTextColor)
+                        .lineLimit(1)
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12))
+                    .foregroundColor(theme.effectiveSecondaryTextColor)
+            }
+            .padding(14)
+            .background(
+                LinearGradient(
+                    colors: [theme.effectivePrimary.opacity(0.12), theme.effectiveTertiary.opacity(0.08)],
+                    startPoint: .leading, endPoint: .trailing)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .overlay(RoundedRectangle(cornerRadius: 16).stroke(theme.effectivePrimary.opacity(0.3), lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, 16)
     }
 
     // MARK: - Skills

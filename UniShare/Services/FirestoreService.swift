@@ -23,12 +23,15 @@ final class FirestoreService {
         try await db.collection(AppConstants.Firestore.users).document(uid).updateData(data)
     }
 
-    func getFeedUsers(excludeUids: [String], limit: Int = 3) async throws -> [UserProfile] {
-        var query = db.collection(AppConstants.Firestore.users)
+    func getFeedUsers(excludeUids: [String], limit: Int = 3, skillsOnly: Bool = false) async throws -> [UserProfile] {
+        var query: Query = db.collection(AppConstants.Firestore.users)
             .whereField("onboardingComplete", isEqualTo: true)
-            .limit(to: limit + excludeUids.count + 1)
 
-        let snapshot = try await query.getDocuments()
+        if skillsOnly {
+            query = query.whereField("hasSkillsProfile", isEqualTo: true)
+        }
+
+        let snapshot = try await query.limit(to: limit + excludeUids.count + 1).getDocuments()
         return snapshot.documents.compactMap { doc in
             guard !excludeUids.contains(doc.documentID) else { return nil }
             return UserProfile.from(doc.data(), uid: doc.documentID)

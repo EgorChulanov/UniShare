@@ -70,15 +70,10 @@ final class AirShareManager: NSObject, ObservableObject {
         }
     }
 
-    private var lastShakeTime = Date.distantPast
-
-    private func handleShake() {
-        guard Date().timeIntervalSince(lastShakeTime) > 1.0 else { return }
-        lastShakeTime = Date()
-
+    // Send profile to all connected peers (called automatically on connect + optionally on shake)
+    func sendMyProfile() {
         guard !session.connectedPeers.isEmpty,
               let data = try? JSONSerialization.data(withJSONObject: myProfileData ?? [:]) else { return }
-
         do {
             try session.send(data, toPeers: session.connectedPeers, with: .reliable)
             DispatchQueue.main.async { self.status = .sent }
@@ -86,6 +81,14 @@ final class AirShareManager: NSObject, ObservableObject {
         } catch {
             print("AirShare send error: \(error)")
         }
+    }
+
+    private var lastShakeTime = Date.distantPast
+
+    private func handleShake() {
+        guard Date().timeIntervalSince(lastShakeTime) > 1.0 else { return }
+        lastShakeTime = Date()
+        sendMyProfile()
     }
 
     private func handleReceivedData(_ data: Data, from peerID: MCPeerID) {
@@ -117,6 +120,8 @@ extension AirShareManager: MCSessionDelegate {
             switch state {
             case .connected:
                 self.status = .holding
+                // Auto-send profile as soon as peer connects — no shake needed
+                self.sendMyProfile()
             case .connecting:
                 self.status = .searching
             case .notConnected:
