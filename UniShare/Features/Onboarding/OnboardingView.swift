@@ -12,11 +12,12 @@ struct OnboardingView: View {
 
     init(onComplete: @escaping () -> Void) {
         self.onComplete = onComplete
+        let env = AppEnvironment.shared
         _vm = StateObject(wrappedValue: OnboardingViewModel(
-            auth: FirebaseAuthService(),
-            firestore: FirestoreService(),
-            storage: StorageService(),
-            rawg: RawgService()
+            auth: env.auth,
+            db: env.db,
+            storage: env.storage,
+            rawg: env.rawg
         ))
     }
 

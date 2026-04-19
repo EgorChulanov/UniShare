@@ -290,37 +290,15 @@ final class SupabaseService {
     }
 
     func listenToUserStatus(uid: String, completion: @escaping (Bool) -> Void) -> () -> Void {
-        let channel = client.channel("user-status-\(uid)")
-
         let task = Task {
-            await channel.on(
-                .postgresChanges,
-                filter: ChannelFilter(
-                    event: .update,
-                    schema: "public",
-                    table: "users",
-                    filter: "uid=eq.\(uid)"
-                )
-            ) { payload in
-                if let record = payload.record,
-                   let isOnline = record["is_online"]?.value as? Bool {
-                    completion(isOnline)
+            while !Task.isCancelled {
+                if let profile = try? await getUser(uid: uid) {
+                    await MainActor.run { completion(profile.isOnline) }
                 }
-            }
-            await channel.subscribe()
-        }
-
-        // Fetch initial value
-        Task {
-            if let profile = try? await getUser(uid: uid) {
-                completion(profile.isOnline)
+                try? await Task.sleep(nanoseconds: 5_000_000_000)
             }
         }
-
-        return {
-            task.cancel()
-            Task { await channel.unsubscribe() }
-        }
+        return { task.cancel() }
     }
 
     // MARK: - Like Requests
@@ -358,47 +336,19 @@ final class SupabaseService {
     }
 
     func listenToLikeRequests(toUid: String, requestType: String, completion: @escaping ([LikeRequest]) -> Void) -> () -> Void {
-        let channel = client.channel("like-requests-\(toUid)-\(requestType)")
-
         let task = Task {
-            await channel.on(
-                .postgresChanges,
-                filter: ChannelFilter(
-                    event: .all,
-                    schema: "public",
-                    table: "like_requests",
-                    filter: "to_uid=eq.\(toUid)"
-                )
-            ) { [weak self] _ in
-                guard let self else { return }
-                Task {
-                    let rows: [LikeRequestRow] = (try? await self.client.from("like_requests")
-                        .select()
-                        .eq("to_uid", value: toUid)
-                        .eq("request_type", value: requestType)
-                        .execute()
-                        .value) ?? []
-                    completion(rows.map { $0.toLikeRequest() })
-                }
+            while !Task.isCancelled {
+                let rows: [LikeRequestRow] = (try? await client.from("like_requests")
+                    .select()
+                    .eq("to_uid", value: toUid)
+                    .eq("request_type", value: requestType)
+                    .execute()
+                    .value) ?? []
+                await MainActor.run { completion(rows.map { $0.toLikeRequest() }) }
+                try? await Task.sleep(nanoseconds: 3_000_000_000)
             }
-            await channel.subscribe()
         }
-
-        // Fetch initial value
-        Task {
-            let rows: [LikeRequestRow] = (try? await client.from("like_requests")
-                .select()
-                .eq("to_uid", value: toUid)
-                .eq("request_type", value: requestType)
-                .execute()
-                .value) ?? []
-            completion(rows.map { $0.toLikeRequest() })
-        }
-
-        return {
-            task.cancel()
-            Task { await channel.unsubscribe() }
-        }
+        return { task.cancel() }
     }
 
     // MARK: - Chats
@@ -424,12 +374,9 @@ final class SupabaseService {
     }
 
     func listenToChats(uid: String, completion: @escaping ([Chat]) -> Void) -> () -> Void {
-        let channel = client.channel("chats-\(uid)")
-
-        let fetchChats: () -> Void = { [weak self] in
-            guard let self else { return }
-            Task {
-                let rows: [ChatRow] = (try? await self.client.from("chats")
+        let task = Task {
+            while !Task.isCancelled {
+                let rows: [ChatRow] = (try? await client.from("chats")
                     .select()
                     .contains("participants", value: [uid])
                     .execute()
@@ -437,31 +384,11 @@ final class SupabaseService {
                 let chats = rows
                     .compactMap { $0.toChat(currentUid: uid) }
                     .sorted { $0.lastMessageAt > $1.lastMessageAt }
-                completion(chats)
+                await MainActor.run { completion(chats) }
+                try? await Task.sleep(nanoseconds: 3_000_000_000)
             }
         }
-
-        let task = Task {
-            await channel.on(
-                .postgresChanges,
-                filter: ChannelFilter(
-                    event: .all,
-                    schema: "public",
-                    table: "chats"
-                )
-            ) { _ in
-                fetchChats()
-            }
-            await channel.subscribe()
-        }
-
-        // Fetch initial value
-        fetchChats()
-
-        return {
-            task.cancel()
-            Task { await channel.unsubscribe() }
-        }
+        return { task.cancel() }
     }
 
     func updateChatLastMessage(chatId: String, message: String, senderId: String, participants: [String]) async throws {
@@ -529,43 +456,19 @@ final class SupabaseService {
     }
 
     func listenToMessages(chatId: String, completion: @escaping ([Message]) -> Void) -> () -> Void {
-        let channel = client.channel("messages-\(chatId)")
-
-        let fetchMessages: () -> Void = { [weak self] in
-            guard let self else { return }
-            Task {
-                let rows: [MessageRow] = (try? await self.client.from("messages")
+        let task = Task {
+            while !Task.isCancelled {
+                let rows: [MessageRow] = (try? await client.from("messages")
                     .select()
                     .eq("chat_id", value: chatId)
                     .order("created_at", ascending: true)
                     .execute()
                     .value) ?? []
-                completion(rows.map { $0.toMessage() })
+                await MainActor.run { completion(rows.map { $0.toMessage() }) }
+                try? await Task.sleep(nanoseconds: 2_000_000_000)
             }
         }
-
-        let task = Task {
-            await channel.on(
-                .postgresChanges,
-                filter: ChannelFilter(
-                    event: .all,
-                    schema: "public",
-                    table: "messages",
-                    filter: "chat_id=eq.\(chatId)"
-                )
-            ) { _ in
-                fetchMessages()
-            }
-            await channel.subscribe()
-        }
-
-        // Fetch initial value
-        fetchMessages()
-
-        return {
-            task.cancel()
-            Task { await channel.unsubscribe() }
-        }
+        return { task.cancel() }
     }
 
     func markMessageRead(chatId: String, messageId: String, uid: String) async throws {
@@ -611,6 +514,38 @@ final class SupabaseService {
         try await client.from("reviews")
             .insert(review)
             .execute()
+    }
+
+    func submitReview(fromUid: String, toUid: String, chatId: String, rating: Int, text: String?) async throws {
+        let review = Review(
+            id: "\(fromUid)_\(toUid)_\(chatId)",
+            fromUid: fromUid,
+            toUid: toUid,
+            chatId: chatId,
+            rating: rating,
+            reviewText: text,
+            createdAt: Date()
+        )
+        try await submitReview(review)
+
+        let reviews = try await getReviews(forUid: toUid)
+        let avg = reviews.isEmpty ? Double(rating) : Double(reviews.map { $0.rating }.reduce(0, +)) / Double(reviews.count)
+        let data: [String: AnyEncodable] = [
+            "rating": AnyEncodable(avg),
+            "review_count": AnyEncodable(reviews.count)
+        ]
+        try await client.from("users").update(data).eq("uid", value: toUid).execute()
+    }
+
+    func hasReviewed(fromUid: String, toUid: String, chatId: String) async throws -> Bool {
+        let id = "\(fromUid)_\(toUid)_\(chatId)"
+        let rows: [Review] = (try? await client.from("reviews")
+            .select()
+            .eq("id", value: id)
+            .limit(1)
+            .execute()
+            .value) ?? []
+        return !rows.isEmpty
     }
 
     func getReviews(forUid: String) async throws -> [Review] {

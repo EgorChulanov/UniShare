@@ -8,10 +8,11 @@ struct FeedView: View {
     @StateObject private var vm: FeedViewModel
 
     init() {
+        let env = AppEnvironment.shared
         _vm = StateObject(wrappedValue: FeedViewModel(
-            auth: FirebaseAuthService(),
-            firestore: FirestoreService(),
-            rawg: RawgService()
+            auth: env.auth,
+            db: env.db,
+            rawg: env.rawg
         ))
     }
 

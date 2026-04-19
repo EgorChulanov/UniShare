@@ -3,7 +3,7 @@ import FirebaseCore
 
 @main
 struct UniShareApp: App {
-    @StateObject private var env = AppEnvironment()
+    @StateObject private var env = AppEnvironment.shared
     @StateObject private var theme = ThemeManager.shared
     @StateObject private var localization = LocalizationManager.shared
 
@@ -24,12 +24,12 @@ struct UniShareApp: App {
                 }
                 .onReceive(NotificationCenter.default.publisher(for: UIApplication.willResignActiveNotification)) { _ in
                     Task {
-                        await env.auth.updateOnlineStatus(isOnline: false, firestoreService: env.firestore)
+                        await env.auth.updateOnlineStatus(isOnline: false, firestoreService: env.db)
                     }
                 }
                 .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
                     Task {
-                        await env.auth.updateOnlineStatus(isOnline: true, firestoreService: env.firestore)
+                        await env.auth.updateOnlineStatus(isOnline: true, firestoreService: env.db)
                     }
                 }
         }

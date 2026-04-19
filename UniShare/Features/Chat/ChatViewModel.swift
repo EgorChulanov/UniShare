@@ -1,5 +1,4 @@
 import Foundation
-import FirebaseFirestore
 import UIKit
 
 @MainActor
@@ -9,30 +8,29 @@ final class ChatViewModel: ObservableObject {
     @Published var isSending = false
     @Published var partnerProfile: UserProfile?
     @Published var isPartnerOnline = false
-    @Published var isPartnerTyping = false
 
     let chat: Chat
 
-    private var messageListener: ListenerRegistration?
-    private var statusListener: ListenerRegistration?
+    private var cancelMessages: (() -> Void)?
+    private var cancelStatus: (() -> Void)?
 
-    private let auth: FirebaseAuthService
-    private let firestore: FirestoreService
-    private let storage: StorageService
+    private let auth: SupabaseAuthService
+    private let db: SupabaseService
+    private let storage: SupabaseStorageService
 
     var myUid: String { auth.uid ?? "" }
     var partnerUid: String? { chat.participants.first { $0 != auth.uid } }
 
-    init(chat: Chat, auth: FirebaseAuthService, firestore: FirestoreService, storage: StorageService) {
+    init(chat: Chat, auth: SupabaseAuthService, db: SupabaseService, storage: SupabaseStorageService) {
         self.chat = chat
         self.auth = auth
-        self.firestore = firestore
+        self.db = db
         self.storage = storage
     }
 
     deinit {
-        messageListener?.remove()
-        statusListener?.remove()
+        cancelMessages?()
+        cancelStatus?()
     }
 
     func start() async {
@@ -43,30 +41,26 @@ final class ChatViewModel: ObservableObject {
     }
 
     private func loadPartnerProfile() async {
-        if let profile = try? await firestore.getUser(uid: chat.partnerUid) {
+        if let profile = try? await db.getUser(uid: chat.partnerUid) {
             partnerProfile = profile
             await AvatarCacheService.shared.loadUserAvatar(from: profile.avatarUrl)
         }
     }
 
     private func startMessageListener() {
-        messageListener = firestore.listenToMessages(chatId: chat.id) { [weak self] messages in
-            Task { @MainActor [weak self] in
-                self?.messages = messages
-            }
+        cancelMessages = db.listenToMessages(chatId: chat.id) { [weak self] messages in
+            Task { @MainActor [weak self] in self?.messages = messages }
         }
     }
 
     private func startStatusListener() {
-        statusListener = firestore.listenToUserStatus(uid: chat.partnerUid) { [weak self] isOnline in
-            Task { @MainActor [weak self] in
-                self?.isPartnerOnline = isOnline
-            }
+        cancelStatus = db.listenToUserStatus(uid: chat.partnerUid) { [weak self] isOnline in
+            Task { @MainActor [weak self] in self?.isPartnerOnline = isOnline }
         }
     }
 
     private func markAsRead() async {
-        try? await firestore.markChatAsRead(chatId: chat.id, uid: myUid)
+        try? await db.markChatAsRead(chatId: chat.id, uid: myUid)
     }
 
     func sendText() async {
@@ -85,8 +79,8 @@ final class ChatViewModel: ObservableObject {
         )
 
         do {
-            try await firestore.sendMessage(msg, chatId: chat.id)
-            try await firestore.updateChatLastMessage(
+            try await db.sendMessage(msg, chatId: chat.id)
+            try await db.updateChatLastMessage(
                 chatId: chat.id,
                 message: text,
                 senderId: myUid,
@@ -110,8 +104,8 @@ final class ChatViewModel: ObservableObject {
                 createdAt: Date(),
                 readBy: [myUid]
             )
-            try await firestore.sendMessage(msg, chatId: chat.id)
-            try await firestore.updateChatLastMessage(
+            try await db.sendMessage(msg, chatId: chat.id)
+            try await db.updateChatLastMessage(
                 chatId: chat.id,
                 message: "📷 Photo",
                 senderId: myUid,

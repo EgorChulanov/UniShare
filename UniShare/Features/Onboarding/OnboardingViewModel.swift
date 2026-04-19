@@ -31,9 +31,9 @@ final class OnboardingViewModel: ObservableObject {
     @Published var gameSearchResults: [GameTag] = []
     @Published var isSearchingGames = false
 
-    private let auth: FirebaseAuthService
-    private let firestore: FirestoreService
-    private let storage: StorageService
+    private let auth: SupabaseAuthService
+    private let db: SupabaseService
+    private let storage: SupabaseStorageService
     private let rawg: RawgService
     private var searchTask: Task<Void, Never>?
 
@@ -50,9 +50,9 @@ final class OnboardingViewModel: ObservableObject {
 
     var isLastStep: Bool { currentStep == .subscriptions }
 
-    init(auth: FirebaseAuthService, firestore: FirestoreService, storage: StorageService, rawg: RawgService) {
+    init(auth: SupabaseAuthService, db: SupabaseService, storage: SupabaseStorageService, rawg: RawgService) {
         self.auth = auth
-        self.firestore = firestore
+        self.db = db
         self.storage = storage
         self.rawg = rawg
     }
@@ -170,7 +170,7 @@ final class OnboardingViewModel: ObservableObject {
             }
             profile.onboardingComplete = true
 
-            try await firestore.createUser(profile)
+            try await db.createUser(profile)
             onComplete()
         } catch {
             errorMessage = error.localizedDescription

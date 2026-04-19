@@ -33,13 +33,13 @@ final class AIViewModel: ObservableObject {
 
     private let chatGPT: ChatGPTService
     private let rawg: RawgService
-    private let firestore: FirestoreService
-    private let auth: FirebaseAuthService
+    private let db: SupabaseService
+    private let auth: SupabaseAuthService
 
-    init(chatGPT: ChatGPTService, rawg: RawgService, firestore: FirestoreService, auth: FirebaseAuthService) {
+    init(chatGPT: ChatGPTService, rawg: RawgService, db: SupabaseService, auth: SupabaseAuthService) {
         self.chatGPT = chatGPT
         self.rawg = rawg
-        self.firestore = firestore
+        self.db = db
         self.auth = auth
     }
 
@@ -68,7 +68,7 @@ final class AIViewModel: ObservableObject {
 
             // Save to Firestore
             if let uid = auth.uid {
-                try? await firestore.saveAIRequest(userId: uid, message: text, response: response)
+                try? await db.saveAIRequest(userId: uid, message: text, response: response)
             }
         } catch {
             errorMessage = error.localizedDescription
@@ -83,7 +83,7 @@ final class AIViewModel: ObservableObject {
 
     private func buildUserContext() async -> UserContext {
         guard let uid = auth.uid,
-              let profile = try? await firestore.getUser(uid: uid) else {
+              let profile = try? await db.getUser(uid: uid) else {
             return UserContext(userGames: [], wantedGames: [], userSkills: [], userSubscriptions: [])
         }
         return UserContext(

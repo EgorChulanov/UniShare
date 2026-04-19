@@ -19,7 +19,8 @@ final class SupabaseAuthService: ObservableObject {
 
         // Watch auth state changes via the async stream
         authListenerTask = Task { [weak self] in
-            for await (event, session) in await client.auth.authStateChanges {
+            guard let self else { return }
+            for await (event, session) in self.client.auth.authStateChanges {
                 let authenticated: Bool
                 switch event {
                 case .signedIn, .tokenRefreshed, .userUpdated:
@@ -29,7 +30,7 @@ final class SupabaseAuthService: ObservableObject {
                 default:
                     authenticated = session != nil
                 }
-                await MainActor.run {
+                await MainActor.run { [weak self] in
                     self?.isAuthenticated = authenticated
                 }
             }
@@ -50,10 +51,7 @@ final class SupabaseAuthService: ObservableObject {
 
     func signUp(email: String, password: String) async throws -> String {
         let response = try await client.auth.signUp(email: email, password: password)
-        guard let user = response.user else {
-            throw AuthError.noUserReturned
-        }
-        return user.id.uuidString
+        return response.user.id.uuidString
     }
 
     // MARK: - Sign Out
@@ -69,8 +67,8 @@ final class SupabaseAuthService: ObservableObject {
     func updateOnlineStatus(isOnline: Bool, firestoreService: SupabaseService) async {
         guard let uid else { return }
         try? await firestoreService.updateUser(uid: uid, data: [
-            "is_online": isOnline,
-            "last_seen": ISO8601DateFormatter().string(from: Date())
+            "is_online": AnyEncodable(isOnline),
+            "last_seen": AnyEncodable(ISO8601DateFormatter().string(from: Date()))
         ])
     }
 

@@ -9,7 +9,6 @@ final class ProfileViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage: String?
 
-    // Edit state (mirrors profile fields)
     @Published var editUsername = ""
     @Published var editStatus = ""
     @Published var editGames: [GameTag] = []
@@ -21,20 +20,19 @@ final class ProfileViewModel: ObservableObject {
     @Published var editSubscriptions: [LocalUserSubscription] = []
     @Published var editAvatar: UIImage?
 
-    // Game search
     @Published var gameSearchQuery = ""
     @Published var gameSearchResults: [GameTag] = []
     @Published var isSearchingGames = false
 
-    private let auth: FirebaseAuthService
-    private let firestore: FirestoreService
-    private let storage: StorageService
+    private let auth: SupabaseAuthService
+    private let db: SupabaseService
+    private let storage: SupabaseStorageService
     private let rawg: RawgService
     private var searchTask: Task<Void, Never>?
 
-    init(auth: FirebaseAuthService, firestore: FirestoreService, storage: StorageService, rawg: RawgService) {
+    init(auth: SupabaseAuthService, db: SupabaseService, storage: SupabaseStorageService, rawg: RawgService) {
         self.auth = auth
-        self.firestore = firestore
+        self.db = db
         self.storage = storage
         self.rawg = rawg
     }
@@ -43,7 +41,7 @@ final class ProfileViewModel: ObservableObject {
         guard let uid = auth.uid else { return }
         isLoading = true
         defer { isLoading = false }
-        profile = try? await firestore.getUser(uid: uid)
+        profile = try? await db.getUser(uid: uid)
         if let p = profile {
             await AvatarCacheService.shared.loadUserAvatar(from: p.avatarUrl)
         }
@@ -57,7 +55,6 @@ final class ProfileViewModel: ObservableObject {
         editWantedGames = p.wantedGames.map { GameTag(name: $0) }
         let platforms = Set(p.platforms.compactMap { Platform(rawValue: $0) })
         editPlatforms = platforms
-        // Restore per-platform games
         editGamesByPlatform = [:]
         for platform in platforms {
             let names = p.platformGames[platform.rawValue] ?? []
@@ -93,7 +90,6 @@ final class ProfileViewModel: ObservableObject {
             p.platforms = editPlatforms.map { $0.rawValue }
             p.skills = editSkills
             p.subscriptions = editSubscriptions
-            // Build platformGames and flat games list from editGamesByPlatform
             var newPlatformGames: [String: [String]] = [:]
             var allGames: [String] = []
             for platform in editPlatforms {
@@ -105,11 +101,21 @@ final class ProfileViewModel: ObservableObject {
             p.games = Array(Set(allGames))
             p.wantedGames = editWantedGames.map { $0.name }
 
-            try await firestore.updateUser(uid: uid, data: p.firestoreData)
+            let data: [String: AnyEncodable] = [
+                "username": AnyEncodable(p.username),
+                "status": AnyEncodable(p.status ?? ""),
+                "avatar_url": AnyEncodable(p.avatarUrl ?? ""),
+                "games": AnyEncodable(p.games),
+                "wanted_games": AnyEncodable(p.wantedGames),
+                "platforms": AnyEncodable(p.platforms),
+                "platform_games": AnyEncodable(p.platformGames),
+                "skills": AnyEncodable(p.skills),
+                "subscriptions": AnyEncodable(p.subscriptions.map { ["name": $0.name, "icon_name": $0.iconName, "url": $0.url ?? ""] })
+            ]
+            try await db.updateUser(uid: uid, data: data)
             profile = p
             isEditing = false
 
-            // Update widgets
             let avatar = AvatarCacheService.shared.cachedAvatar
             WidgetDataService.shared.updateWidgetData(
                 username: p.username,

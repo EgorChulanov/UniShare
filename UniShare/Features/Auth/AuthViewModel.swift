@@ -1,5 +1,4 @@
 import Foundation
-import Combine
 
 @MainActor
 final class AuthViewModel: ObservableObject {
@@ -9,12 +8,12 @@ final class AuthViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var isLoginMode = true
 
-    private let auth: FirebaseAuthService
-    private let firestore: FirestoreService
+    private let auth: SupabaseAuthService
+    private let db: SupabaseService
 
-    init(auth: FirebaseAuthService, firestore: FirestoreService) {
+    init(auth: SupabaseAuthService, db: SupabaseService) {
         self.auth = auth
-        self.firestore = firestore
+        self.db = db
     }
 
     func submit() async {
@@ -28,7 +27,7 @@ final class AuthViewModel: ObservableObject {
             } else {
                 let uid = try await auth.signUp(email: email, password: password)
                 let profile = UserProfile(uid: uid, username: email.components(separatedBy: "@").first ?? "user")
-                try await firestore.createUser(profile)
+                try await db.createUser(profile)
             }
         } catch {
             errorMessage = error.localizedDescription
