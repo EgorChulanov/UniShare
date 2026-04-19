@@ -161,6 +161,38 @@ final class FirestoreService {
             .updateData(["readBy": FieldValue.arrayUnion([uid])])
     }
 
+    // MARK: - Reviews / Ratings
+
+    func submitReview(fromUid: String, toUid: String, chatId: String, rating: Int, text: String?) async throws {
+        let id = "\(fromUid)_\(toUid)_\(chatId)"
+        var data: [String: Any] = [
+            "fromUid": fromUid,
+            "toUid": toUid,
+            "chatId": chatId,
+            "rating": rating,
+            "createdAt": Timestamp(date: Date())
+        ]
+        if let text { data["reviewText"] = text }
+        try await db.collection("reviews").document(id).setData(data)
+
+        // Update target user's aggregate rating
+        let reviews = try await db.collection("reviews")
+            .whereField("toUid", isEqualTo: toUid)
+            .getDocuments()
+        let ratings = reviews.documents.compactMap { $0.data()["rating"] as? Int }
+        let avg = ratings.isEmpty ? 0.0 : Double(ratings.reduce(0, +)) / Double(ratings.count)
+        try await db.collection(AppConstants.Firestore.users).document(toUid).updateData([
+            "rating": avg,
+            "reviewCount": ratings.count
+        ])
+    }
+
+    func hasReviewed(fromUid: String, toUid: String, chatId: String) async throws -> Bool {
+        let id = "\(fromUid)_\(toUid)_\(chatId)"
+        let doc = try await db.collection("reviews").document(id).getDocument()
+        return doc.exists
+    }
+
     // MARK: - AI Requests
 
     func saveAIRequest(userId: String, message: String, response: String) async throws {

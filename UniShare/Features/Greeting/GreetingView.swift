@@ -17,7 +17,7 @@ struct GreetingView: View {
     var body: some View {
         ZStack {
             theme.effectiveBackground.ignoresSafeArea()
-            GrainOverlay(opacity: 0.05)
+            GrainOverlay(opacity: 0.14)
             AnimatedFullScreenGlow(isExpanded: glowExpanded)
 
             VStack(spacing: 20) {

@@ -8,6 +8,8 @@ struct ChatView: View {
     @StateObject private var vm: ChatViewModel
     @State private var photoItem: PhotosPickerItem?
     @State private var showReportSheet = false
+    @State private var showRatingSheet = false
+    @State private var hasRated = false
 
     init(chat: Chat) {
         self.chat = chat
@@ -45,6 +47,11 @@ struct ChatView: View {
                     }
                 }
 
+                // "Confirm account received" banner (exchange chats only, before rating)
+                if chat.chatType == "exchange" && !hasRated && !vm.messages.isEmpty {
+                    confirmBanner
+                }
+
                 inputBar
             }
         }
@@ -74,11 +81,57 @@ struct ChatView: View {
                 }
             }
         }
-        .task { await vm.start() }
+        .task {
+            await vm.start()
+            if let partnerUid = vm.partnerUid, !vm.myUid.isEmpty {
+                hasRated = (try? await FirestoreService().hasReviewed(
+                    fromUid: vm.myUid, toUid: partnerUid, chatId: chat.id)) ?? false
+            }
+        }
         .sheet(isPresented: $showReportSheet) {
             ReportSheet(username: vm.partnerProfile?.username ?? "")
                 .environmentObject(theme)
         }
+        .sheet(isPresented: $showRatingSheet) {
+            RatingSheet(partnerUsername: vm.partnerProfile?.username ?? "") { rating, text in
+                Task {
+                    guard let myUid = vm.myUid,
+                          let partnerUid = vm.partnerUid else { return }
+                    try? await FirestoreService().submitReview(
+                        fromUid: myUid, toUid: partnerUid,
+                        chatId: chat.id, rating: rating, text: text)
+                    hasRated = true
+                }
+            }
+            .environmentObject(theme)
+        }
+    }
+
+    // MARK: - Confirm banner
+
+    private var confirmBanner: some View {
+        Button { showRatingSheet = true } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "checkmark.seal.fill")
+                    .foregroundColor(theme.effectivePrimary)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Подтвердить получение аккаунта")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(theme.effectiveTextColor)
+                    Text("Оцени обмен и оставь отзыв")
+                        .font(.system(size: 11))
+                        .foregroundColor(theme.effectiveSecondaryTextColor)
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 11))
+                    .foregroundColor(theme.effectiveSecondaryTextColor)
+            }
+            .padding(.horizontal, 16).padding(.vertical, 10)
+            .background(theme.effectivePrimary.opacity(0.1))
+            .overlay(alignment: .top) { Divider().background(theme.effectivePrimary.opacity(0.3)) }
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Input Bar

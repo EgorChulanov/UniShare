@@ -19,33 +19,54 @@ struct AIView: View {
     var body: some View {
         ZStack {
             theme.effectiveBackground.ignoresSafeArea()
-            GrainOverlay(opacity: 0.05)
+            GrainOverlay(opacity: 0.14)
 
             VStack(spacing: 0) {
-                // Quick commands auto-scroll
-                quickCommandsRow
+                // ── Large title (Figma) ──
+                HStack {
+                    Text("AI Assistant")
+                        .font(.system(size: 28, weight: .bold))
+                        .foregroundColor(theme.effectiveTextColor)
+                    Spacer()
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 14)
+                .padding(.bottom, 4)
 
-                // Messages
+                // ── Persistent bubble + status ──
+                VStack(spacing: 10) {
+                    AIBubbleView(isThinking: vm.isThinking)
+
+                    // Thinking status pill
+                    HStack(spacing: 6) {
+                        Circle()
+                            .fill(vm.isThinking ? theme.effectivePrimary : theme.effectiveSecondaryTextColor.opacity(0.5))
+                            .frame(width: 7, height: 7)
+                        Text(vm.isThinking ? "ai.thinking".localized : "ai.tap".localized)
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundColor(theme.effectiveSecondaryTextColor)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(theme.effectiveCardColor.opacity(0.8))
+                    .clipShape(Capsule())
+                }
+                .padding(.vertical, 8)
+
+                // ── Quick commands ──
+                quickCommandsRow
+                    .padding(.bottom, 4)
+
+                // ── Message history ──
                 ScrollViewReader { proxy in
                     ScrollView {
                         LazyVStack(spacing: 16) {
-                            if vm.messages.isEmpty {
-                                emptyState
-                            }
                             ForEach(vm.messages) { msg in
-                                AIMessageView(message: msg)
-                                    .id(msg.id)
-                            }
-                            if vm.isThinking {
-                                HStack {
-                                    ThinkingBubble()
-                                    Spacer()
-                                }
-                                .padding(.horizontal, 16)
-                                .id("thinking")
+                                AIMessageView(message: msg).id(msg.id)
                             }
                         }
-                        .padding(.vertical, 12)
+                        .padding(.horizontal, 0)
+                        .padding(.vertical, 8)
                     }
                     .scrollDismissesKeyboard(.immediately)
                     .onChange(of: vm.messages.count) { _ in
@@ -53,12 +74,9 @@ struct AIView: View {
                             if let last = vm.messages.last { proxy.scrollTo(last.id, anchor: .bottom) }
                         }
                     }
-                    .onChange(of: vm.isThinking) { thinking in
-                        if thinking { withAnimation { proxy.scrollTo("thinking", anchor: .bottom) } }
-                    }
                 }
 
-                // Input bar
+                // ── Input bar ──
                 inputBar
             }
         }
@@ -74,53 +92,36 @@ struct AIView: View {
                         HapticsManager.shared.impact(.light)
                         vm.sendQuickCommand(command.key)
                     } label: {
-                        HStack(spacing: 8) {
+                        HStack(spacing: 6) {
                             Image(systemName: command.icon)
-                                .font(.system(size: 13))
+                                .font(.system(size: 12))
                                 .foregroundColor(theme.effectivePrimary)
                             Text(command.key.localized)
                                 .font(.system(size: 13, weight: .medium))
                                 .foregroundColor(theme.effectiveTextColor)
                         }
                         .padding(.horizontal, 14)
-                        .padding(.vertical, 10)
-                        .glass(cornerRadius: 20)
+                        .padding(.vertical, 9)
+                        .background(theme.effectiveCardColor.opacity(0.8))
+                        .clipShape(Capsule())
+                        .overlay(Capsule().stroke(theme.effectivePrimary.opacity(0.2), lineWidth: 1))
                     }
                 }
             }
             .padding(.horizontal, 16)
         }
-        .padding(.vertical, 8)
-    }
-
-    // MARK: - Empty State (gradient bubble + prompt)
-
-    private var emptyState: some View {
-        VStack(spacing: 24) {
-            AIBubbleView(isThinking: vm.isThinking)
-                .padding(.top, 20)
-
-            VStack(spacing: 8) {
-                Text("ai.title".localized)
-                    .font(.system(size: 20, weight: .bold))
-                    .foregroundColor(theme.effectiveTextColor)
-                Text("Tap the bubble or ask anything about games,\nexchange tips, or find teammates!")
-                    .font(.system(size: 14))
-                    .foregroundColor(theme.effectiveSecondaryTextColor)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 32)
-            }
-        }
+        .padding(.vertical, 6)
     }
 
     // MARK: - Input Bar
 
     private var inputBar: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 6) {
             if vm.inputText.count > 80 {
                 Text("\(vm.inputText.count)/\(AppConstants.AI.maxMessageLength)")
                     .font(.system(size: 11))
-                    .foregroundColor(vm.inputText.count >= AppConstants.AI.maxMessageLength ? .red : theme.effectiveSecondaryTextColor)
+                    .foregroundColor(vm.inputText.count >= AppConstants.AI.maxMessageLength
+                                     ? .red : theme.effectiveSecondaryTextColor)
                     .frame(maxWidth: .infinity, alignment: .trailing)
                     .padding(.horizontal, 20)
             }
@@ -153,8 +154,10 @@ struct AIView: View {
                         } else {
                             Circle()
                                 .fill(vm.inputIsValid
-                                    ? LinearGradient(colors: [theme.effectivePrimary, theme.effectiveTertiary], startPoint: .topLeading, endPoint: .bottomTrailing)
-                                    : LinearGradient(colors: [theme.effectiveCardColor, theme.effectiveCardColor], startPoint: .topLeading, endPoint: .bottomTrailing))
+                                    ? LinearGradient(colors: [theme.effectivePrimary, theme.effectiveTertiary],
+                                                     startPoint: .topLeading, endPoint: .bottomTrailing)
+                                    : LinearGradient(colors: [theme.effectiveCardColor, theme.effectiveCardColor],
+                                                     startPoint: .topLeading, endPoint: .bottomTrailing))
                                 .frame(width: 40, height: 40)
                             Image(systemName: "arrow.up")
                                 .font(.system(size: 16, weight: .bold))
@@ -195,25 +198,23 @@ struct AIMessageView: View {
                 Text(message.text)
                     .font(.system(size: 15))
                     .foregroundColor(message.isFromUser ? .white : theme.effectiveTextColor)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 10)
+                    .padding(.horizontal, 14).padding(.vertical, 10)
                     .background(
-                        message.isFromUser ?
-                        LinearGradient(colors: [theme.effectivePrimary, theme.effectiveTertiary], startPoint: .leading, endPoint: .trailing) :
-                        LinearGradient(colors: [theme.effectiveCardColor, theme.effectiveCardColor], startPoint: .leading, endPoint: .trailing)
+                        message.isFromUser
+                            ? LinearGradient(colors: [theme.effectivePrimary, theme.effectiveTertiary],
+                                             startPoint: .leading, endPoint: .trailing)
+                            : LinearGradient(colors: [theme.effectiveCardColor, theme.effectiveCardColor],
+                                             startPoint: .leading, endPoint: .trailing)
                     )
                     .clipShape(RoundedRectangle(cornerRadius: 18))
 
                 if message.isFromUser { Spacer(minLength: 0) }
             }
 
-            // Game cards
             if !message.gameCards.isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 12) {
-                        ForEach(message.gameCards) { card in
-                            AIGameCardView(card: card)
-                        }
+                        ForEach(message.gameCards) { card in AIGameCardView(card: card) }
                     }
                     .padding(.horizontal, 16)
                 }
@@ -234,9 +235,7 @@ struct AIGameCardView: View {
         VStack(alignment: .leading, spacing: 8) {
             ZStack {
                 if let image = coverImage {
-                    Image(uiImage: image)
-                        .resizable()
-                        .scaledToFill()
+                    Image(uiImage: image).resizable().scaledToFill()
                 } else {
                     theme.effectiveCardColor
                     Image(systemName: "gamecontroller.fill")
@@ -255,9 +254,7 @@ struct AIGameCardView: View {
 
             if let rating = card.rating {
                 HStack(spacing: 4) {
-                    Image(systemName: "star.fill")
-                        .font(.system(size: 10))
-                        .foregroundColor(.yellow)
+                    Image(systemName: "star.fill").font(.system(size: 10)).foregroundColor(.yellow)
                     Text(String(format: "%.1f", rating))
                         .font(.system(size: 11))
                         .foregroundColor(theme.effectiveSecondaryTextColor)

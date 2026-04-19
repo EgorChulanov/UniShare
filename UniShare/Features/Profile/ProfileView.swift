@@ -23,51 +23,54 @@ struct ProfileView: View {
     var body: some View {
         ZStack {
             theme.effectiveBackground.ignoresSafeArea()
-            GrainOverlay(opacity: 0.05)
+            GrainOverlay(opacity: 0.14)
 
             if vm.isLoading && vm.profile == nil {
                 ProgressView().tint(theme.effectivePrimary)
             } else {
-                ScrollView {
-                    VStack(spacing: 20) {
-                        // Profile card (same layout as feed)
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 0) {
                         if let profile = vm.profile {
-                            profileCard(profile: profile)
-                                .padding(.top, 16)
+                            // ── Figma-style centered gradient hero ──
+                            profileHero(profile: profile)
 
-                            if !profile.skills.isEmpty {
-                                skillsSection(profile.skills)
+                            VStack(spacing: 16) {
+                                // Games card
+                                gamesCard(profile: profile)
+
+                                // Skills card
+                                if !profile.skills.isEmpty {
+                                    skillsSection(profile.skills)
+                                }
+
+                                // Subscriptions
+                                if !profile.subscriptions.isEmpty {
+                                    subsSection(profile.subscriptions)
+                                }
+
+                                // Skills profile CTA
+                                skillsProfileButton(profile: profile)
+
+                                // Settings
+                                Button { showSettings = true } label: {
+                                    HStack(spacing: 14) {
+                                        Image(systemName: "gearshape.fill")
+                                            .foregroundColor(theme.effectivePrimary).frame(width: 22)
+                                        Text("profile.settings".localized)
+                                            .font(.system(size: 15)).foregroundColor(theme.effectiveTextColor)
+                                        Spacer()
+                                        Image(systemName: "chevron.right")
+                                            .font(.system(size: 12))
+                                            .foregroundColor(theme.effectiveSecondaryTextColor)
+                                    }
+                                    .padding()
+                                    .glass(cornerRadius: 14)
+                                }
+                                .padding(.horizontal, 16)
+                                .padding(.bottom, 32)
                             }
-
-                            if !profile.subscriptions.isEmpty {
-                                subsSection(profile.subscriptions)
-                            }
-
-                            // Skills profile button
-                            skillsProfileButton(profile: profile)
+                            .padding(.top, 20)
                         }
-
-                        // Settings button
-                        Button {
-                            showSettings = true
-                        } label: {
-                            HStack(spacing: 14) {
-                                Image(systemName: "gearshape.fill")
-                                    .foregroundColor(theme.effectivePrimary)
-                                    .frame(width: 22)
-                                Text("profile.settings".localized)
-                                    .font(.system(size: 15))
-                                    .foregroundColor(theme.effectiveTextColor)
-                                Spacer()
-                                Image(systemName: "chevron.right")
-                                    .font(.system(size: 12))
-                                    .foregroundColor(theme.effectiveSecondaryTextColor)
-                            }
-                            .padding()
-                            .glass(cornerRadius: 14)
-                        }
-                        .padding(.horizontal, 16)
-                        .padding(.bottom, 32)
                     }
                 }
             }
@@ -93,7 +96,120 @@ struct ProfileView: View {
         }
     }
 
-    // MARK: - Profile Card (feed-style)
+    // MARK: - Figma-style centered hero header
+
+    private func profileHero(profile: UserProfile) -> some View {
+        ZStack(alignment: .top) {
+            // Gradient glow from top (matches Figma dark bg + pink radial)
+            RadialGradient(
+                colors: [theme.effectivePrimary.opacity(0.55), .clear],
+                center: .top, startRadius: 0, endRadius: 300
+            )
+            .frame(height: 320)
+            .ignoresSafeArea(edges: .top)
+
+            VStack(spacing: 10) {
+                // Avatar with edit button
+                ZStack(alignment: .bottomTrailing) {
+                    AvatarView(url: profile.avatarUrl, size: 100, showBorder: true)
+                    Button {
+                        vm.startEditing(); showEditProfile = true
+                    } label: {
+                        Circle()
+                            .fill(theme.effectivePrimary)
+                            .frame(width: 28, height: 28)
+                            .overlay(Image(systemName: "camera.fill")
+                                .font(.system(size: 11)).foregroundColor(.white))
+                    }
+                    .offset(x: 3, y: 3)
+                }
+                .padding(.top, 20)
+
+                // Username
+                HStack(spacing: 8) {
+                    Text("@\(profile.username)")
+                        .font(.system(size: 22, weight: .bold))
+                        .foregroundColor(theme.effectiveTextColor)
+                    Button {
+                        vm.startEditing(); showEditProfile = true
+                    } label: {
+                        Image(systemName: "pencil.circle.fill")
+                            .font(.system(size: 17))
+                            .foregroundColor(theme.effectivePrimary.opacity(0.8))
+                    }
+                }
+
+                // Status
+                if let status = profile.status, !status.isEmpty {
+                    Text(status)
+                        .font(.system(size: 13))
+                        .foregroundColor(theme.effectiveSecondaryTextColor)
+                        .multilineTextAlignment(.center)
+                }
+
+                // Platforms + rating — "PC · PlayStation · Nintendo · ★ 4.8"
+                let platforms = profile.platforms.compactMap { Platform(rawValue: $0) }
+                if !platforms.isEmpty || profile.rating > 0 {
+                    HStack(spacing: 6) {
+                        ForEach(Array(platforms.enumerated()), id: \.0) { idx, p in
+                            if idx > 0 { Text("·").foregroundColor(theme.effectiveSecondaryTextColor) }
+                            Text(p.rawValue)
+                                .font(.system(size: 12))
+                                .foregroundColor(theme.effectiveSecondaryTextColor)
+                        }
+                        if profile.rating > 0 {
+                            Text("·").foregroundColor(theme.effectiveSecondaryTextColor)
+                            Image(systemName: "star.fill")
+                                .font(.system(size: 10)).foregroundColor(.yellow)
+                            Text(String(format: "%.1f", profile.rating))
+                                .font(.system(size: 12))
+                                .foregroundColor(theme.effectiveSecondaryTextColor)
+                        }
+                    }
+                    .padding(.top, 2)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.bottom, 20)
+        }
+    }
+
+    // MARK: - Games card
+
+    private func gamesCard(profile: UserProfile) -> some View {
+        let platforms = profile.platforms.compactMap { Platform(rawValue: $0) }
+        guard !platforms.isEmpty else { return AnyView(EmptyView()) }
+
+        return AnyView(
+            VStack(alignment: .leading, spacing: 0) {
+                Text("profile.games".localized)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(theme.effectiveSecondaryTextColor)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 14)
+                    .padding(.bottom, 8)
+
+                ForEach(Array(platforms.enumerated()), id: \.1.rawValue) { idx, platform in
+                    if idx > 0 { Divider().padding(.horizontal, 16) }
+                    profilePlatformRow(
+                        platform: platform,
+                        games: profile.platformGames[platform.rawValue] ?? [],
+                        isTrailing: idx % 2 == 1
+                    )
+                }
+
+                Color.clear.frame(height: 8)
+            }
+            .background(theme.effectiveCardColor)
+            .clipShape(RoundedRectangle(cornerRadius: 20))
+            .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.07), lineWidth: 1))
+            .shadow(color: .black.opacity(0.15), radius: 8, y: 3)
+            .padding(.horizontal, 16)
+            .onTapGesture { vm.startEditing(); showEditProfile = true }
+        )
+    }
+
+    // MARK: - Profile Card (legacy — kept for compilation)
 
     private func profileCard(profile: UserProfile) -> some View {
         VStack(spacing: 0) {

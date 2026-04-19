@@ -27,7 +27,7 @@ struct LoginView: View {
             )
             .ignoresSafeArea()
 
-            GrainOverlay(opacity: 0.055)
+            GrainOverlay(opacity: 0.14)
 
             // Ambient background glow
             Circle()

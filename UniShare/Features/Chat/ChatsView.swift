@@ -28,9 +28,17 @@ struct ChatsView: View {
         NavigationView {
             ZStack {
                 theme.effectiveBackground.ignoresSafeArea()
-                GrainOverlay(opacity: 0.05)
+                GrainOverlay(opacity: 0.14)
 
-                VStack(spacing: 0) {
+                VStack(alignment: .leading, spacing: 0) {
+                    // Large title — matches Figma "Messages"
+                    Text("chats.title".localized)
+                        .font(.system(size: 30, weight: .bold))
+                        .foregroundColor(theme.effectiveTextColor)
+                        .padding(.horizontal, 20)
+                        .padding(.top, 14)
+                        .padding(.bottom, 4)
+
                     segmentPicker
 
                     ScrollView {
