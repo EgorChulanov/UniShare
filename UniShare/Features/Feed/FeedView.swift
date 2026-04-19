@@ -18,6 +18,7 @@ struct FeedView: View {
     var body: some View {
         ZStack {
             theme.effectiveBackground.ignoresSafeArea()
+            GrainOverlay(opacity: 0.05)
 
             VStack(spacing: 0) {
                 // Pill segment picker — small Capsule buttons

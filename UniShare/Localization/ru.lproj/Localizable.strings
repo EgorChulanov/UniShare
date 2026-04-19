@@ -99,6 +99,9 @@
 "profile.subscriptions" = "Подписки";
 "profile.platforms" = "Платформы";
 "profile.skills" = "Навыки";
+"profile.skills.create" = "Создать анкету навыков";
+"profile.skills.edit" = "Редактировать анкету навыков";
+"profile.skills.subtitle" = "Появись в поиске навыков";
 "profile.wanted" = "Желаемые игры";
 "profile.status.placeholder" = "#хэштеги о себе";
 "profile.change.avatar" = "Изменить фото";

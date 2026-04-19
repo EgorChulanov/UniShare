@@ -6,27 +6,33 @@ struct AirShareView: View {
     @StateObject private var manager = AirShareManager()
 
     @State private var myProfile: UserProfile?
-    @State private var showProfileCard = false
     @State private var selectedProfile: ReceivedProfile?
-    @State private var phoneOffset: CGFloat = 0
-    @State private var phoneCross = false
+    @State private var showProfileCard = false
+    @State private var pulse = false
 
     var body: some View {
         ZStack {
             theme.effectiveBackground.ignoresSafeArea()
+            GrainOverlay(opacity: 0.05)
 
-            // Animated gradient background
-            AnimatedFullScreenGlow(isExpanded: phoneCross)
-                .opacity(0.3)
+            // Ambient glow behind phones
+            Circle()
+                .fill(RadialGradient(
+                    colors: [theme.effectivePrimary.opacity(0.3), .clear],
+                    center: .center, startRadius: 0, endRadius: 200
+                ))
+                .frame(width: 400, height: 400)
+                .scaleEffect(pulse ? 1.15 : 1.0)
+                .animation(.easeInOut(duration: 2).repeatForever(autoreverses: true), value: pulse)
+                .ignoresSafeArea()
 
-            VStack(spacing: 32) {
-                // Title
-                VStack(spacing: 8) {
-                    Text("airshare.title".localized)
+            VStack(spacing: 28) {
+                // Header
+                VStack(spacing: 6) {
+                    Text("AirShare")
                         .font(.system(size: 28, weight: .bold))
                         .foregroundColor(theme.effectiveTextColor)
-
-                    Text("airshare.description".localized)
+                    Text("Держи телефон рядом с другим устройством.\nПрофили обменяются автоматически.")
                         .font(.system(size: 14))
                         .foregroundColor(theme.effectiveSecondaryTextColor)
                         .multilineTextAlignment(.center)
@@ -36,34 +42,23 @@ struct AirShareView: View {
                 // Phone animation
                 phoneAnimation
 
-                // Status
-                Text(manager.status.description)
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(theme.effectiveSecondaryTextColor)
-                    .animation(.easeInOut, value: manager.status.description)
+                // Status pill
+                statusPill
 
-                // Received profiles list
+                // Discovered profiles
                 if !manager.discoveredProfiles.isEmpty {
-                    receivedProfilesList
+                    discoveredList
                 }
 
                 Spacer()
             }
-            .padding(.top, 40)
+            .padding(.top, 48)
         }
-        .task {
-            await loadAndStart()
-        }
-        .onDisappear {
-            manager.stop()
-        }
+        .task { await loadAndStart() }
+        .onAppear { pulse = true }
+        .onDisappear { manager.stop() }
         .onChange(of: manager.discoveredProfiles.count) { count in
-            if count > 0 {
-                withAnimation(.spring()) { phoneCross = true }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                    withAnimation(.spring()) { phoneCross = false }
-                }
-            }
+            if count > 0 { HapticsManager.shared.notification(.success) }
         }
         .sheet(isPresented: $showProfileCard) {
             if let profile = selectedProfile {
@@ -80,50 +75,98 @@ struct AirShareView: View {
 
     // MARK: - Phone Animation
 
+    private var connected: Bool {
+        if case .holding = manager.status { return true }
+        if case .sent = manager.status { return true }
+        if case .received = manager.status { return true }
+        return false
+    }
+
     private var phoneAnimation: some View {
-        HStack(spacing: phoneCross ? -30 : 60) {
+        HStack(spacing: connected ? -20 : 56) {
             // My phone
             VStack(spacing: 8) {
-                Image(systemName: "iphone")
-                    .font(.system(size: 56))
-                    .foregroundColor(theme.effectivePrimary)
-                    .rotationEffect(.degrees(-15))
-
-                if let profile = myProfile {
-                    AvatarView(url: profile.avatarUrl, size: 36)
+                ZStack {
+                    Image(systemName: "iphone")
+                        .font(.system(size: 60))
+                        .foregroundColor(theme.effectivePrimary)
+                        .rotationEffect(.degrees(-12))
+                    if let p = myProfile {
+                        AvatarView(url: p.avatarUrl, size: 28)
+                            .offset(x: -2, y: 6)
+                    }
                 }
+                Text(myProfile?.username ?? "Я")
+                    .font(.system(size: 11))
+                    .foregroundColor(theme.effectiveSecondaryTextColor)
             }
-            .offset(x: phoneCross ? 10 : 0)
-            .animation(.spring(response: 0.6, dampingFraction: 0.7), value: phoneCross)
+            .offset(x: connected ? 8 : 0)
 
             // Partner phone
             VStack(spacing: 8) {
-                Image(systemName: "iphone")
-                    .font(.system(size: 56))
-                    .foregroundColor(theme.effectiveTertiary)
-                    .rotationEffect(.degrees(15))
-
-                Text("?")
-                    .font(.system(size: 24, weight: .bold))
+                ZStack {
+                    Image(systemName: "iphone")
+                        .font(.system(size: 60))
+                        .foregroundColor(theme.effectiveTertiary)
+                        .rotationEffect(.degrees(12))
+                    if let first = manager.discoveredProfiles.first {
+                        AvatarView(url: first.avatarUrl, size: 28)
+                            .offset(x: 2, y: 6)
+                    } else {
+                        Image(systemName: "questionmark")
+                            .font(.system(size: 20, weight: .bold))
+                            .foregroundColor(theme.effectiveSecondaryTextColor)
+                            .offset(x: 2, y: 6)
+                    }
+                }
+                Text(manager.discoveredProfiles.first?.username ?? "?")
+                    .font(.system(size: 11))
                     .foregroundColor(theme.effectiveSecondaryTextColor)
-                    .frame(width: 36, height: 36)
-                    .background(theme.effectiveCardColor)
-                    .clipShape(Circle())
             }
-            .offset(x: phoneCross ? -10 : 0)
-            .animation(.spring(response: 0.6, dampingFraction: 0.7), value: phoneCross)
+            .offset(x: connected ? -8 : 0)
         }
-        .padding(.vertical, 20)
+        .animation(.spring(response: 0.6, dampingFraction: 0.65), value: connected)
+        .padding(.vertical, 16)
     }
 
-    // MARK: - Received Profiles
+    // MARK: - Status Pill
 
-    private var receivedProfilesList: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("airshare.found".localized)
+    private var statusPill: some View {
+        HStack(spacing: 8) {
+            Circle()
+                .fill(statusColor)
+                .frame(width: 8, height: 8)
+                .scaleEffect(pulse ? 1.3 : 1.0)
+                .animation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true), value: pulse)
+
+            Text(manager.status.description)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(theme.effectiveTextColor)
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 10)
+        .background(theme.effectiveCardColor)
+        .clipShape(Capsule())
+        .overlay(Capsule().stroke(statusColor.opacity(0.4), lineWidth: 1))
+    }
+
+    private var statusColor: Color {
+        switch manager.status {
+        case .idle, .searching: return theme.effectiveSecondaryTextColor
+        case .holding: return theme.effectivePrimary
+        case .sent: return .green
+        case .received: return .green
+        }
+    }
+
+    // MARK: - Discovered Profiles
+
+    private var discoveredList: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Найдены поблизости")
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundColor(theme.effectiveSecondaryTextColor)
-                .padding(.horizontal, 16)
+                .padding(.horizontal, 20)
 
             ForEach(manager.discoveredProfiles) { profile in
                 Button {
@@ -133,13 +176,12 @@ struct AirShareView: View {
                     HStack(spacing: 14) {
                         AvatarView(url: profile.avatarUrl, size: 48, showBorder: true)
 
-                        VStack(alignment: .leading, spacing: 4) {
+                        VStack(alignment: .leading, spacing: 3) {
                             Text(profile.username)
                                 .font(.system(size: 15, weight: .semibold))
                                 .foregroundColor(theme.effectiveTextColor)
-
                             if !profile.games.isEmpty {
-                                Text(profile.games.prefix(2).joined(separator: ", "))
+                                Text(profile.games.prefix(3).joined(separator: " · "))
                                     .font(.system(size: 12))
                                     .foregroundColor(theme.effectiveSecondaryTextColor)
                                     .lineLimit(1)
@@ -149,14 +191,21 @@ struct AirShareView: View {
                         Spacer()
 
                         Image(systemName: "chevron.right")
+                            .font(.system(size: 13))
                             .foregroundColor(theme.effectiveSecondaryTextColor)
                     }
-                    .padding()
-                    .glass(cornerRadius: 16)
+                    .padding(14)
+                    .background(theme.effectiveCardColor)
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                    .overlay(RoundedRectangle(cornerRadius: 16).stroke(theme.effectivePrimary.opacity(0.25), lineWidth: 1))
                     .padding(.horizontal, 16)
                 }
+                .buttonStyle(.plain)
+                .transition(.asymmetric(insertion: .move(edge: .trailing).combined(with: .opacity),
+                                        removal: .opacity))
             }
         }
+        .animation(.spring(response: 0.5, dampingFraction: 0.75), value: manager.discoveredProfiles.count)
     }
 
     // MARK: - Actions
@@ -175,7 +224,6 @@ struct AirShareView: View {
         let request = LikeRequest(id: requestId, from: myUid, to: profile.uid, requestType: "exchange", createdAt: Date())
         try? await env.firestore.sendLikeRequest(request)
 
-        // Check mutual
         if let existingId = try? await env.firestore.checkMutualLike(fromUid: myUid, toUid: profile.uid, requestType: "exchange") {
             _ = try? await env.firestore.createChat(participants: [myUid, profile.uid], chatType: "exchange")
             try? await env.firestore.deleteLikeRequest(id: existingId)
@@ -198,54 +246,78 @@ struct AirShareProfileCard: View {
     var body: some View {
         ZStack {
             theme.effectiveBackground.ignoresSafeArea()
+            GrainOverlay(opacity: 0.05)
 
-            VStack(spacing: 24) {
-                // Drag indicator
+            VStack(spacing: 0) {
                 Capsule()
-                    .fill(theme.effectiveSecondaryTextColor.opacity(0.4))
+                    .fill(theme.effectiveSecondaryTextColor.opacity(0.35))
                     .frame(width: 40, height: 4)
-                    .padding(.top, 12)
+                    .padding(.top, 14)
+                    .padding(.bottom, 24)
 
                 AvatarView(url: profile.avatarUrl, size: 100, showBorder: true)
+                    .padding(.bottom, 16)
 
-                VStack(spacing: 8) {
-                    Text(profile.username)
-                        .font(.system(size: 24, weight: .bold))
-                        .foregroundColor(theme.effectiveTextColor)
+                Text(profile.username)
+                    .font(.system(size: 24, weight: .bold))
+                    .foregroundColor(theme.effectiveTextColor)
 
-                    if !profile.platforms.isEmpty {
-                        PlatformBadgeRow(platforms: profile.platforms, size: 32)
+                if !profile.platforms.isEmpty {
+                    HStack(spacing: 10) {
+                        ForEach(profile.platforms, id: \.rawValue) { p in
+                            PlatformBadge(platform: p, size: 26)
+                        }
                     }
+                    .padding(.top, 8)
+                }
 
-                    if !profile.games.isEmpty {
-                        GameTagsScrollView(tags: profile.games.map { GameTag(name: $0) })
+                if !profile.games.isEmpty {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(profile.games, id: \.self) { game in
+                                Text(game)
+                                    .font(.system(size: 13, weight: .medium))
+                                    .foregroundColor(theme.effectiveTextColor)
+                                    .padding(.horizontal, 12).padding(.vertical, 7)
+                                    .background(theme.effectivePrimary.opacity(0.15))
+                                    .clipShape(Capsule())
+                            }
+                        }
+                        .padding(.horizontal, 24)
                     }
+                    .padding(.top, 16)
                 }
 
                 Spacer()
 
-                // Action buttons
-                HStack(spacing: 20) {
+                HStack(spacing: 24) {
                     Button(action: onDismiss) {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 22, weight: .bold))
+                        Label("Пропустить", systemImage: "xmark")
+                            .font(.system(size: 15, weight: .semibold))
                             .foregroundColor(.red)
-                            .frame(width: 64, height: 64)
-                            .background(Color.red.opacity(0.15))
-                            .clipShape(Circle())
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 52)
+                            .background(Color.red.opacity(0.12))
+                            .clipShape(RoundedRectangle(cornerRadius: 16))
                     }
 
                     Button(action: onLike) {
-                        Image(systemName: "heart.fill")
-                            .font(.system(size: 22, weight: .bold))
-                            .foregroundColor(.green)
-                            .frame(width: 64, height: 64)
-                            .background(Color.green.opacity(0.15))
-                            .clipShape(Circle())
+                        Label("Лайк", systemImage: "heart.fill")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 52)
+                            .background(
+                                LinearGradient(colors: [theme.effectivePrimary, theme.effectiveTertiary],
+                                               startPoint: .leading, endPoint: .trailing)
+                            )
+                            .clipShape(RoundedRectangle(cornerRadius: 16))
                     }
                 }
-                .padding(.bottom, 40)
+                .padding(.horizontal, 24)
+                .padding(.bottom, 48)
             }
         }
+        .presentationDetents([.medium, .large])
     }
 }

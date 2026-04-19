@@ -99,6 +99,9 @@
 "profile.subscriptions" = "Підписки";
 "profile.platforms" = "Платформи";
 "profile.skills" = "Навички";
+"profile.skills.create" = "Створити анкету навичок";
+"profile.skills.edit" = "Редагувати анкету навичок";
+"profile.skills.subtitle" = "Зʼявись у пошуку навичок";
 "profile.wanted" = "Бажані ігри";
 "profile.status.placeholder" = "#хештеги про себе";
 "profile.change.avatar" = "Змінити фото";

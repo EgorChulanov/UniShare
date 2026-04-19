@@ -171,13 +171,17 @@ struct SwipeCard: View {
     }
 
     private func platformRow(platform: Platform, games: [String], isTrailing: Bool) -> some View {
-        VStack(alignment: isTrailing ? .trailing : .leading, spacing: 6) {
+        let tags = card.platformGameTags[platform.rawValue] ?? []
+        let coverUrls = tags.reduce(into: [String: String]()) { dict, tag in
+            if let url = tag.coverUrl { dict[tag.name] = url }
+        }
+        return VStack(alignment: isTrailing ? .trailing : .leading, spacing: 6) {
             Text(platform.rawValue)
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundColor(platform.color)
                 .padding(.horizontal, 16)
 
-            GameCirclesRow(games: games, color: platform.color, isTrailing: isTrailing)
+            GameCirclesRow(games: games, color: platform.color, isTrailing: isTrailing, coverUrls: coverUrls)
         }
         .padding(.vertical, 10)
     }
@@ -302,7 +306,9 @@ struct ProfileDetailSheet: View {
                                             }
                                             .padding(.horizontal, 16)
 
-                                            GameCirclesRow(games: games, color: platform.color, isTrailing: false)
+                                            let tags = card.platformGameTags[platform.rawValue] ?? []
+                                            let urls = tags.reduce(into: [String:String]()) { d,t in if let u = t.coverUrl { d[t.name]=u } }
+                                            GameCirclesRow(games: games, color: platform.color, isTrailing: false, coverUrls: urls)
                                         }
                                         .padding(.vertical, 12)
 

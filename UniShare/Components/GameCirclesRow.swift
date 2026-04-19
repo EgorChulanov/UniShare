@@ -7,11 +7,11 @@ struct GameCirclesRow: View {
     let games: [String]
     let color: Color
     let isTrailing: Bool
+    var coverUrls: [String: String] = [:]   // game name → RAWG cover URL
 
     @EnvironmentObject var theme: ThemeManager
     @State private var scrollIndex = 0
 
-    // Auto-scroll every 2.5 s when there are more than 3 games
     private let scrollTimer = Timer.publish(every: 2.5, on: .main, in: .common).autoconnect()
 
     var body: some View {
@@ -28,7 +28,7 @@ struct GameCirclesRow: View {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 10) {
                             ForEach(Array(games.enumerated()), id: \.0) { idx, name in
-                                GameCircleView(name: name, color: color)
+                                GameCircleView(name: name, color: color, coverUrl: coverUrls[name])
                                     .id(idx)
                             }
                         }

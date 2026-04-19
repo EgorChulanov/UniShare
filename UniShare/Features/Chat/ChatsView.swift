@@ -28,6 +28,7 @@ struct ChatsView: View {
         NavigationView {
             ZStack {
                 theme.effectiveBackground.ignoresSafeArea()
+                GrainOverlay(opacity: 0.05)
 
                 VStack(spacing: 0) {
                     segmentPicker

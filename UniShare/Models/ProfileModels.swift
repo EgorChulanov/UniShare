@@ -80,6 +80,7 @@ struct ProfileCard: Identifiable {
     var platforms: [Platform]
     var tags: [GameTag]
     var platformGames: [String: [String]]
+    var platformGameTags: [String: [GameTag]]   // platform rawValue → GameTag (with coverUrl)
     var userId: String
     var avatarUrl: String?
     var subscriptions: [LocalUserSubscription]
@@ -94,6 +95,7 @@ struct ProfileCard: Identifiable {
         platforms: [Platform] = [],
         tags: [GameTag] = [],
         platformGames: [String: [String]] = [:],
+        platformGameTags: [String: [GameTag]] = [:],
         userId: String,
         avatarUrl: String? = nil,
         subscriptions: [LocalUserSubscription] = [],
@@ -107,6 +109,7 @@ struct ProfileCard: Identifiable {
         self.platforms = platforms
         self.tags = tags
         self.platformGames = platformGames
+        self.platformGameTags = platformGameTags
         self.userId = userId
         self.avatarUrl = avatarUrl
         self.subscriptions = subscriptions
@@ -131,6 +134,8 @@ struct UserProfile: Codable, Identifiable {
     var skills: [String]
     var subscriptions: [LocalUserSubscription]
     var onboardingComplete: Bool
+    var hasSkillsProfile: Bool
+    var skillsDescription: String?
     var isOnline: Bool
     var lastSeen: Date?
     var rating: Double
@@ -145,6 +150,8 @@ struct UserProfile: Codable, Identifiable {
         self.skills = []
         self.subscriptions = []
         self.onboardingComplete = false
+        self.hasSkillsProfile = false
+        self.skillsDescription = nil
         self.isOnline = true
         self.rating = 0.0
     }
@@ -159,9 +166,11 @@ struct UserProfile: Codable, Identifiable {
             "platformGames": platformGames,
             "skills": skills,
             "onboardingComplete": onboardingComplete,
+            "hasSkillsProfile": hasSkillsProfile,
             "isOnline": isOnline,
             "rating": rating
         ]
+        if let skillsDescription { data["skillsDescription"] = skillsDescription }
         if let avatarUrl { data["avatarUrl"] = avatarUrl }
         if let status { data["status"] = status }
         data["subscriptions"] = subscriptions.map { ["name": $0.name, "iconName": $0.iconName, "url": $0.url ?? ""] }
@@ -180,6 +189,8 @@ struct UserProfile: Codable, Identifiable {
         profile.platformGames = data["platformGames"] as? [String: [String]] ?? [:]
         profile.skills = data["skills"] as? [String] ?? []
         profile.onboardingComplete = data["onboardingComplete"] as? Bool ?? false
+        profile.hasSkillsProfile = data["hasSkillsProfile"] as? Bool ?? false
+        profile.skillsDescription = data["skillsDescription"] as? String
         profile.isOnline = data["isOnline"] as? Bool ?? false
         profile.rating = data["rating"] as? Double ?? 0.0
         if let subs = data["subscriptions"] as? [[String: String]] {
