@@ -13,11 +13,12 @@ struct ChatView: View {
 
     init(chat: Chat) {
         self.chat = chat
+        let env = AppEnvironment.shared
         _vm = StateObject(wrappedValue: ChatViewModel(
             chat: chat,
-            auth: FirebaseAuthService(),
-            firestore: FirestoreService(),
-            storage: StorageService()
+            auth: env.auth,
+            db: env.db,
+            storage: env.storage
         ))
     }
 
@@ -84,7 +85,7 @@ struct ChatView: View {
         .task {
             await vm.start()
             if let partnerUid = vm.partnerUid, !vm.myUid.isEmpty {
-                hasRated = (try? await FirestoreService().hasReviewed(
+                hasRated = (try? await AppEnvironment.shared.db.hasReviewed(
                     fromUid: vm.myUid, toUid: partnerUid, chatId: chat.id)) ?? false
             }
         }
@@ -95,10 +96,9 @@ struct ChatView: View {
         .sheet(isPresented: $showRatingSheet) {
             RatingSheet(partnerUsername: vm.partnerProfile?.username ?? "") { rating, text in
                 Task {
-                    guard let myUid = vm.myUid,
-                          let partnerUid = vm.partnerUid else { return }
-                    try? await FirestoreService().submitReview(
-                        fromUid: myUid, toUid: partnerUid,
+                    guard let partnerUid = vm.partnerUid else { return }
+                    try? await AppEnvironment.shared.db.submitReview(
+                        fromUid: vm.myUid, toUid: partnerUid,
                         chatId: chat.id, rating: rating, text: text)
                     hasRated = true
                 }

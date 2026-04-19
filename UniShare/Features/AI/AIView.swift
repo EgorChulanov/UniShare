@@ -8,11 +8,12 @@ struct AIView: View {
     @StateObject private var vm: AIViewModel
 
     init() {
+        let env = AppEnvironment.shared
         _vm = StateObject(wrappedValue: AIViewModel(
-            chatGPT: ChatGPTService(),
-            rawg: RawgService(),
-            firestore: FirestoreService(),
-            auth: FirebaseAuthService()
+            chatGPT: env.chatGPT,
+            rawg: env.rawg,
+            db: env.db,
+            auth: env.auth
         ))
     }
 

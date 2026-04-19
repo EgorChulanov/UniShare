@@ -10,9 +10,10 @@ struct ChatsView: View {
     @State private var previewProfile: UserProfile?
 
     init() {
+        let env = AppEnvironment.shared
         _vm = StateObject(wrappedValue: ChatsViewModel(
-            auth: FirebaseAuthService(),
-            firestore: FirestoreService()
+            auth: env.auth,
+            db: env.db
         ))
     }
 
@@ -190,7 +191,7 @@ struct ChatsView: View {
         .onAppear {
             Task {
                 if vm.partnerProfiles[request.from] == nil,
-                   let profile = try? await FirestoreService().getUser(uid: request.from) {
+                   let profile = try? await AppEnvironment.shared.db.getUser(uid: request.from) {
                     vm.partnerProfiles[request.from] = profile
                 }
             }

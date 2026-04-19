@@ -394,12 +394,12 @@ struct SkillsProfileSetupView: View {
         updated.skillsDescription = description.isEmpty ? nil : description
         updated.hasSkillsProfile = true
 
-        let data: [String: Any] = [
-            "skills": updated.skills,
-            "skillsDescription": updated.skillsDescription ?? "",
-            "hasSkillsProfile": true
+        let data: [String: AnyEncodable] = [
+            "skills": AnyEncodable(updated.skills),
+            "skills_description": AnyEncodable(updated.skillsDescription ?? ""),
+            "has_skills_profile": AnyEncodable(true)
         ]
-        try? await FirestoreService().updateUser(uid: existingProfile.uid, data: data)
+        try? await AppEnvironment.shared.db.updateUser(uid: existingProfile.uid, data: data)
         isSaving = false
         onComplete(updated)
         dismiss()

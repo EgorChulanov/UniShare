@@ -12,11 +12,12 @@ struct ProfileView: View {
     @State private var showSkillsSetup = false
 
     init() {
+        let env = AppEnvironment.shared
         _vm = StateObject(wrappedValue: ProfileViewModel(
-            auth: FirebaseAuthService(),
-            firestore: FirestoreService(),
-            storage: StorageService(),
-            rawg: RawgService()
+            auth: env.auth,
+            db: env.db,
+            storage: env.storage,
+            rawg: env.rawg
         ))
     }
 

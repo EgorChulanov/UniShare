@@ -9,7 +9,6 @@ final class FeedViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var selectedSegment: FeedSegment = .exchange
 
-    // Search
     @Published var searchQuery = ""
     @Published var searchResults: [GameTag] = []
     @Published var isSearching = false
@@ -21,8 +20,8 @@ final class FeedViewModel: ObservableObject {
     @AppStorage(AppConstants.Feed.undoCountKey) private var undoCount = 0
     @AppStorage(AppConstants.Feed.undoDateKey) private var undoDate = ""
 
-    private let auth: FirebaseAuthService
-    private let firestore: FirestoreService
+    private let auth: SupabaseAuthService
+    private let db: SupabaseService
     private let rawg: RawgService
     private var searchTask: Task<Void, Never>?
 
@@ -32,9 +31,9 @@ final class FeedViewModel: ObservableObject {
         return undoCount < AppConstants.Feed.maxUndoPerDay && !undoStack.isEmpty
     }
 
-    init(auth: FirebaseAuthService, firestore: FirestoreService, rawg: RawgService) {
+    init(auth: SupabaseAuthService, db: SupabaseService, rawg: RawgService) {
         self.auth = auth
-        self.firestore = firestore
+        self.db = db
         self.rawg = rawg
     }
 
@@ -45,13 +44,13 @@ final class FeedViewModel: ObservableObject {
 
         let excludeUids = [myUid] + Array(dislikedUids) + Array(likedUids)
 
-        async let exchangeProfiles = (try? await firestore.getFeedUsers(
+        async let exchangeProfiles = (try? await db.getFeedUsers(
             excludeUids: excludeUids,
             limit: AppConstants.Feed.initialBatchSize,
             skillsOnly: false
         )) ?? []
 
-        async let skillProfiles = (try? await firestore.getFeedUsers(
+        async let skillProfiles = (try? await db.getFeedUsers(
             excludeUids: excludeUids,
             limit: AppConstants.Feed.initialBatchSize,
             skillsOnly: true
@@ -77,10 +76,8 @@ final class FeedViewModel: ObservableObject {
     }
 
     private func buildCard(from profile: UserProfile) async -> ProfileCard {
-        // Collect all unique game names across all platforms
         let allNames = Array(Set(profile.platformGames.values.flatMap { $0 } + profile.games)).prefix(12)
 
-        // Fetch cover URLs in parallel
         let coverUrlMap: [String: String] = await withTaskGroup(of: (String, String?).self) { group in
             for name in allNames {
                 group.addTask {
@@ -97,12 +94,10 @@ final class FeedViewModel: ObservableObject {
             return result
         }
 
-        // Build platformGameTags: platform → [GameTag with coverUrl]
         let platformGameTags = profile.platformGames.mapValues { names in
             names.map { name in GameTag(name: name, coverUrl: coverUrlMap[name]) }
         }
 
-        // Flat tags for backward compat
         let tags = profile.games.prefix(3).map { name in
             GameTag(name: name, coverUrl: coverUrlMap[name])
         }
@@ -138,11 +133,11 @@ final class FeedViewModel: ObservableObject {
             requestType: requestType,
             createdAt: Date()
         )
-        try? await firestore.sendLikeRequest(request)
+        try? await db.sendLikeRequest(request)
 
-        if let existingId = try? await firestore.checkMutualLike(fromUid: myUid, toUid: card.userId, requestType: requestType) {
-            _ = try? await firestore.createChat(participants: [myUid, card.userId], chatType: requestType)
-            try? await firestore.deleteLikeRequest(id: existingId)
+        if let existingId = try? await db.checkMutualLike(fromUid: myUid, toUid: card.userId, requestType: requestType) {
+            _ = try? await db.createChat(participants: [myUid, card.userId], chatType: requestType)
+            try? await db.deleteLikeRequest(id: existingId)
             HapticsManager.shared.playMatch()
         }
 
@@ -182,7 +177,7 @@ final class FeedViewModel: ObservableObject {
         guard let myUid = auth.uid else { return }
         let excludeUids = [myUid] + Array(dislikedUids) + Array(likedUids)
         let skillsOnly = requestType == "skills"
-        let profiles = (try? await firestore.getFeedUsers(excludeUids: excludeUids, limit: 1, skillsOnly: skillsOnly)) ?? []
+        let profiles = (try? await db.getFeedUsers(excludeUids: excludeUids, limit: 1, skillsOnly: skillsOnly)) ?? []
         for profile in profiles {
             let card = await buildCard(from: profile)
             if requestType == "exchange" { exchangeCards.append(card) }
