@@ -169,7 +169,6 @@ struct UniShareWidgetView: View {
 
 // MARK: - Widget Definition
 
-@main
 struct UniShareMainWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: "UniShareMainWidget", provider: UniShareProvider()) { entry in
@@ -179,5 +178,21 @@ struct UniShareMainWidget: Widget {
         .configurationDisplayName("UniShare")
         .description("Your gaming profile at a glance")
         .supportedFamilies([.systemSmall, .systemMedium])
+    }
+}
+
+// MARK: - Widget Bundle
+
+@main
+struct UniShareWidgetBundle: WidgetBundle {
+    var body: some Widget {
+        UniShareMainWidget()
+        UniShareWidgetLiveActivity()
+        if #available(iOS 18.0, *) {
+            UniShareChatsControl()
+            UniShareAirShareControl()
+            UniShareAIControl()
+            UniShareProfileControl()
+        }
     }
 }

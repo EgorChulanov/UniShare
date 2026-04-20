@@ -19,7 +19,7 @@ final class AirShareManager: NSObject, ObservableObject {
     // MARK: - Start / Stop
 
     func start(with profile: UserProfile) {
-        myProfileData = try? JSONSerialization.data(withJSONObject: profile.firestoreData)
+        myProfileData = try? JSONEncoder().encode(profile)
         status = .searching
         centralManager  = CBCentralManager(delegate: self, queue: .main)
         peripheralManager = CBPeripheralManager(delegate: self, queue: .main)

@@ -46,6 +46,7 @@ struct OpenProfileIntent: AppIntent {
 
 // MARK: - Control Widgets
 
+@available(iOS 18.0, *)
 struct UniShareChatsControl: ControlWidget {
     static var kind: String = "UniShareChatsControl"
 
@@ -60,6 +61,7 @@ struct UniShareChatsControl: ControlWidget {
     }
 }
 
+@available(iOS 18.0, *)
 struct UniShareAirShareControl: ControlWidget {
     static var kind: String = "UniShareAirShareControl"
 
@@ -74,6 +76,7 @@ struct UniShareAirShareControl: ControlWidget {
     }
 }
 
+@available(iOS 18.0, *)
 struct UniShareAIControl: ControlWidget {
     static var kind: String = "UniShareAIControl"
 
@@ -88,6 +91,7 @@ struct UniShareAIControl: ControlWidget {
     }
 }
 
+@available(iOS 18.0, *)
 struct UniShareProfileControl: ControlWidget {
     static var kind: String = "UniShareProfileControl"
 
