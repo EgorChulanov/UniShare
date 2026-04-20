@@ -191,7 +191,7 @@ struct LoginView: View {
                     uid: uid,
                     username: email.components(separatedBy: "@").first ?? "user"
                 )
-                try await env.firestore.createUser(profile)
+                try await env.db.createUser(profile)
             }
         } catch {
             errorMessage = error.localizedDescription

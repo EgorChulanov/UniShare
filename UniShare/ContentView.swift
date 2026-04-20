@@ -59,7 +59,7 @@ struct ContentView: View {
             return
         }
         isCheckingOnboarding = true
-        let profile = try? await env.firestore.getUser(uid: uid)
+        let profile = try? await env.db.getUser(uid: uid)
         await MainActor.run {
             onboardingComplete = profile?.onboardingComplete ?? false
             if onboardingComplete && !greetingDone {

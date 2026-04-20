@@ -212,7 +212,7 @@ struct AirShareView: View {
 
     private func loadAndStart() async {
         guard let uid = env.auth.uid else { return }
-        if let profile = try? await env.firestore.getUser(uid: uid) {
+        if let profile = try? await env.db.getUser(uid: uid) {
             myProfile = profile
             manager.start(with: profile)
         }
@@ -222,11 +222,11 @@ struct AirShareView: View {
         guard let myUid = env.auth.uid else { return }
         let requestId = "\(myUid)_\(profile.uid)_exchange"
         let request = LikeRequest(id: requestId, from: myUid, to: profile.uid, requestType: "exchange", createdAt: Date())
-        try? await env.firestore.sendLikeRequest(request)
+        try? await env.db.sendLikeRequest(request)
 
-        if let existingId = try? await env.firestore.checkMutualLike(fromUid: myUid, toUid: profile.uid, requestType: "exchange") {
-            _ = try? await env.firestore.createChat(participants: [myUid, profile.uid], chatType: "exchange")
-            try? await env.firestore.deleteLikeRequest(id: existingId)
+        if let existingId = try? await env.db.checkMutualLike(fromUid: myUid, toUid: profile.uid, requestType: "exchange") {
+            _ = try? await env.db.createChat(participants: [myUid, profile.uid], chatType: "exchange")
+            try? await env.db.deleteLikeRequest(id: existingId)
             HapticsManager.shared.playMatch()
             TabBarState.shared.switchTo(.chats)
         }

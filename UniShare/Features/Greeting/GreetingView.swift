@@ -49,7 +49,7 @@ struct GreetingView: View {
 
     private func loadUserData() async {
         guard let uid = env.auth.uid else { return }
-        if let profile = try? await env.firestore.getUser(uid: uid) {
+        if let profile = try? await env.db.getUser(uid: uid) {
             await MainActor.run {
                 username = profile.username
                 avatarUrl = profile.avatarUrl
