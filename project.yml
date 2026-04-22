@@ -8,18 +8,6 @@ options:
   createIntermediateGroups: true
 
 packages:
-  FirebaseAnalytics:
-    url: https://github.com/firebase/firebase-ios-sdk
-    exactVersion: "10.25.0"
-  FirebaseAuth:
-    url: https://github.com/firebase/firebase-ios-sdk
-    exactVersion: "10.25.0"
-  FirebaseFirestore:
-    url: https://github.com/firebase/firebase-ios-sdk
-    exactVersion: "10.25.0"
-  FirebaseStorage:
-    url: https://github.com/firebase/firebase-ios-sdk
-    exactVersion: "10.25.0"
   Supabase:
     url: https://github.com/supabase/supabase-swift
     from: "2.0.0"
@@ -81,14 +69,6 @@ targets:
         com.apple.security.application-groups:
           - group.com.CHULANOV.UniShare
     dependencies:
-      - package: FirebaseAnalytics
-        product: FirebaseAnalytics
-      - package: FirebaseAuth
-        product: FirebaseAuth
-      - package: FirebaseFirestore
-        product: FirebaseFirestore
-      - package: FirebaseStorage
-        product: FirebaseStorage
       - package: Supabase
         product: Supabase
     settings:

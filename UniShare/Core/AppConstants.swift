@@ -15,15 +15,6 @@ enum AppConstants {
         static let profile = URL(string: "unishare://profile")!
     }
 
-    // MARK: - Firestore Collections
-    enum Firestore {
-        static let users = "users"
-        static let chats = "chats"
-        static let messages = "messages"
-        static let likeRequests = "likeRequests"
-        static let aiRequests = "aiRequests"
-    }
-
     // MARK: - App Group Keys
     enum WidgetKeys {
         static let username = "widget_username"

@@ -28,17 +28,18 @@ struct AvatarView: View {
         }
         .frame(width: size, height: size)
         .clipShape(Circle())
-        .overlay(
-            showBorder ?
-            Circle().stroke(
-                LinearGradient(
-                    colors: [theme.effectivePrimary, theme.effectiveTertiary],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                ),
-                lineWidth: 2
-            ) : nil
-        )
+        .overlay {
+            if showBorder {
+                Circle().stroke(
+                    LinearGradient(
+                        colors: [theme.effectivePrimary, theme.effectiveTertiary],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 2
+                )
+            }
+        }
         .task(id: url) {
             guard let url, !url.isEmpty else { return }
             if let cached = AvatarCacheService.shared.image(for: url) {

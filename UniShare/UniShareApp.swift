@@ -1,5 +1,4 @@
 import SwiftUI
-import FirebaseCore
 
 @main
 struct UniShareApp: App {
@@ -8,7 +7,6 @@ struct UniShareApp: App {
     @StateObject private var localization = LocalizationManager.shared
 
     init() {
-        FirebaseApp.configure()
         ManropeFontSwizzle.apply()
     }
 
