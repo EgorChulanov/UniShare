@@ -10,7 +10,7 @@ final class SupabaseAuthService: ObservableObject {
 
     var uid: String? {
         // Synchronously retrieve the cached session user id
-        client.auth.currentUser?.id.uuidString
+        client.auth.currentUser?.id.uuidString.lowercased()
     }
 
     init() {
@@ -51,7 +51,7 @@ final class SupabaseAuthService: ObservableObject {
 
     func signUp(email: String, password: String) async throws -> String {
         let response = try await client.auth.signUp(email: email, password: password)
-        return response.user.id.uuidString
+        return response.user.id.uuidString.lowercased()
     }
 
     // MARK: - Sign Out
