@@ -13,8 +13,8 @@ final class SupabaseStorageService {
         _ = try await client.storage
             .from("avatars")
             .upload(
-                path: path,
-                file: data,
+                path,
+                data: data,
                 options: FileOptions(contentType: "image/jpeg", upsert: true)
             )
         let url = try client.storage
@@ -32,8 +32,8 @@ final class SupabaseStorageService {
         _ = try await client.storage
             .from("chats")
             .upload(
-                path: path,
-                file: data,
+                path,
+                data: data,
                 options: FileOptions(contentType: "image/jpeg", upsert: false)
             )
         let url = try client.storage
