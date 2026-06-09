@@ -12,11 +12,7 @@ final class SupabaseStorageService {
         let path = "\(uid).jpg"
         _ = try await client.storage
             .from("avatars")
-            .upload(
-                path,
-                data: data,
-                options: FileOptions(contentType: "image/jpeg", upsert: true)
-            )
+            .upload(path, data: data, options: FileOptions(contentType: "image/jpeg", upsert: true))
         let url = try client.storage
             .from("avatars")
             .getPublicURL(path: path)
@@ -31,11 +27,7 @@ final class SupabaseStorageService {
         let path = "\(chatId)/\(fileName)"
         _ = try await client.storage
             .from("chats")
-            .upload(
-                path,
-                data: data,
-                options: FileOptions(contentType: "image/jpeg", upsert: false)
-            )
+            .upload(path, data: data, options: FileOptions(contentType: "image/jpeg", upsert: false))
         let url = try client.storage
             .from("chats")
             .getPublicURL(path: path)
