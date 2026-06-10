@@ -71,12 +71,17 @@ targets:
     dependencies:
       - package: Supabase
         product: Supabase
+    configFiles:
+      Debug: Config/Debug.xcconfig
+      Release: Config/Release.xcconfig
     settings:
       base:
         PRODUCT_NAME: UniShare
         SWIFT_VERSION: "5.9"
         DEVELOPMENT_TEAM: ""
         CODE_SIGN_STYLE: Automatic
+        INFOPLIST_FILE: UniShare/Info.plist
+        GENERATE_INFOPLIST_FILE: NO
 
   UniShareWidget:
     type: app-extension
@@ -93,9 +98,13 @@ targets:
       properties:
         com.apple.security.application-groups:
           - group.com.CHULANOV.UniShare
+    configFiles:
+      Debug: Config/Debug.xcconfig
+      Release: Config/Release.xcconfig
     settings:
       base:
         PRODUCT_NAME: UniShareWidget
+        PRODUCT_BUNDLE_IDENTIFIER: com.CHULANOV.UniShare.UniShareWidget
         SWIFT_VERSION: "5.9"
         DEVELOPMENT_TEAM: ""
         CODE_SIGN_STYLE: Automatic
