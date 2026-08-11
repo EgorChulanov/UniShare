@@ -1,0 +1,85 @@
+name: Upload TestFlight
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  upload:
+    runs-on: macos-26
+    environment: testflight
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install tooling
+        run: brew install xcodegen
+      - name: Create build configuration
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+        run: |
+          test -n "$SUPABASE_URL" && test -n "$SUPABASE_PUBLISHABLE_KEY"
+          SAFE_URL=$(printf '%s' "$SUPABASE_URL" | sed 's#https://#https:/$()/#')
+          cat > Config/Secrets.xcconfig <<EOF
+          SUPABASE_URL = $SAFE_URL
+          SUPABASE_PUBLISHABLE_KEY = $SUPABASE_PUBLISHABLE_KEY
+          SUPABASE_ANON_KEY = \$(SUPABASE_PUBLISHABLE_KEY)
+          EOF
+      - name: Validate release sources and metadata
+        run: |
+          make generate
+          make test-static
+          git diff --check
+      - name: Import distribution certificate
+        env:
+          CERTIFICATE_P12_BASE64: ${{ secrets.CERTIFICATE_P12_BASE64 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.CERTIFICATE_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          test -n "$CERTIFICATE_P12_BASE64" && test -n "$CERTIFICATE_PASSWORD" && test -n "$KEYCHAIN_PASSWORD"
+          echo "$CERTIFICATE_P12_BASE64" | base64 -D > "$RUNNER_TEMP/distribution.p12"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          security set-keychain-settings -lut 21600 build.keychain
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          security import "$RUNNER_TEMP/distribution.p12" -P "$CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k build.keychain
+          security list-keychain -d user -s build.keychain
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" build.keychain
+      - name: Install App Store provisioning profiles
+        env:
+          APPSTORE_APP_PROFILE_BASE64: ${{ secrets.APPSTORE_APP_PROFILE_BASE64 }}
+          APPSTORE_WIDGET_PROFILE_BASE64: ${{ secrets.APPSTORE_WIDGET_PROFILE_BASE64 }}
+        run: |
+          test -n "$APPSTORE_APP_PROFILE_BASE64" && test -n "$APPSTORE_WIDGET_PROFILE_BASE64"
+          PROFILE_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
+          mkdir -p "$PROFILE_DIR"
+          echo "$APPSTORE_APP_PROFILE_BASE64" | base64 -D > "$PROFILE_DIR/unishare-app.mobileprovision"
+          echo "$APPSTORE_WIDGET_PROFILE_BASE64" | base64 -D > "$PROFILE_DIR/unishare-widget.mobileprovision"
+          chmod 600 "$PROFILE_DIR"/*.mobileprovision
+      - name: Archive and upload
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_BASE64: ${{ secrets.ASC_KEY_BASE64 }}
+          RELEASE_BUNDLE_ID: ${{ vars.RELEASE_BUNDLE_ID }}
+          RELEASE_WIDGET_BUNDLE_ID: ${{ vars.RELEASE_WIDGET_BUNDLE_ID }}
+          RELEASE_APP_GROUP_ID: ${{ vars.RELEASE_APP_GROUP_ID }}
+          RELEASE_APP_PROFILE: ${{ vars.RELEASE_APP_PROFILE }}
+          RELEASE_WIDGET_PROFILE: ${{ vars.RELEASE_WIDGET_PROFILE }}
+          RELEASE_VERSION: ${{ vars.RELEASE_VERSION }}
+          RELEASE_BUILD_NUMBER: ${{ vars.RELEASE_BUILD_NUMBER }}
+        run: |
+          test -n "$ASC_KEY_BASE64"
+          mkdir -p "$RUNNER_TEMP/appstoreconnect/private_keys"
+          ASC_KEY_PATH="$RUNNER_TEMP/appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8"
+          echo "$ASC_KEY_BASE64" | base64 -D > "$ASC_KEY_PATH"
+          export ASC_KEY_PATH
+          ./scripts/archive_testflight.sh
+      - name: Remove temporary signing material
+        if: always()
+        run: |
+          rm -f "$RUNNER_TEMP/distribution.p12"
+          rm -rf "$RUNNER_TEMP/appstoreconnect"
+          rm -f "$HOME/Library/MobileDevice/Provisioning Profiles/unishare-app.mobileprovision"
+          rm -f "$HOME/Library/MobileDevice/Provisioning Profiles/unishare-widget.mobileprovision"
+          security delete-keychain build.keychain 2>/dev/null || true
