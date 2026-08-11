@@ -13,9 +13,20 @@ DEVICE_ID=$(xcrun simctl list devices available -j | \
     exit 1
 }
 
+set -- \
+    -only-testing:UniShareTests \
+    -only-testing:UniShareUITests/LaunchUITests/testLaunchShowsWorkingAuthenticationForm
+
+if [ -n "${UNISHARE_E2E_URL:-}" ] && [ -n "${UNISHARE_E2E_KEY:-}" ]; then
+    set -- "$@" \
+        -only-testing:UniShareUITests/LaunchUITests/testFullRegistrationProfileAndDeletionAgainstLocalSupabase \
+        -only-testing:UniShareUITests/LaunchUITests/testMutualMatchAndChatAgainstLocalSupabase
+fi
+
 xcodebuild test \
     -project UniShare.xcodeproj \
     -scheme UniShare \
     -destination "platform=iOS Simulator,id=$DEVICE_ID" \
     -derivedDataPath "$DERIVED_DATA" \
+    "$@" \
     CODE_SIGNING_ALLOWED=NO
