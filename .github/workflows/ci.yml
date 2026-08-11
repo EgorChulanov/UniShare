@@ -2,6 +2,8 @@ name: UniShare CI
 
 on:
   push:
+    branches:
+      - main
   pull_request:
 
 concurrency:
@@ -12,7 +14,7 @@ jobs:
   backend-security:
     runs-on: macos-26
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Install PostgreSQL
         run: brew install postgresql@17
       - name: Validate migrations and RLS
@@ -21,7 +23,7 @@ jobs:
   backend-e2e:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: supabase/setup-cli@v3
         with:
           version: 2.109.1
@@ -31,7 +33,7 @@ jobs:
   ios-tests:
     runs-on: macos-26
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Install tooling
         run: brew install xcodegen jq
       - name: Create public build configuration
