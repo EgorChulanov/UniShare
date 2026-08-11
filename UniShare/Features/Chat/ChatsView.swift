@@ -1,269 +1,188 @@
 import SwiftUI
 
 struct ChatsView: View {
-    @EnvironmentObject var env: AppEnvironment
-    @EnvironmentObject var theme: ThemeManager
-    @EnvironmentObject var localization: LocalizationManager
-
+    @EnvironmentObject private var env: AppEnvironment
+    @EnvironmentObject private var theme: ThemeManager
     @StateObject private var vm: ChatsViewModel
-    @State private var selectedChat: Chat?
     @State private var previewProfile: UserProfile?
 
     init() {
         let env = AppEnvironment.shared
-        _vm = StateObject(wrappedValue: ChatsViewModel(
-            auth: env.auth,
-            db: env.db
-        ))
-    }
-
-    var currentChats: [Chat] {
-        vm.selectedSegment == .exchange ? vm.exchangeChats : vm.skillChats
-    }
-
-    var currentRequests: [LikeRequest] {
-        vm.selectedSegment == .exchange ? vm.exchangeRequests : vm.skillRequests
+        _vm = StateObject(wrappedValue: ChatsViewModel(auth: env.auth, db: env.db))
     }
 
     var body: some View {
         NavigationView {
             ZStack {
                 theme.effectiveBackground.ignoresSafeArea()
-                GrainOverlay(opacity: 0.14)
 
-                VStack(alignment: .leading, spacing: 0) {
-                    // Large title — matches Figma "Messages"
-                    Text("chats.title".localized)
-                        .font(.system(size: 30, weight: .bold))
-                        .foregroundColor(theme.effectiveTextColor)
-                        .padding(.horizontal, 20)
-                        .padding(.top, 14)
-                        .padding(.bottom, 4)
+                ScrollView {
+                    LazyVStack(spacing: 0) {
+                        if !vm.requests.isEmpty { requestsSection }
 
-                    segmentPicker
-
-                    ScrollView {
-                        LazyVStack(spacing: 0) {
-                            if !currentRequests.isEmpty {
-                                requestsSection
-                            }
-
-                            if currentChats.isEmpty && currentRequests.isEmpty {
-                                emptyState
-                            } else {
-                                ForEach(currentChats) { chat in
-                                    NavigationLink {
-                                        ChatView(chat: chat)
-                                    } label: {
-                                        chatRow(chat)
-                                    }
-                                    Divider()
-                                        .background(theme.effectiveCardColor)
-                                        .padding(.leading, 76)
+                        if vm.chats.isEmpty && vm.requests.isEmpty {
+                            emptyState
+                        } else {
+                            ForEach(vm.chats) { chat in
+                                NavigationLink {
+                                    ChatView(chat: chat)
+                                } label: {
+                                    chatRow(chat)
                                 }
+                                .buttonStyle(.plain)
+                                .accessibilityIdentifier("chats.row.\(chat.id)")
+
+                                Divider()
+                                    .padding(.leading, 82)
                             }
                         }
                     }
-                    .refreshable {}
+                    .padding(.top, 8)
                 }
             }
             .navigationTitle("")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(.visible, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
+            .navigationBarHidden(true)
             .sheet(item: $previewProfile) { profile in
-                ProfilePreviewSheet(profile: profile)
-                    .environmentObject(theme)
+                ProfilePreviewSheet(profile: profile).environmentObject(theme)
+            }
+            .alert("common.error".localized, isPresented: Binding(
+                get: { vm.errorMessage != nil },
+                set: { if !$0 { vm.errorMessage = nil } }
+            )) {
+                Button("common.ok".localized, role: .cancel) {}
+            } message: {
+                Text(vm.errorMessage ?? "")
             }
         }
         .onAppear { vm.startListening() }
     }
 
-    // MARK: - Pill Segment Picker
-
-    private var segmentPicker: some View {
-        HStack(spacing: 8) {
-            ForEach(ChatsSegment.allCases, id: \.localizedKey) { seg in
-                Button {
-                    withAnimation(.easeInOut(duration: 0.2)) { vm.selectedSegment = seg }
-                } label: {
-                    Text(seg.localizedKey.localized)
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(vm.selectedSegment == seg ? .white : theme.effectiveSecondaryTextColor)
-                        .padding(.horizontal, 18)
-                        .padding(.vertical, 8)
-                        .background(
-                            Group {
-                                if vm.selectedSegment == seg {
-                                    LinearGradient(
-                                        colors: [theme.effectivePrimary, theme.effectiveTertiary],
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    )
-                                } else {
-                                    LinearGradient(
-                                        colors: [Color.clear, Color.clear],
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    )
-                                }
-                            }
-                        )
-                        .clipShape(Capsule())
-                        .overlay(
-                            Capsule().stroke(
-                                vm.selectedSegment == seg
-                                    ? Color.clear
-                                    : theme.effectiveSecondaryTextColor.opacity(0.35),
-                                lineWidth: 1
-                            )
-                        )
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-    }
-
-    // MARK: - Requests Section
-
     private var requestsSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("chats.requests".localized)
                 .font(.system(size: 13, weight: .semibold))
-                .foregroundColor(theme.effectiveSecondaryTextColor)
-                .padding(.horizontal, 16)
+                .foregroundStyle(theme.effectiveSecondaryTextColor)
+                .padding(.horizontal, 18)
 
-            ForEach(currentRequests) { request in
-                requestRow(request)
-            }
+            ForEach(vm.requests) { request in requestRow(request) }
         }
-        .padding(.top, 8)
+        .padding(.vertical, 10)
     }
 
     private func requestRow(_ request: LikeRequest) -> some View {
         let profile = vm.partnerProfiles[request.from]
-        return HStack(spacing: 14) {
+        return HStack(spacing: 13) {
             Button {
-                if let p = profile { previewProfile = p }
+                if let profile { previewProfile = profile }
             } label: {
                 AvatarView(url: profile?.avatarUrl, size: 48, showBorder: true)
             }
+            .buttonStyle(.plain)
 
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 5) {
                 Text(profile?.username ?? request.from.prefix(8).description)
                     .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(theme.effectiveTextColor)
-                Text("wants to exchange")
-                    .font(.system(size: 13))
-                    .foregroundColor(theme.effectiveSecondaryTextColor)
+                    .foregroundStyle(theme.effectiveTextColor)
+                typeBadge(request.requestType)
             }
 
             Spacer()
 
-            HStack(spacing: 8) {
-                Button {
-                    Task { await vm.declineRequest(request) }
-                } label: {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundColor(.red)
-                        .frame(width: 34, height: 34)
-                        .background(Color.red.opacity(0.15))
-                        .clipShape(Circle())
-                }
-
-                Button {
-                    Task { await vm.acceptRequest(request) }
-                } label: {
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundColor(.green)
-                        .frame(width: 34, height: 34)
-                        .background(Color.green.opacity(0.15))
-                        .clipShape(Circle())
-                }
+            Button { Task { await vm.declineRequest(request) } } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(.red)
+                    .frame(width: 34, height: 34)
+                    .background(.red.opacity(0.12), in: Circle())
             }
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-        .onAppear {
-            Task {
-                if vm.partnerProfiles[request.from] == nil,
-                   let profile = try? await AppEnvironment.shared.db.getUser(uid: request.from) {
-                    vm.partnerProfiles[request.from] = profile
-                }
+            .accessibilityIdentifier("chats.request.decline.\(request.id)")
+            Button { Task { await vm.acceptRequest(request) } } label: {
+                Image(systemName: "checkmark")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(.green)
+                    .frame(width: 34, height: 34)
+                    .background(.green.opacity(0.12), in: Circle())
             }
+            .accessibilityIdentifier("chats.request.accept.\(request.id)")
         }
+        .padding(.horizontal, 18)
+        .padding(.vertical, 8)
+        .task { await vm.loadProfile(for: request) }
     }
-
-    // MARK: - Chat Row
 
     private func chatRow(_ chat: Chat) -> some View {
         let profile = vm.partnerProfiles[chat.partnerUid]
         let unread = chat.unreadCount(for: env.auth.uid ?? "")
-        return HStack(spacing: 14) {
+        return HStack(spacing: 13) {
             ZStack(alignment: .bottomTrailing) {
-                AvatarView(url: profile?.avatarUrl, size: 52)
-
+                AvatarView(url: profile?.avatarUrl, size: 54)
                 if chat.partnerStatus == "online" {
                     Circle()
-                        .fill(Color.green)
+                        .fill(.green)
                         .frame(width: 12, height: 12)
                         .overlay(Circle().stroke(theme.effectiveBackground, lineWidth: 2))
                 }
             }
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text(profile?.username ?? chat.partnerUid.prefix(8).description)
-                    .font(.system(size: 15, weight: unread > 0 ? .semibold : .regular))
-                    .foregroundColor(theme.effectiveTextColor)
-
+            VStack(alignment: .leading, spacing: 5) {
+                HStack(spacing: 7) {
+                    Text(profile?.username ?? chat.partnerUid.prefix(8).description)
+                        .font(.system(size: 15, weight: unread > 0 ? .semibold : .regular))
+                        .foregroundStyle(theme.effectiveTextColor)
+                    typeBadge(chat.chatType)
+                }
                 Text(chat.lastMessage.isEmpty ? "chat.empty".localized : chat.lastMessage)
                     .font(.system(size: 13))
-                    .foregroundColor(theme.effectiveSecondaryTextColor)
+                    .foregroundStyle(theme.effectiveSecondaryTextColor)
                     .lineLimit(1)
             }
 
             Spacer()
 
-            VStack(alignment: .trailing, spacing: 6) {
+            VStack(alignment: .trailing, spacing: 7) {
                 Text(chat.lastMessageAt.formatted(.relative(presentation: .numeric)))
                     .font(.system(size: 11))
-                    .foregroundColor(theme.effectiveSecondaryTextColor)
-
+                    .foregroundStyle(theme.effectiveSecondaryTextColor)
                 if unread > 0 {
                     Text("\(unread)")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundColor(.white)
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(.white)
                         .frame(minWidth: 20, minHeight: 20)
-                        .background(theme.effectivePrimary)
-                        .clipShape(Circle())
+                        .background(theme.effectivePrimary, in: Circle())
                 }
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        .padding(.horizontal, 18)
+        .padding(.vertical, 11)
         .contentShape(Rectangle())
     }
 
-    // MARK: - Empty State
+    private func typeBadge(_ type: String) -> some View {
+        Text((type == "skills" ? "feed.segment.skills" : "feed.segment.exchange").localized)
+            .font(.system(size: 10, weight: .semibold))
+            .foregroundStyle(theme.effectiveSecondaryTextColor)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3)
+            .background(theme.effectiveCardColor, in: Capsule())
+            .overlay(Capsule().stroke(theme.effectiveTextColor.opacity(0.08)))
+    }
 
     private var emptyState: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "message.circle")
-                .font(.system(size: 56))
-                .foregroundColor(theme.effectiveSecondaryTextColor)
+        VStack(spacing: 14) {
+            Image(systemName: "message")
+                .font(.system(size: 46, weight: .light))
+                .foregroundStyle(theme.effectiveSecondaryTextColor)
             Text("chats.empty".localized)
-                .font(.system(size: 20, weight: .semibold))
-                .foregroundColor(theme.effectiveTextColor)
+                .font(.system(size: 19, weight: .semibold))
+                .foregroundStyle(theme.effectiveTextColor)
             Text("chats.empty.subtitle".localized)
                 .font(.system(size: 14))
-                .foregroundColor(theme.effectiveSecondaryTextColor)
+                .foregroundStyle(theme.effectiveSecondaryTextColor)
                 .multilineTextAlignment(.center)
         }
-        .padding(.top, 60)
+        .frame(maxWidth: .infinity)
+        .padding(.top, 110)
+        .padding(.horizontal, 40)
     }
 }
 
@@ -359,7 +278,7 @@ struct ProfilePreviewSheet: View {
                         // Skills
                         if !profile.skills.isEmpty {
                             VStack(alignment: .leading, spacing: 8) {
-                                Text("Skills")
+                                Text("profile.skills".localized)
                                     .font(.system(size: 13, weight: .semibold))
                                     .foregroundColor(theme.effectiveSecondaryTextColor)
                                     .padding(.horizontal, 16)

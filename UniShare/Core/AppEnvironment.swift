@@ -7,7 +7,6 @@ final class AppEnvironment: ObservableObject {
     let auth: SupabaseAuthService
     let db: SupabaseService
     let storage: SupabaseStorageService
-    let chatGPT: ChatGPTService
     let rawg: RawgService
 
     private var cancellables = Set<AnyCancellable>()
@@ -16,7 +15,6 @@ final class AppEnvironment: ObservableObject {
         self.auth = SupabaseAuthService()
         self.db = SupabaseService()
         self.storage = SupabaseStorageService()
-        self.chatGPT = ChatGPTService()
         self.rawg = RawgService()
 
         auth.objectWillChange

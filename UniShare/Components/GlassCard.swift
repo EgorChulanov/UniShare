@@ -12,15 +12,16 @@ struct GlassModifier: ViewModifier {
         content
             .background(
                 ZStack {
-                    theme.effectiveCardColor.opacity(opacity)
-                    Color.white.opacity(0.05)
+                    theme.effectiveCardColor.opacity(max(opacity, 0.86))
+                    theme.effectiveTextColor.opacity(0.025)
                 }
             )
-            .cornerRadius(cornerRadius)
+            .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: cornerRadius)
-                    .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .stroke(theme.effectiveTextColor.opacity(0.14), lineWidth: 1)
             )
+            .shadow(color: Color.black.opacity(0.06), radius: 8, y: 3)
     }
 }
 

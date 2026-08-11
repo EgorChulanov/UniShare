@@ -22,7 +22,11 @@ struct UniShareEntry: TimelineEntry {
 // MARK: - Provider
 
 struct UniShareProvider: TimelineProvider {
-    private let defaults = UserDefaults(suiteName: "group.com.CHULANOV.UniShare")
+    private var defaults: UserDefaults? {
+        let appGroupID = Bundle.main.object(forInfoDictionaryKey: "APP_GROUP_ID") as? String
+            ?? "group.com.egorchulanov.unishare"
+        return UserDefaults(suiteName: appGroupID)
+    }
 
     func placeholder(in context: Context) -> UniShareEntry {
         .placeholder
@@ -173,11 +177,23 @@ struct UniShareMainWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: "UniShareMainWidget", provider: UniShareProvider()) { entry in
             UniShareWidgetView(entry: entry)
-                .containerBackground(Color(red: 0.102, green: 0.102, blue: 0.180), for: .widget)
+                .uniShareWidgetBackground()
         }
         .configurationDisplayName("UniShare")
         .description("Your gaming profile at a glance")
         .supportedFamilies([.systemSmall, .systemMedium])
+    }
+}
+
+private extension View {
+    @ViewBuilder
+    func uniShareWidgetBackground() -> some View {
+        let background = Color(red: 0.102, green: 0.102, blue: 0.180)
+        if #available(iOS 17.0, *) {
+            containerBackground(background, for: .widget)
+        } else {
+            self.background(background)
+        }
     }
 }
 
@@ -187,11 +203,9 @@ struct UniShareMainWidget: Widget {
 struct UniShareWidgetBundle: WidgetBundle {
     var body: some Widget {
         UniShareMainWidget()
-        UniShareWidgetLiveActivity()
         if #available(iOS 18.0, *) {
             UniShareChatsControl()
             UniShareAirShareControl()
-            UniShareAIControl()
             UniShareProfileControl()
         }
     }

@@ -38,6 +38,16 @@ struct OnboardingView: View {
                 navigationButtons
             }
         }
+        .alert("common.error".localized, isPresented: Binding(
+            get: { vm.errorMessage != nil },
+            set: { if !$0 { vm.errorMessage = nil } }
+        )) {
+            Button("common.ok".localized, role: .cancel) {}
+        } message: {
+            Text(vm.errorMessage ?? "")
+                .accessibilityIdentifier("onboarding.error")
+        }
+        .accessibilityIdentifier("onboarding.step.\(stepIdentifier)")
     }
 
     // MARK: - Progress Bar
@@ -76,6 +86,17 @@ struct OnboardingView: View {
         }
     }
 
+    private var stepIdentifier: String {
+        switch vm.currentStep {
+        case .username: return "username"
+        case .avatar: return "avatar"
+        case .platform: return "platform"
+        case .games: return "games"
+        case .skills: return "skills"
+        case .subscriptions: return "subscriptions"
+        }
+    }
+
     // MARK: - Step Content
 
     @ViewBuilder
@@ -101,13 +122,14 @@ struct OnboardingView: View {
                     .foregroundColor(theme.effectiveTextColor)
                     .accentColor(theme.effectivePrimary)
                     .autocapitalization(.none)
+                    .accessibilityIdentifier("onboarding.username")
             }
             .padding()
             .glass(cornerRadius: 14)
             .animatedGradientBorder(cornerRadius: 14, lineWidth: vm.username.count >= 3 ? 2 : 0)
 
             if vm.username.count > 0 && vm.username.count < 3 {
-                Text("Min. 3 characters")
+                Text("onboarding.username.minimum".localized)
                     .font(.system(size: 13))
                     .foregroundColor(theme.effectivePrimary)
             }
@@ -144,6 +166,7 @@ struct OnboardingView: View {
                             .stroke(selected ? theme.effectivePrimary : Color.clear, lineWidth: 2)
                     )
                 }
+                .accessibilityIdentifier("onboarding.platform.\(platform.rawValue)")
             }
         }
     }
@@ -194,12 +217,13 @@ struct OnboardingView: View {
                 HStack {
                     Image(systemName: "magnifyingglass")
                         .foregroundColor(theme.effectiveSecondaryTextColor)
-                    TextField("Search games...", text: $vm.gameSearchQuery)
+                    TextField("onboarding.games.search".localized, text: $vm.gameSearchQuery)
                         .foregroundColor(theme.effectiveTextColor)
                         .accentColor(theme.effectivePrimary)
                         .onChange(of: vm.gameSearchQuery) { query in
                             vm.searchGames(query)
                         }
+                        .accessibilityIdentifier("onboarding.gameSearch")
                     if vm.isSearchingGames {
                         ProgressView().scaleEffect(0.8).tint(theme.effectivePrimary)
                     }
@@ -217,7 +241,7 @@ struct OnboardingView: View {
                 let selectedGames = vm.gamesForPlatform(activePlatform)
                 if !selectedGames.isEmpty {
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("Selected: \(selectedGames.count)")
+                        Text(String(format: "onboarding.games.selected".localized, selectedGames.count))
                             .font(.system(size: 12, weight: .medium))
                             .foregroundColor(theme.effectiveSecondaryTextColor)
                         ScrollView(.horizontal, showsIndicators: false) {
@@ -270,6 +294,7 @@ struct OnboardingView: View {
                                         .stroke(isSelected ? theme.effectivePrimary : Color.clear, lineWidth: 1.5)
                                 )
                             }
+                            .accessibilityIdentifier("onboarding.gameResult.\(game.name)")
                         }
                     }
                 } else if vm.gameSearchQuery.isEmpty {
@@ -278,7 +303,7 @@ struct OnboardingView: View {
                         .foregroundColor(theme.effectiveSecondaryTextColor)
                         .padding(.top, 12)
                 } else if !vm.isSearchingGames {
-                    Text("No games found")
+                    Text("game.search.empty".localized)
                         .font(.system(size: 14))
                         .foregroundColor(theme.effectiveSecondaryTextColor)
                         .padding(.top, 12)
@@ -404,11 +429,13 @@ struct OnboardingView: View {
                 .cornerRadius(14)
             }
             .disabled(!vm.canAdvance || vm.isLoading)
+            .accessibilityIdentifier("onboarding.next")
 
             if vm.currentStep == .games {
                 Button("skip".localized) { vm.advance() }
                     .font(.system(size: 14))
                     .foregroundColor(theme.effectiveSecondaryTextColor)
+                    .accessibilityIdentifier("onboarding.skipGames")
             }
         }
         .padding(.horizontal, 24)

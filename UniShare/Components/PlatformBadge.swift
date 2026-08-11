@@ -11,11 +11,29 @@ struct PlatformBadge: View {
             Circle()
                 .fill(platform.color.opacity(0.15))
                 .frame(width: size, height: size)
-            Image(systemName: platform.icon)
+            BrandIcon(assetName: platform.brandAssetName, systemName: platform.icon)
+                .frame(width: size * 0.52, height: size * 0.52)
+                .foregroundStyle(platform.color)
+        }
+    }
+}
+
+struct BrandIcon: View {
+    let assetName: String?
+    let systemName: String
+
+    var body: some View {
+        if let assetName, UIImage(named: assetName) != nil {
+            Image(assetName)
+                .renderingMode(.template)
                 .resizable()
                 .scaledToFit()
-                .frame(width: size * 0.5, height: size * 0.5)
-                .foregroundColor(platform.color)
+                .accessibilityHidden(true)
+        } else {
+            Image(systemName: systemName)
+                .resizable()
+                .scaledToFit()
+                .accessibilityHidden(true)
         }
     }
 }

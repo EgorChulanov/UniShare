@@ -23,13 +23,10 @@ struct SkillsProfileSetupView: View {
         "Sound Design", "Concept Art", "Narrative Design", "VR/AR"
     ]
 
-    private let steps = ["Навыки", "О себе", "Портфолио", "Готово"]
-
     var body: some View {
         NavigationView {
             ZStack {
-                theme.effectiveBackground.ignoresSafeArea()
-                GrainOverlay(opacity: 0.14)
+                BrandBackground()
 
                 VStack(spacing: 0) {
                     // Progress bar
@@ -60,11 +57,11 @@ struct SkillsProfileSetupView: View {
                         .padding(.bottom, 40)
                 }
             }
-            .navigationTitle("Анкета навыков")
+            .navigationTitle("profile.skills.create".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Отмена") { dismiss() }
+                    Button("cancel".localized) { dismiss() }
                         .foregroundColor(theme.effectiveSecondaryTextColor)
                 }
             }
@@ -75,7 +72,7 @@ struct SkillsProfileSetupView: View {
 
     private var progressBar: some View {
         HStack(spacing: 6) {
-            ForEach(0..<steps.count, id: \.self) { i in
+            ForEach(0..<4, id: \.self) { i in
                 Capsule()
                     .fill(i <= step ? theme.effectivePrimary : theme.effectiveCardColor)
                     .frame(height: 4)
@@ -90,10 +87,10 @@ struct SkillsProfileSetupView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("Какие у тебя навыки?")
+                    Text("skills.setup.question".localized)
                         .font(.system(size: 22, weight: .bold))
                         .foregroundColor(theme.effectiveTextColor)
-                    Text("Выбери всё что подходит. Другие смогут найти тебя по ним.")
+                    Text("skills.setup.question.subtitle".localized)
                         .font(.system(size: 14))
                         .foregroundColor(theme.effectiveSecondaryTextColor)
                 }
@@ -132,7 +129,7 @@ struct SkillsProfileSetupView: View {
 
                 // Custom skill input
                 HStack(spacing: 10) {
-                    TextField("Добавить свой навык...", text: $customSkill)
+                    TextField("skills.setup.custom".localized, text: $customSkill)
                         .font(.system(size: 14))
                         .foregroundColor(theme.effectiveTextColor)
                         .accentColor(theme.effectivePrimary)
@@ -166,10 +163,10 @@ struct SkillsProfileSetupView: View {
     private var descriptionStep: some View {
         VStack(alignment: .leading, spacing: 20) {
             VStack(alignment: .leading, spacing: 6) {
-                Text("Расскажи о себе")
+                Text("skills.setup.about.title".localized)
                     .font(.system(size: 22, weight: .bold))
                     .foregroundColor(theme.effectiveTextColor)
-                Text("Кратко опиши свой опыт и чем ты можешь помочь другим.")
+                Text("skills.setup.about.subtitle".localized)
                     .font(.system(size: 14))
                     .foregroundColor(theme.effectiveSecondaryTextColor)
             }
@@ -188,7 +185,7 @@ struct SkillsProfileSetupView: View {
                 ))
 
             if description.isEmpty {
-                Text("Например: «Играю в FIFA 5 лет, могу обучить основам, знаю все тактики»")
+                Text("skills.setup.about.example".localized)
                     .font(.system(size: 13))
                     .foregroundColor(theme.effectiveSecondaryTextColor.opacity(0.6))
             }
@@ -201,10 +198,10 @@ struct SkillsProfileSetupView: View {
     private var portfolioStep: some View {
         VStack(alignment: .leading, spacing: 20) {
             VStack(alignment: .leading, spacing: 6) {
-                Text("Портфолио")
+                Text("skills.setup.portfolio.title".localized)
                     .font(.system(size: 22, weight: .bold))
                     .foregroundColor(theme.effectiveTextColor)
-                Text("Добавь скриншоты работ, стримов или игровых достижений.")
+                Text("skills.setup.portfolio.subtitle".localized)
                     .font(.system(size: 14))
                     .foregroundColor(theme.effectiveSecondaryTextColor)
             }
@@ -248,7 +245,7 @@ struct SkillsProfileSetupView: View {
                     Image(systemName: "photo.on.rectangle.angled")
                         .font(.system(size: 18))
                         .foregroundColor(theme.effectivePrimary)
-                    Text(portfolioPhotos.isEmpty ? "Добавить фото" : "Добавить ещё")
+                    Text((portfolioPhotos.isEmpty ? "skills.setup.portfolio.add" : "skills.setup.portfolio.more").localized)
                         .font(.system(size: 15, weight: .medium))
                         .foregroundColor(theme.effectiveTextColor)
                     Spacer()
@@ -277,7 +274,7 @@ struct SkillsProfileSetupView: View {
                 }
             }
 
-            Text("Фото помогут другим лучше понять твои навыки и опыт.")
+            Text("skills.setup.portfolio.help".localized)
                 .font(.system(size: 12))
                 .foregroundColor(theme.effectiveSecondaryTextColor.opacity(0.7))
                 .padding(.horizontal, 24)
@@ -291,7 +288,7 @@ struct SkillsProfileSetupView: View {
             // Skills preview
             if !selectedSkills.isEmpty {
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("Твои навыки")
+                    Text("skills.setup.your".localized)
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundColor(theme.effectiveSecondaryTextColor)
                         .padding(.horizontal, 24)
@@ -314,7 +311,7 @@ struct SkillsProfileSetupView: View {
 
             if !description.isEmpty {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("О себе")
+                    Text("skills.setup.about.title".localized)
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundColor(theme.effectiveSecondaryTextColor)
                     Text(description)
@@ -327,7 +324,7 @@ struct SkillsProfileSetupView: View {
                 .padding(.horizontal, 24)
             }
 
-            Text("После сохранения твоя анкета появится в поиске навыков для других пользователей.")
+            Text("skills.setup.confirm".localized)
                 .font(.system(size: 13))
                 .foregroundColor(theme.effectiveSecondaryTextColor)
                 .multilineTextAlignment(.center)
@@ -343,7 +340,7 @@ struct SkillsProfileSetupView: View {
                 Button {
                     withAnimation { step -= 1 }
                 } label: {
-                    Text("Назад")
+                    Text("back".localized)
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundColor(theme.effectiveTextColor)
                         .frame(maxWidth: .infinity).frame(height: 52)
@@ -353,7 +350,7 @@ struct SkillsProfileSetupView: View {
             }
 
             Button {
-                if step < steps.count - 1 {
+                if step < 3 {
                     withAnimation { step += 1 }
                 } else {
                     Task { await saveAndFinish() }
@@ -363,7 +360,7 @@ struct SkillsProfileSetupView: View {
                     if isSaving {
                         ProgressView().tint(.white)
                     } else {
-                        Text(step < steps.count - 1 ? "Далее" : "Сохранить")
+                        Text((step < 3 ? "next" : "save").localized)
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundColor(.white)
                     }

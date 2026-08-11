@@ -6,6 +6,8 @@ struct FeedView: View {
     @EnvironmentObject var localization: LocalizationManager
 
     @StateObject private var vm: FeedViewModel
+    @State private var selectedStory: CommunityStory?
+    @State private var storiesCollapsed = false
 
     init() {
         let env = AppEnvironment.shared
@@ -22,14 +24,43 @@ struct FeedView: View {
 
     var body: some View {
         ZStack {
-            theme.effectiveBackground.ignoresSafeArea()
-            GrainOverlay(opacity: 0.14)
+            BrandBackground()
 
             VStack(spacing: 0) {
+                if !vm.stories.isEmpty {
+                    if storiesCollapsed {
+                        VStack(spacing: 2) {
+                            Capsule()
+                                .fill(theme.effectiveSecondaryTextColor.opacity(0.45))
+                                .frame(width: 34, height: 3)
+                            Image(systemName: "chevron.down")
+                                .font(.system(size: 9, weight: .bold))
+                                .foregroundStyle(theme.effectiveSecondaryTextColor.opacity(0.7))
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 3)
+                        .contentShape(Rectangle())
+                        .onTapGesture { revealStories() }
+                        .gesture(
+                            DragGesture(minimumDistance: 8).onEnded { value in
+                                guard value.translation.height > 16 else { return }
+                                revealStories()
+                            }
+                        )
+                    } else {
+                        CommunityStoriesRail(stories: vm.stories) { story in
+                            selectedStory = story
+                            Task { await vm.markStoryViewed(story) }
+                        }
+                        .environmentObject(theme)
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                    }
+                }
+
                 // ── Segment picker — flush below status bar ──
                 segmentPicker
                     .padding(.horizontal, 20)
-                    .padding(.top, 8)
+                    .padding(.top, 5)
                     .padding(.bottom, 10)
 
                 // ── Card stack ──
@@ -67,56 +98,49 @@ struct FeedView: View {
                     HStack(spacing: 5) {
                         Image(systemName: "antenna.radiowaves.left.and.right")
                             .font(.system(size: 11))
-                        Text("AirShare nearby")
+                        Text("feed.airshare.nearby".localized)
                             .font(.system(size: 13, weight: .medium))
                     }
                     .foregroundColor(theme.effectiveSecondaryTextColor)
                     .padding(.bottom, 12)
                 }
             }
+            .simultaneousGesture(
+                DragGesture(minimumDistance: 18).onChanged { value in
+                    guard !storiesCollapsed,
+                          value.translation.height < -22,
+                          abs(value.translation.height) > abs(value.translation.width) else { return }
+                    withAnimation(.spring(response: 0.32, dampingFraction: 0.84)) { storiesCollapsed = true }
+                }
+            )
         }
         .task { await vm.loadInitialCards() }
+        .alert("common.error".localized, isPresented: Binding(
+            get: { vm.errorMessage != nil },
+            set: { if !$0 { vm.errorMessage = nil } }
+        )) {
+            Button("common.ok".localized, role: .cancel) {}
+        } message: {
+            Text(vm.errorMessage ?? "")
+        }
+        .fullScreenCover(item: $selectedStory) { story in
+            CommunityStoryViewer(story: story)
+                .environmentObject(theme)
+        }
+    }
+
+    private func revealStories() {
+        withAnimation(.spring(response: 0.32, dampingFraction: 0.84)) { storiesCollapsed = false }
     }
 
     // MARK: - Segment picker
 
     private var segmentPicker: some View {
-        HStack(spacing: 0) {
-            ForEach(FeedSegment.allCases, id: \.rawValue) { segment in
-                let selected = vm.selectedSegment == segment
-                Button {
-                    withAnimation(.easeInOut(duration: 0.2)) { vm.selectedSegment = segment }
-                } label: {
-                    Text(segment.localizedKey.localized)
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(selected ? .white : theme.effectiveSecondaryTextColor)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 9)
-                        .background(
-                            Group {
-                                if selected {
-                                    LinearGradient(colors: [theme.effectivePrimary, theme.effectiveTertiary],
-                                                   startPoint: .leading, endPoint: .trailing)
-                                } else {
-                                    LinearGradient(colors: [Color.clear, Color.clear],
-                                                   startPoint: .leading, endPoint: .trailing)
-                                }
-                            }
-                        )
-                        .clipShape(Capsule())
-                        .overlay(
-                            Capsule().stroke(
-                                selected ? Color.clear : theme.effectiveSecondaryTextColor.opacity(0.35),
-                                lineWidth: 1
-                            )
-                        )
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .padding(3)
-        .background(theme.effectiveCardColor.opacity(0.6))
-        .clipShape(Capsule())
+        LiquidSegmentedPicker(
+            options: FeedSegment.allCases,
+            selection: $vm.selectedSegment,
+            title: { $0.localizedKey.localized }
+        )
     }
 
     // MARK: - Action buttons
@@ -141,6 +165,7 @@ struct FeedView: View {
                 }
             }
             .disabled(topCard == nil)
+            .accessibilityIdentifier("feed.dislike")
 
             // Undo
             if vm.canUndo {
@@ -156,6 +181,7 @@ struct FeedView: View {
                             .foregroundColor(theme.effectiveSecondaryTextColor)
                     }
                 }
+                .accessibilityIdentifier("feed.undo")
             }
 
             // Like
@@ -175,6 +201,7 @@ struct FeedView: View {
                 }
             }
             .disabled(topCard == nil)
+            .accessibilityIdentifier("feed.like")
         }
     }
 }

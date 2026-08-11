@@ -4,41 +4,34 @@ import SwiftUI
 
 // MARK: - Intents
 
+@available(iOS 18.0, *)
 struct OpenChatsIntent: AppIntent {
     static var title: LocalizedStringResource = "Open Chats"
 
-    func perform() async throws -> some IntentResult {
-        return .result()
+    func perform() async throws -> some IntentResult & OpensIntent {
+        .result(opensIntent: OpenURLIntent(URL(string: "unishare://chats")!))
     }
 
     static var openAppWhenRun: Bool = true
 }
 
+@available(iOS 18.0, *)
 struct OpenAirShareIntent: AppIntent {
     static var title: LocalizedStringResource = "Open AirShare"
 
-    func perform() async throws -> some IntentResult {
-        return .result()
+    func perform() async throws -> some IntentResult & OpensIntent {
+        .result(opensIntent: OpenURLIntent(URL(string: "unishare://airshare")!))
     }
 
     static var openAppWhenRun: Bool = true
 }
 
-struct OpenAIIntent: AppIntent {
-    static var title: LocalizedStringResource = "Open AI"
-
-    func perform() async throws -> some IntentResult {
-        return .result()
-    }
-
-    static var openAppWhenRun: Bool = true
-}
-
+@available(iOS 18.0, *)
 struct OpenProfileIntent: AppIntent {
     static var title: LocalizedStringResource = "Open Profile"
 
-    func perform() async throws -> some IntentResult {
-        return .result()
+    func perform() async throws -> some IntentResult & OpensIntent {
+        .result(opensIntent: OpenURLIntent(URL(string: "unishare://profile")!))
     }
 
     static var openAppWhenRun: Bool = true
@@ -73,21 +66,6 @@ struct UniShareAirShareControl: ControlWidget {
         }
         .displayName("AirShare")
         .description("Open AirShare to find nearby gamers")
-    }
-}
-
-@available(iOS 18.0, *)
-struct UniShareAIControl: ControlWidget {
-    static var kind: String = "UniShareAIControl"
-
-    var body: some ControlWidgetConfiguration {
-        StaticControlConfiguration(kind: Self.kind) {
-            ControlWidgetButton(action: OpenAIIntent()) {
-                Label("AI", systemImage: "sparkles")
-            }
-        }
-        .displayName("UniShare AI")
-        .description("Open AI assistant")
     }
 }
 

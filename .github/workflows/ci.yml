@@ -1,0 +1,45 @@
+name: UniShare CI
+
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend-security:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install PostgreSQL
+        run: brew install postgresql@17
+      - name: Validate migrations and RLS
+        run: make test-backend
+
+  backend-e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v3
+        with:
+          version: 2.109.1
+      - name: Run multi-user Supabase E2E
+        run: make test-e2e
+
+  ios-tests:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install tooling
+        run: brew install xcodegen jq
+      - name: Create public build configuration
+        run: |
+          cat > Config/Secrets.xcconfig <<'EOF'
+          SUPABASE_URL = https:/$()/placeholder.supabase.co
+          SUPABASE_PUBLISHABLE_KEY = sb_publishable_ci_placeholder
+          SUPABASE_ANON_KEY = $(SUPABASE_PUBLISHABLE_KEY)
+          EOF
+      - name: Run iOS tests
+        run: ./scripts/ci_ios_tests.sh

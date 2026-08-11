@@ -1,0 +1,5 @@
+UniShare is a social discovery app for gaming communities.
+
+Create a profile with your platforms, games, skills and preferred play style. Browse player cards, connect after mutual interest, and discuss plans in private chats. Community stories provide safety guidance and announcements, while AirShare helps you discover another UniShare profile nearby.
+
+Safety is built in: block users, report suspicious profiles or messages, and permanently delete your account and associated data from Settings. Never share passwords, recovery codes, payment details or identity documents. Use UniShare only for activities permitted by each game and platform.

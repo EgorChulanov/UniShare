@@ -83,7 +83,7 @@ struct SkillSwipeCard: View {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 12) {
                             if !card.skills.isEmpty {
-                                Text("Skills")
+                                Text("profile.skills".localized)
                                     .font(.system(size: 12, weight: .semibold))
                                     .foregroundColor(theme.effectiveTertiary)
                                     .padding(.horizontal, 16)
@@ -99,7 +99,7 @@ struct SkillSwipeCard: View {
                                 }
                                 .padding(.horizontal, 16)
                             } else {
-                                Text("No skills listed")
+                                Text("skills.empty".localized)
                                     .font(.system(size: 13))
                                     .foregroundColor(theme.effectiveSecondaryTextColor)
                                     .padding(16)
@@ -111,8 +111,8 @@ struct SkillSwipeCard: View {
                 }
                 .background(theme.effectiveCardColor)
                 .clipShape(RoundedRectangle(cornerRadius: 24))
-                .overlay(RoundedRectangle(cornerRadius: 24).stroke(Color.white.opacity(0.08), lineWidth: 1))
-                .shadow(color: .black.opacity(0.28), radius: 12, x: 0, y: 6)
+                .overlay(RoundedRectangle(cornerRadius: 24).stroke(theme.effectiveTextColor.opacity(0.10), lineWidth: 1))
+                .shadow(color: .black.opacity(0.12), radius: 14, x: 0, y: 7)
                 .scaleEffect(isTop ? 1.0 : 0.95)
                 .offset(x: isTop ? offset.width : 0, y: isTop ? offset.height * 0.3 : 0)
                 .rotationEffect(.degrees(isTop ? rotation : 0))
@@ -121,7 +121,7 @@ struct SkillSwipeCard: View {
 
                 if isTop {
                     if offset.width > 30 {
-                        Text("MATCH")
+                        Text("feed.swipe.match".localized.uppercased())
                             .font(.system(size: 22, weight: .heavy))
                             .foregroundColor(.green)
                             .padding(8)
@@ -132,7 +132,7 @@ struct SkillSwipeCard: View {
                             .opacity(Double(min(offset.width / threshold, 1.0)))
                     }
                     if offset.width < -30 {
-                        Text("PASS")
+                        Text("feed.swipe.pass".localized.uppercased())
                             .font(.system(size: 22, weight: .heavy))
                             .foregroundColor(.red)
                             .padding(8)

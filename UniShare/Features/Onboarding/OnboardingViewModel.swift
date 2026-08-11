@@ -90,8 +90,9 @@ final class OnboardingViewModel: ObservableObject {
 
     func toggleGame(_ tag: GameTag, for platform: Platform) {
         var games = gamesByPlatform[platform] ?? []
-        if games.contains(where: { $0.name == tag.name }) {
-            games.removeAll { $0.name == tag.name }
+        let normalizedName = GameNameValidator.normalized(tag.name)
+        if games.contains(where: { GameNameValidator.normalized($0.name) == normalizedName }) {
+            games.removeAll { GameNameValidator.normalized($0.name) == normalizedName }
         } else {
             games.append(tag)
         }
@@ -115,20 +116,19 @@ final class OnboardingViewModel: ObservableObject {
 
     func searchGames(_ query: String) {
         searchTask?.cancel()
-        guard !query.isEmpty else {
+        guard GameNameValidator.sanitized(query) != nil else {
             gameSearchResults = []
+            isSearchingGames = false
             return
         }
         isSearchingGames = true
         searchTask = Task {
             try? await Task.sleep(nanoseconds: 400_000_000)
             guard !Task.isCancelled else { return }
-            let games = await rawg.searchGames(query)
-            let tags = games.map { rawg.gameToTag($0) }
-            await MainActor.run {
-                gameSearchResults = tags
-                isSearchingGames = false
-            }
+            let tags = await rawg.searchGameTags(query)
+            guard !Task.isCancelled else { return }
+            gameSearchResults = tags
+            isSearchingGames = false
         }
     }
 
@@ -156,13 +156,13 @@ final class OnboardingViewModel: ObservableObject {
             // Save games per platform
             var platformGamesDict: [String: [String]] = [:]
             for (platform, tags) in gamesByPlatform {
-                let names = tags.map { $0.name }
+                let names = GameNameValidator.uniqueNames(tags.map { $0.name })
                 if !names.isEmpty {
                     platformGamesDict[platform.rawValue] = names
                 }
             }
             profile.platformGames = platformGamesDict
-            profile.games = platformGamesDict.values.flatMap { $0 }
+            profile.games = GameNameValidator.uniqueNames(platformGamesDict.values.flatMap { $0 })
 
             profile.skills = skills
             profile.subscriptions = selectedSubscriptions.compactMap { name in
@@ -171,9 +171,20 @@ final class OnboardingViewModel: ObservableObject {
             profile.onboardingComplete = true
 
             try await db.createUser(profile)
+            guard (try await db.getUser(uid: uid)) != nil else {
+                throw OnboardingSaveError.profileNotReturned
+            }
             onComplete()
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+}
+
+private enum OnboardingSaveError: LocalizedError {
+    case profileNotReturned
+
+    var errorDescription: String? {
+        "profile.error.save.verify".localized
     }
 }

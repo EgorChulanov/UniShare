@@ -33,7 +33,7 @@ struct GameSearchPickerView: View {
             // Selected games
             if !selectedGames.isEmpty {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Selected (\(selectedGames.count))")
+                    Text(String(format: "onboarding.games.selected".localized, selectedGames.count))
                         .font(.system(size: 13, weight: .medium))
                         .foregroundColor(theme.effectiveSecondaryTextColor)
 
@@ -88,7 +88,7 @@ struct GameSearchPickerView: View {
                     }
                 }
             } else if !searchQuery.isEmpty && !isSearching {
-                Text("No games found")
+                Text("game.search.empty".localized)
                     .foregroundColor(theme.effectiveSecondaryTextColor)
                     .font(.system(size: 14))
                     .padding(.top, 20)

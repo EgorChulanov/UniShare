@@ -22,7 +22,9 @@ struct ContentView: View {
                 } else if !onboardingComplete {
                     OnboardingView(onComplete: {
                         onboardingComplete = true
-                        showGreeting = true
+                        showGreeting = !AppConstants.isUITesting
+                        greetingDone = AppConstants.isUITesting
+                        Task { await PushNotificationService.shared.activateForAuthenticatedUser() }
                     })
                 } else if showGreeting && !greetingDone {
                     GreetingView(onFinish: {
@@ -62,7 +64,13 @@ struct ContentView: View {
         let profile = try? await env.db.getUser(uid: uid)
         await MainActor.run {
             onboardingComplete = profile?.onboardingComplete ?? false
-            if onboardingComplete && !greetingDone {
+            if onboardingComplete {
+                Task { await PushNotificationService.shared.activateForAuthenticatedUser() }
+            }
+            if AppConstants.isUITesting {
+                greetingDone = true
+                showGreeting = false
+            } else if onboardingComplete && !greetingDone {
                 showGreeting = true
             }
             isCheckingOnboarding = false

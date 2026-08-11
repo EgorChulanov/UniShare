@@ -1,6 +1,6 @@
 name: UniShare
 options:
-  bundleIdPrefix: com.CHULANOV
+  bundleIdPrefix: com.egorchulanov
   deploymentTarget:
     iOS: "16.1"
   xcodeVersion: "15.0"
@@ -10,7 +10,7 @@ options:
 packages:
   Supabase:
     url: https://github.com/supabase/supabase-swift
-    from: "2.0.0"
+    exactVersion: "2.51.0"
 
 configFiles:
   Debug: Config/Debug.xcconfig
@@ -23,29 +23,33 @@ targets:
     sources:
       - path: UniShare
         excludes:
-          - "**/*.xcassets"
-      - path: UniShare/Resources/Assets.xcassets
-        type: folder
-    resources:
+          - "Resources/Assets.xcassets"
+          - "Resources/Fonts"
       - path: UniShare/Resources/Assets.xcassets
       - path: UniShare/Resources/Fonts
-        type: folder
+        buildPhase: resources
     info:
       path: UniShare/Info.plist
       properties:
+        CFBundleDisplayName: UniShare
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         UILaunchScreen:
           UIColorName: ""
           UIImageName: ""
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
+        "UISupportedInterfaceOrientations~ipad":
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
         CFBundleURLTypes:
           - CFBundleURLSchemes:
               - unishare
-            CFBundleURLName: com.CHULANOV.UniShare
-        NSCameraUsageDescription: "UniShare needs camera access to set your profile photo"
+            CFBundleURLName: "$(PRODUCT_BUNDLE_IDENTIFIER)"
         NSPhotoLibraryUsageDescription: "UniShare needs photo library access to share images in chats"
         NSBluetoothAlwaysUsageDescription: "UniShare uses Bluetooth to find nearby users with AirShare"
-        NSLocalNetworkUsageDescription: "UniShare uses local networking to connect with nearby users"
         NSMotionUsageDescription: "UniShare detects shake gestures for AirShare"
         UIAppFonts:
           - Manrope-Regular.ttf
@@ -58,25 +62,37 @@ targets:
           - PlusJakartaSans-Medium.ttf
           - PlusJakartaSans-SemiBold.ttf
           - PlusJakartaSans-Bold.ttf
-        OPENAI_API_KEY: "$(OPENAI_API_KEY)"
-        RAWG_API_KEY: "$(RAWG_API_KEY)"
         APP_GROUP_ID: "$(APP_GROUP_ID)"
         SUPABASE_URL: "$(SUPABASE_URL)"
+        SUPABASE_PUBLISHABLE_KEY: "$(SUPABASE_PUBLISHABLE_KEY)"
         SUPABASE_ANON_KEY: "$(SUPABASE_ANON_KEY)"
+        ITSAppUsesNonExemptEncryption: false
     entitlements:
       path: UniShare/UniShare.entitlements
       properties:
+        aps-environment: development
+        com.apple.developer.applesignin:
+          - Default
         com.apple.security.application-groups:
-          - group.com.CHULANOV.UniShare
+          - "$(APP_GROUP_ID)"
     dependencies:
       - package: Supabase
         product: Supabase
+      - target: UniShareWidget
+        embed: true
     settings:
       base:
+        PRODUCT_BUNDLE_IDENTIFIER: "$(UNISHARE_APP_BUNDLE_ID)"
         PRODUCT_NAME: UniShare
         SWIFT_VERSION: "5.9"
-        DEVELOPMENT_TEAM: ""
+        DEVELOPMENT_TEAM: FLSHXRH925
         CODE_SIGN_STYLE: Automatic
+        TARGETED_DEVICE_FAMILY: "1,2"
+      configs:
+        Release:
+          CODE_SIGN_STYLE: Manual
+          CODE_SIGN_IDENTITY: Apple Distribution
+          PROVISIONING_PROFILE_SPECIFIER: "$(UNISHARE_APP_PROFILE)"
 
   UniShareWidget:
     type: app-extension
@@ -86,18 +102,78 @@ targets:
     info:
       path: UniShareWidget/Info.plist
       properties:
+        CFBundleDisplayName: UniShare
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        APP_GROUP_ID: "$(APP_GROUP_ID)"
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
     entitlements:
       path: UniShareWidget/UniShareWidget.entitlements
       properties:
         com.apple.security.application-groups:
-          - group.com.CHULANOV.UniShare
+          - "$(APP_GROUP_ID)"
     settings:
       base:
+        PRODUCT_BUNDLE_IDENTIFIER: "$(UNISHARE_WIDGET_BUNDLE_ID)"
         PRODUCT_NAME: UniShareWidget
         SWIFT_VERSION: "5.9"
-        DEVELOPMENT_TEAM: ""
+        DEVELOPMENT_TEAM: FLSHXRH925
         CODE_SIGN_STYLE: Automatic
+        TARGETED_DEVICE_FAMILY: "1,2"
         SKIP_INSTALL: YES
         EXTENSION_ATTRIBUTES: WidgetKitExtension
+      configs:
+        Release:
+          CODE_SIGN_STYLE: Manual
+          CODE_SIGN_IDENTITY: Apple Distribution
+          PROVISIONING_PROFILE_SPECIFIER: "$(UNISHARE_WIDGET_PROFILE)"
+
+  UniShareTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: UniShareTests
+    dependencies:
+      - target: UniShare
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.egorchulanov.unishare.Tests
+        PRODUCT_NAME: UniShareTests
+        SWIFT_VERSION: "5.9"
+        IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+        GENERATE_INFOPLIST_FILE: YES
+
+  UniShareUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: UniShareUITests
+    dependencies:
+      - target: UniShare
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.egorchulanov.unishare.UITests
+        PRODUCT_NAME: UniShareUITests
+        SWIFT_VERSION: "5.9"
+        IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+        GENERATE_INFOPLIST_FILE: YES
+
+schemes:
+  UniShare:
+    build:
+      targets:
+        UniShare: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      gatherCoverageData: true
+      targets:
+        - UniShareTests
+        - UniShareUITests
+      environmentVariables:
+        UNISHARE_E2E_URL: "$(UNISHARE_E2E_URL)"
+        UNISHARE_E2E_KEY: "$(UNISHARE_E2E_KEY)"
+    archive:
+      config: Release

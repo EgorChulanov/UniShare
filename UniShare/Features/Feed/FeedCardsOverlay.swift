@@ -66,8 +66,8 @@ struct SwipeCard: View {
                 }
                 .background(theme.effectiveCardColor)
                 .clipShape(RoundedRectangle(cornerRadius: 24))
-                .overlay(RoundedRectangle(cornerRadius: 24).stroke(Color.white.opacity(0.08), lineWidth: 1))
-                .shadow(color: .black.opacity(0.28), radius: 12, x: 0, y: 6)
+                .overlay(RoundedRectangle(cornerRadius: 24).stroke(theme.effectiveTextColor.opacity(0.10), lineWidth: 1))
+                .shadow(color: .black.opacity(0.12), radius: 14, x: 0, y: 7)
                 .scaleEffect(isTop ? 1.0 : 0.95)
                 .offset(x: isTop ? offset.width : 0, y: isTop ? offset.height * 0.3 : 0)
                 .rotationEffect(.degrees(isTop ? rotation : 0))
@@ -82,6 +82,7 @@ struct SwipeCard: View {
             .frame(width: geo.size.width, height: geo.size.height)
         }
         .frame(height: 460)
+        .accessibilityIdentifier("feed.card.\(card.userId)")
         .sheet(isPresented: $showDetail) {
             ProfileDetailSheet(card: card)
                 .environmentObject(theme)
@@ -138,6 +139,7 @@ struct SwipeCard: View {
                     .foregroundColor(theme.effectivePrimary.opacity(0.85))
             }
             .buttonStyle(.plain)
+            .accessibilityIdentifier("feed.card.info")
         }
         .padding(16)
     }
@@ -148,7 +150,7 @@ struct SwipeCard: View {
         Group {
             if card.platforms.isEmpty {
                 Spacer()
-                Text("No platforms added")
+                Text("feed.platforms.empty".localized)
                     .font(.system(size: 13))
                     .foregroundColor(theme.effectiveSecondaryTextColor)
                 Spacer()
@@ -178,10 +180,10 @@ struct SwipeCard: View {
         return VStack(alignment: isTrailing ? .trailing : .leading, spacing: 6) {
             Text(platform.rawValue)
                 .font(.system(size: 11, weight: .semibold))
-                .foregroundColor(platform.color)
+                .foregroundColor(theme.effectiveSecondaryTextColor)
                 .padding(.horizontal, 16)
 
-            GameCirclesRow(games: games, color: platform.color, isTrailing: isTrailing, coverUrls: coverUrls)
+            GameCirclesRow(games: games, color: theme.effectiveSecondaryTextColor, isTrailing: isTrailing, coverUrls: coverUrls)
         }
         .padding(.vertical, 10)
     }
@@ -224,7 +226,7 @@ struct SwipeCard: View {
     // MARK: - Indicators
 
     private var likeIndicator: some View {
-        Text("LIKE")
+        Text("feed.swipe.like".localized.uppercased())
             .font(.system(size: 24, weight: .heavy))
             .foregroundColor(.green)
             .padding(.horizontal, 16).padding(.vertical, 8)
@@ -236,7 +238,7 @@ struct SwipeCard: View {
     }
 
     private var dislikeIndicator: some View {
-        Text("NOPE")
+        Text("feed.swipe.pass".localized.uppercased())
             .font(.system(size: 24, weight: .heavy))
             .foregroundColor(.red)
             .padding(.horizontal, 16).padding(.vertical, 8)
@@ -326,7 +328,7 @@ struct ProfileDetailSheet: View {
                         // Skills
                         if !card.skills.isEmpty {
                             VStack(alignment: .leading, spacing: 10) {
-                                Text("Skills")
+                                Text("profile.skills".localized)
                                     .font(.system(size: 13, weight: .semibold))
                                     .foregroundColor(theme.effectiveSecondaryTextColor)
                                     .padding(.horizontal, 16)

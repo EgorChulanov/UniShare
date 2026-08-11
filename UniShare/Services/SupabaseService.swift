@@ -15,7 +15,7 @@ private struct UserRow: Codable {
     var skills: [String]
     var skillsDescription: String?
     var hasSkillsProfile: Bool
-    var subscriptions: [SubscriptionRow]
+    var subscriptions: [SupabaseSubscriptionRow]
     var onboardingComplete: Bool
     var isOnline: Bool
     var lastSeen: Date?
@@ -74,7 +74,7 @@ private struct UserRow: Codable {
             skills: profile.skills,
             skillsDescription: profile.skillsDescription,
             hasSkillsProfile: profile.hasSkillsProfile,
-            subscriptions: profile.subscriptions.map { SubscriptionRow.from($0) },
+            subscriptions: profile.subscriptions.map { SupabaseSubscriptionRow.from($0) },
             onboardingComplete: profile.onboardingComplete,
             isOnline: profile.isOnline,
             lastSeen: profile.lastSeen,
@@ -84,17 +84,79 @@ private struct UserRow: Codable {
     }
 }
 
-private struct SubscriptionRow: Codable {
+struct SupabaseSubscriptionRow: Codable {
     var name: String
     var iconName: String
     var url: String?
+    var planName: String?
+    var expiresAt: Date?
+    var details: String?
+    var startedAt: Date?
+    var billingCycleId: String?
+    var autoRenew: Bool?
+    var sharedSlots: Int?
 
-    func toLocalUserSubscription() -> LocalUserSubscription {
-        LocalUserSubscription(name: name, url: url, iconName: iconName)
+    private enum CodingKeys: String, CodingKey {
+        case name, url, details
+        case iconName = "icon_name"
+        case legacyIconName = "iconName"
+        case planName = "plan_name"
+        case expiresAt = "expires_at"
+        case startedAt = "started_at"
+        case billingCycleId = "billing_cycle_id"
+        case autoRenew = "auto_renew"
+        case sharedSlots = "shared_slots"
     }
 
-    static func from(_ sub: LocalUserSubscription) -> SubscriptionRow {
-        SubscriptionRow(name: sub.name, iconName: sub.iconName, url: sub.url)
+    init(name: String, iconName: String, url: String?, planName: String? = nil, expiresAt: Date? = nil, details: String? = nil, startedAt: Date? = nil, billingCycleId: String? = nil, autoRenew: Bool? = nil, sharedSlots: Int? = nil) {
+        self.name = name
+        self.iconName = iconName
+        self.url = url
+        self.planName = planName
+        self.expiresAt = expiresAt
+        self.details = details
+        self.startedAt = startedAt
+        self.billingCycleId = billingCycleId
+        self.autoRenew = autoRenew
+        self.sharedSlots = sharedSlots
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        name = try container.decode(String.self, forKey: .name)
+        iconName = try container.decodeIfPresent(String.self, forKey: .iconName)
+            ?? container.decodeIfPresent(String.self, forKey: .legacyIconName)
+            ?? "link"
+        url = try container.decodeIfPresent(String.self, forKey: .url)
+        planName = try container.decodeIfPresent(String.self, forKey: .planName)
+        expiresAt = try container.decodeIfPresent(Date.self, forKey: .expiresAt)
+        details = try container.decodeIfPresent(String.self, forKey: .details)
+        startedAt = try container.decodeIfPresent(Date.self, forKey: .startedAt)
+        billingCycleId = try container.decodeIfPresent(String.self, forKey: .billingCycleId)
+        autoRenew = try container.decodeIfPresent(Bool.self, forKey: .autoRenew)
+        sharedSlots = try container.decodeIfPresent(Int.self, forKey: .sharedSlots)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(name, forKey: .name)
+        try container.encode(iconName, forKey: .iconName)
+        try container.encodeIfPresent(url, forKey: .url)
+        try container.encodeIfPresent(planName, forKey: .planName)
+        try container.encodeIfPresent(expiresAt, forKey: .expiresAt)
+        try container.encodeIfPresent(details, forKey: .details)
+        try container.encodeIfPresent(startedAt, forKey: .startedAt)
+        try container.encodeIfPresent(billingCycleId, forKey: .billingCycleId)
+        try container.encodeIfPresent(autoRenew, forKey: .autoRenew)
+        try container.encodeIfPresent(sharedSlots, forKey: .sharedSlots)
+    }
+
+    func toLocalUserSubscription() -> LocalUserSubscription {
+        LocalUserSubscription(name: name, url: nil, iconName: iconName, planName: planName, expiresAt: expiresAt, details: nil, startedAt: startedAt, billingCycleId: billingCycleId, autoRenew: autoRenew, sharedSlots: nil)
+    }
+
+    static func from(_ sub: LocalUserSubscription) -> SupabaseSubscriptionRow {
+        SupabaseSubscriptionRow(name: sub.name, iconName: sub.iconName, url: nil, planName: sub.planName, expiresAt: sub.expiresAt, details: nil, startedAt: sub.startedAt, billingCycleId: sub.billingCycleId, autoRenew: sub.autoRenew, sharedSlots: nil)
     }
 }
 
@@ -115,6 +177,60 @@ private struct LikeRequestRow: Codable {
 
     func toLikeRequest() -> LikeRequest {
         LikeRequest(id: id, from: fromUid, to: toUid, requestType: requestType, createdAt: createdAt)
+    }
+}
+
+private struct SendLikeParams: Encodable {
+    let targetUid: String
+    let kind: String
+    let requestId: String
+
+    enum CodingKeys: String, CodingKey {
+        case targetUid = "target_uid"
+        case kind
+        case requestId = "request_id"
+    }
+}
+
+private struct FeedParams: Encodable {
+    let kind: String
+    let batchLimit: Int
+
+    enum CodingKeys: String, CodingKey {
+        case kind
+        case batchLimit = "batch_limit"
+    }
+}
+
+private struct SwipeParams: Encodable {
+    let targetUid: String
+    let kind: String
+    let swipeDecision: String
+
+    enum CodingKeys: String, CodingKey {
+        case targetUid = "target_uid"
+        case kind
+        case swipeDecision = "swipe_decision"
+    }
+}
+
+private struct UndoSwipeParams: Encodable {
+    let targetUid: String
+    let kind: String
+
+    enum CodingKeys: String, CodingKey {
+        case targetUid = "target_uid"
+        case kind
+    }
+}
+
+private struct MatchResultRow: Decodable {
+    let matched: Bool
+    let chatId: String?
+
+    enum CodingKeys: String, CodingKey {
+        case matched
+        case chatId = "chat_id"
     }
 }
 
@@ -183,58 +299,115 @@ private struct MessageRow: Codable {
     }
 }
 
-private struct AIRequestInsert: Encodable {
-    var userId: String
-    var message: String
-    var response: String
-    var createdAt: Date
+private struct AcceptLikeParams: Encodable {
+    let requestId: String
 
     enum CodingKeys: String, CodingKey {
-        case userId = "user_id"
-        case message
-        case response
-        case createdAt = "created_at"
+        case requestId = "request_id"
     }
 }
 
-private struct MessageInsert: Encodable {
-    var id: String
-    var chatId: String
-    var senderId: String
-    var text: String?
-    var imageUrl: String?
-    var createdAt: Date
-    var readBy: [String]
+private struct SendMessageParams: Encodable {
+    let messageId: String
+    let targetChatId: String
+    let messageText: String?
+    let messageImageUrl: String?
 
     enum CodingKeys: String, CodingKey {
-        case id
-        case chatId = "chat_id"
-        case senderId = "sender_id"
-        case text
+        case messageId = "message_id"
+        case targetChatId = "target_chat_id"
+        case messageText = "message_text"
+        case messageImageUrl = "message_image_url"
+    }
+}
+
+private struct MarkChatReadParams: Encodable {
+    let targetChatId: String
+
+    enum CodingKeys: String, CodingKey {
+        case targetChatId = "target_chat_id"
+    }
+}
+
+private struct StoryRow: Decodable {
+    let id: String
+    let title: String
+    let subtitle: String
+    let body: String
+    let imageUrl: String?
+    let symbol: String
+    let accentHex: String
+    let ctaTitle: String?
+    let ctaUrl: String?
+    let publishedAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case id, title, subtitle, body, symbol
         case imageUrl = "image_url"
-        case createdAt = "created_at"
-        case readBy = "read_by"
+        case accentHex = "accent_hex"
+        case ctaTitle = "cta_title"
+        case ctaUrl = "cta_url"
+        case publishedAt = "published_at"
+    }
+
+    func toStory(isSeen: Bool) -> CommunityStory {
+        CommunityStory(
+            id: id,
+            title: title,
+            subtitle: subtitle,
+            body: body,
+            imageUrl: imageUrl,
+            symbol: symbol,
+            accentHex: accentHex,
+            ctaTitle: ctaTitle,
+            ctaUrl: ctaUrl,
+            publishedAt: publishedAt,
+            isSeen: isSeen
+        )
     }
 }
 
-private struct ChatInsert: Encodable {
-    var participants: [String]
-    var lastMessage: String
-    var lastMessageAt: Date
-    var chatType: String
-    var unreadCounts: [String: Int]
+private struct StoryViewRow: Decodable {
+    let storyId: String
 
     enum CodingKeys: String, CodingKey {
-        case participants
-        case lastMessage = "last_message"
-        case lastMessageAt = "last_message_at"
-        case chatType = "chat_type"
-        case unreadCounts = "unread_counts"
+        case storyId = "story_id"
     }
 }
 
-private struct ChatRowId: Decodable {
-    var id: String
+private struct StoryViewInsert: Encodable {
+    let storyId: String
+    let userId: String
+    let viewedAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case storyId = "story_id"
+        case userId = "user_id"
+        case viewedAt = "viewed_at"
+    }
+}
+
+private struct ReportInsert: Encodable {
+    let reporterId: String
+    let subjectId: String
+    let reason: String
+    let details: String
+
+    enum CodingKeys: String, CodingKey {
+        case reporterId = "reporter_id"
+        case subjectId = "subject_id"
+        case reason, details
+    }
+}
+
+private struct BlockInsert: Encodable {
+    let blockerId: String
+    let blockedId: String
+
+    enum CodingKeys: String, CodingKey {
+        case blockerId = "blocker_id"
+        case blockedId = "blocked_id"
+    }
 }
 
 // MARK: - SupabaseService
@@ -247,7 +420,7 @@ final class SupabaseService {
     func createUser(_ profile: UserProfile) async throws {
         let row = UserRow.from(profile)
         try await client.from("users")
-            .insert(row)
+            .upsert(row, onConflict: "uid")
             .execute()
     }
 
@@ -289,6 +462,33 @@ final class SupabaseService {
         return rows.map { $0.toUserProfile() }
     }
 
+    func getFeedProfiles(kind: String, limit: Int = 12) async throws -> [UserProfile] {
+        let rows: [UserRow] = try await client.rpc(
+            "get_feed_profiles",
+            params: FeedParams(kind: kind, batchLimit: limit)
+        )
+        .execute()
+        .value
+        return rows.map { $0.toUserProfile() }
+    }
+
+    func recordDislike(targetUid: String, kind: String) async throws {
+        try await client.rpc(
+            "record_swipe",
+            params: SwipeParams(targetUid: targetUid, kind: kind, swipeDecision: "dislike")
+        )
+        .execute()
+    }
+
+    func undoDislike(targetUid: String, kind: String) async throws -> Bool {
+        try await client.rpc(
+            "undo_dislike",
+            params: UndoSwipeParams(targetUid: targetUid, kind: kind)
+        )
+        .execute()
+        .value
+    }
+
     func listenToUserStatus(uid: String, completion: @escaping (Bool) -> Void) -> () -> Void {
         let task = Task {
             while !Task.isCancelled {
@@ -303,17 +503,18 @@ final class SupabaseService {
 
     // MARK: - Like Requests
 
-    func sendLikeRequest(_ request: LikeRequest) async throws {
-        let row = LikeRequestRow(
-            id: request.id,
-            fromUid: request.from,
-            toUid: request.to,
-            requestType: request.requestType,
-            createdAt: request.createdAt
+    func sendLikeRequest(_ request: LikeRequest) async throws -> String? {
+        let rows: [MatchResultRow] = try await client.rpc(
+            "send_like",
+            params: SendLikeParams(
+                targetUid: request.to,
+                kind: request.requestType,
+                requestId: request.id
+            )
         )
-        try await client.from("like_requests")
-            .insert(row)
-            .execute()
+        .execute()
+        .value
+        return rows.first(where: { $0.matched })?.chatId
     }
 
     func deleteLikeRequest(id: String) async throws {
@@ -321,18 +522,6 @@ final class SupabaseService {
             .delete()
             .eq("id", value: id)
             .execute()
-    }
-
-    func checkMutualLike(fromUid: String, toUid: String, requestType: String) async throws -> String? {
-        let rows: [LikeRequestRow] = try await client.from("like_requests")
-            .select()
-            .eq("from_uid", value: toUid)
-            .eq("to_uid", value: fromUid)
-            .eq("request_type", value: requestType)
-            .limit(1)
-            .execute()
-            .value
-        return rows.first?.id
     }
 
     func listenToLikeRequests(toUid: String, requestType: String, completion: @escaping ([LikeRequest]) -> Void) -> () -> Void {
@@ -353,30 +542,22 @@ final class SupabaseService {
 
     // MARK: - Chats
 
-    func createChat(participants: [String], chatType: String) async throws -> String {
-        let unreadCounts = Dictionary(uniqueKeysWithValues: participants.map { ($0, 0) })
-        let insert = ChatInsert(
-            participants: participants,
-            lastMessage: "",
-            lastMessageAt: Date(),
-            chatType: chatType,
-            unreadCounts: unreadCounts
+    func acceptLikeRequest(id: String) async throws -> String {
+        let chatId: String = try await client.rpc(
+            "accept_like_request",
+            params: AcceptLikeParams(requestId: id)
         )
-        let rows: [ChatRowId] = try await client.from("chats")
-            .insert(insert)
-            .select("id")
-            .execute()
-            .value
-        guard let id = rows.first?.id else {
-            throw ServiceError.noIdReturned
-        }
-        return id
+        .execute()
+        .value
+        return chatId
     }
 
     func listenToChats(uid: String, completion: @escaping ([Chat]) -> Void) -> () -> Void {
+        let channel = client.channel("chats-\(uid)-\(UUID().uuidString)")
+        let changes = channel.postgresChange(AnyAction.self, schema: "public", table: "chats")
         let task = Task {
-            while !Task.isCancelled {
-                let rows: [ChatRow] = (try? await client.from("chats")
+            let refresh = {
+                let rows: [ChatRow] = (try? await self.client.from("chats")
                     .select()
                     .contains("participants", value: [uid])
                     .execute()
@@ -385,126 +566,134 @@ final class SupabaseService {
                     .compactMap { $0.toChat(currentUid: uid) }
                     .sorted { $0.lastMessageAt > $1.lastMessageAt }
                 await MainActor.run { completion(chats) }
-                try? await Task.sleep(nanoseconds: 3_000_000_000)
+            }
+
+            await refresh()
+            do {
+                try await channel.subscribeWithError()
+                for await _ in changes {
+                    guard !Task.isCancelled else { break }
+                    await refresh()
+                }
+            } catch {
+                while !Task.isCancelled {
+                    await refresh()
+                    try? await Task.sleep(nanoseconds: 3_000_000_000)
+                }
             }
         }
-        return { task.cancel() }
-    }
-
-    func updateChatLastMessage(chatId: String, message: String, senderId: String, participants: [String]) async throws {
-        // First fetch current unread counts
-        let rows: [ChatRow] = (try? await client.from("chats")
-            .select()
-            .eq("id", value: chatId)
-            .limit(1)
-            .execute()
-            .value) ?? []
-
-        var unreadCounts = rows.first?.unreadCounts ?? [:]
-        for participantUid in participants where participantUid != senderId {
-            unreadCounts[participantUid] = (unreadCounts[participantUid] ?? 0) + 1
+        return {
+            task.cancel()
+            Task { await self.client.removeChannel(channel) }
         }
-
-        let isoDate = ISO8601DateFormatter().string(from: Date())
-        let data: [String: AnyEncodable] = [
-            "last_message": AnyEncodable(message),
-            "last_message_at": AnyEncodable(isoDate),
-            "unread_counts": AnyEncodable(unreadCounts)
-        ]
-        try await client.from("chats")
-            .update(data)
-            .eq("id", value: chatId)
-            .execute()
     }
 
-    func markChatAsRead(chatId: String, uid: String) async throws {
-        // Fetch current unread counts, zero out the given uid
-        let rows: [ChatRow] = (try? await client.from("chats")
-            .select()
-            .eq("id", value: chatId)
-            .limit(1)
-            .execute()
-            .value) ?? []
-
-        var unreadCounts = rows.first?.unreadCounts ?? [:]
-        unreadCounts[uid] = 0
-
-        let data: [String: AnyEncodable] = [
-            "unread_counts": AnyEncodable(unreadCounts)
-        ]
-        try await client.from("chats")
-            .update(data)
-            .eq("id", value: chatId)
-            .execute()
+    func markChatAsRead(chatId: String) async throws {
+        try await client.rpc(
+            "mark_chat_read",
+            params: MarkChatReadParams(targetChatId: chatId)
+        )
+        .execute()
     }
 
     // MARK: - Messages
 
     func sendMessage(_ message: Message, chatId: String) async throws {
-        let insert = MessageInsert(
-            id: message.id,
-            chatId: chatId,
-            senderId: message.senderId,
-            text: message.text,
-            imageUrl: message.imageUrl,
-            createdAt: message.createdAt,
-            readBy: message.readBy
+        try await client.rpc(
+            "send_chat_message",
+            params: SendMessageParams(
+                messageId: message.id,
+                targetChatId: chatId,
+                messageText: message.text,
+                messageImageUrl: message.imageUrl
+            )
         )
-        try await client.from("messages")
-            .insert(insert)
-            .execute()
+        .execute()
     }
 
     func listenToMessages(chatId: String, completion: @escaping ([Message]) -> Void) -> () -> Void {
+        let channel = client.channel("messages-\(chatId)-\(UUID().uuidString)")
+        let changes = channel.postgresChange(
+            AnyAction.self,
+            schema: "public",
+            table: "messages",
+            filter: .eq("chat_id", value: chatId)
+        )
         let task = Task {
-            while !Task.isCancelled {
-                let rows: [MessageRow] = (try? await client.from("messages")
+            let refresh = {
+                let rows: [MessageRow] = (try? await self.client.from("messages")
                     .select()
                     .eq("chat_id", value: chatId)
                     .order("created_at", ascending: true)
                     .execute()
                     .value) ?? []
                 await MainActor.run { completion(rows.map { $0.toMessage() }) }
-                try? await Task.sleep(nanoseconds: 2_000_000_000)
+            }
+
+            await refresh()
+            do {
+                try await channel.subscribeWithError()
+                for await _ in changes {
+                    guard !Task.isCancelled else { break }
+                    await refresh()
+                }
+            } catch {
+                while !Task.isCancelled {
+                    await refresh()
+                    try? await Task.sleep(nanoseconds: 2_000_000_000)
+                }
             }
         }
-        return { task.cancel() }
-    }
-
-    func markMessageRead(chatId: String, messageId: String, uid: String) async throws {
-        // Fetch current read_by array
-        let rows: [MessageRow] = (try? await client.from("messages")
-            .select()
-            .eq("id", value: messageId)
-            .limit(1)
-            .execute()
-            .value) ?? []
-
-        var readBy = rows.first?.readBy ?? []
-        if !readBy.contains(uid) {
-            readBy.append(uid)
+        return {
+            task.cancel()
+            Task { await self.client.removeChannel(channel) }
         }
+    }
 
-        let data: [String: AnyEncodable] = [
-            "read_by": AnyEncodable(readBy)
-        ]
-        try await client.from("messages")
-            .update(data)
-            .eq("id", value: messageId)
+    // MARK: - Community Stories
+
+    func getStories(userId: String) async throws -> [CommunityStory] {
+        async let storyRows: [StoryRow] = client.from("stories")
+            .select()
+            .order("priority", ascending: false)
+            .order("published_at", ascending: false)
+            .execute()
+            .value
+        async let viewRows: [StoryViewRow] = client.from("story_views")
+            .select("story_id")
+            .eq("user_id", value: userId)
+            .execute()
+            .value
+
+        let (stories, views) = try await (storyRows, viewRows)
+        let seenIds = Set(views.map(\.storyId))
+        return stories.map { $0.toStory(isSeen: seenIds.contains($0.id)) }
+    }
+
+    func markStoryViewed(storyId: String, userId: String) async throws {
+        let row = StoryViewInsert(storyId: storyId, userId: userId, viewedAt: Date())
+        try await client.from("story_views")
+            .upsert(row, onConflict: "story_id,user_id")
             .execute()
     }
 
-    // MARK: - AI Requests
+    // MARK: - Moderation
 
-    func saveAIRequest(userId: String, message: String, response: String) async throws {
-        let insert = AIRequestInsert(
-            userId: userId,
-            message: message,
-            response: response,
-            createdAt: Date()
+    func submitReport(reporterId: String, subjectId: String, reason: String, details: String) async throws {
+        let report = ReportInsert(
+            reporterId: reporterId,
+            subjectId: subjectId,
+            reason: reason,
+            details: details
         )
-        try await client.from("ai_requests")
-            .insert(insert)
+        try await client.from("reports")
+            .insert(report)
+            .execute()
+    }
+
+    func blockUser(blockerId: String, blockedId: String) async throws {
+        try await client.from("blocks")
+            .upsert(BlockInsert(blockerId: blockerId, blockedId: blockedId))
             .execute()
     }
 
@@ -527,14 +716,6 @@ final class SupabaseService {
             createdAt: Date()
         )
         try await submitReview(review)
-
-        let reviews = try await getReviews(forUid: toUid)
-        let avg = reviews.isEmpty ? Double(rating) : Double(reviews.map { $0.rating }.reduce(0, +)) / Double(reviews.count)
-        let data: [String: AnyEncodable] = [
-            "rating": AnyEncodable(avg),
-            "review_count": AnyEncodable(reviews.count)
-        ]
-        try await client.from("users").update(data).eq("uid", value: toUid).execute()
     }
 
     func hasReviewed(fromUid: String, toUid: String, chatId: String) async throws -> Bool {
@@ -561,11 +742,11 @@ final class SupabaseService {
     // MARK: - Errors
 
     enum ServiceError: LocalizedError {
-        case noIdReturned
+        case invalidParticipants
 
         var errorDescription: String? {
             switch self {
-            case .noIdReturned: return "No ID was returned from insert"
+            case .invalidParticipants: return "A chat requires two different participants"
             }
         }
     }

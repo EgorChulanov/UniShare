@@ -14,18 +14,17 @@ struct RatingSheet: View {
     var body: some View {
         NavigationView {
             ZStack {
-                theme.effectiveBackground.ignoresSafeArea()
-                GrainOverlay(opacity: 0.14)
+                BrandBackground()
 
                 VStack(spacing: 28) {
                     // Stars
                     VStack(spacing: 12) {
-                        Text("Оцени @\(partnerUsername)")
+                        Text(String(format: "rating.title".localized, partnerUsername))
                             .font(.system(size: 20, weight: .bold))
                             .foregroundColor(theme.effectiveTextColor)
                             .multilineTextAlignment(.center)
 
-                        Text("Как прошёл обмен?")
+                        Text("rating.subtitle".localized)
                             .font(.system(size: 14))
                             .foregroundColor(theme.effectiveSecondaryTextColor)
 
@@ -49,7 +48,7 @@ struct RatingSheet: View {
 
                     // Review text
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Короткий отзыв (необязательно)")
+                        Text("rating.comment".localized)
                             .font(.system(size: 13, weight: .medium))
                             .foregroundColor(theme.effectiveSecondaryTextColor)
 
@@ -78,12 +77,12 @@ struct RatingSheet: View {
                             if submitted {
                                 HStack(spacing: 8) {
                                     Image(systemName: "checkmark")
-                                    Text("Отправлено!")
+                                    Text("rating.sent".localized)
                                 }
                                 .font(.system(size: 16, weight: .semibold))
                                 .foregroundColor(.white)
                             } else {
-                                Text("Отправить отзыв")
+                                Text("rating.submit".localized)
                                     .font(.system(size: 16, weight: .semibold))
                                     .foregroundColor(rating > 0 ? .white : theme.effectiveSecondaryTextColor)
                             }
@@ -109,7 +108,7 @@ struct RatingSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Пропустить") { dismiss() }
+                    Button("skip".localized) { dismiss() }
                         .foregroundColor(theme.effectiveSecondaryTextColor)
                 }
             }

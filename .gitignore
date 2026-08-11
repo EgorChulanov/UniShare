@@ -23,6 +23,8 @@ Podfile.lock
 
 # ─── SECRETS — НИКОГДА НЕ КОММИТИТЬ ─────────────────────────────────────────
 # Secrets.xcconfig содержит API ключи — не коммить файл с реальными ключами!
+Config/Secrets.xcconfig
+Config/ReleaseIdentity.xcconfig
 
 # Firebase — скачать из Firebase консоли и положить локально
 GoogleService-Info.plist

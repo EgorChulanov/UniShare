@@ -1,4 +1,5 @@
 import Foundation
+import Supabase
 import UIKit
 
 // MARK: - Rawg Models
@@ -23,47 +24,53 @@ struct RawgSearchResponse: Codable {
 // MARK: - Service
 
 final class RawgService {
-    private let baseURL = "https://api.rawg.io/api"
-    private var apiKey: String {
-        Bundle.main.infoDictionary?["RAWG_API_KEY"] as? String ?? ""
-    }
-
-    // In-memory cache to reduce API quota usage
+    private let client = SupabaseManager.shared.client
     private var searchCache: [String: [RawgGame]] = [:]
 
+    var isConfigured: Bool {
+        SupabaseManager.shared.isConfigured
+    }
+
     func searchGames(_ query: String) async -> [RawgGame] {
-        let key = query.lowercased().trimmingCharacters(in: .whitespaces)
-        guard !key.isEmpty else { return [] }
+        guard let sanitized = GameNameValidator.sanitized(query) else { return [] }
+        let key = GameNameValidator.normalized(sanitized)
 
         // Return cached result if available
         if let cached = searchCache[key] {
             return cached
         }
 
-        guard let encoded = key.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else {
-            return []
+        let localResults = GameCatalog.search(sanitized)
+        guard isConfigured else {
+            let results = addingCustomResult(to: localResults, query: sanitized)
+            searchCache[key] = results
+            return results
         }
-        let urlString = "\(baseURL)/games?key=\(apiKey)&search=\(encoded)&page_size=10"
-        guard let url = URL(string: urlString) else { return [] }
 
         do {
-            let (data, _) = try await URLSession.shared.data(from: url)
-            let response = try JSONDecoder().decode(RawgSearchResponse.self, from: data)
-            searchCache[key] = response.results
-            return response.results
+            let response: RawgSearchResponse = try await client.functions.invoke(
+                "game-search",
+                options: FunctionInvokeOptions(body: ["query": sanitized])
+            )
+            let results = addingCustomResult(to: merge(response.results, with: localResults), query: sanitized)
+            searchCache[key] = results
+            return results
         } catch {
-            print("Rawg search error: \(error)")
-            return []
+            return addingCustomResult(to: localResults, query: sanitized)
         }
     }
 
-    func getGame(id: Int) async -> RawgGame? {
-        let urlString = "\(baseURL)/games/\(id)?key=\(apiKey)"
-        guard let url = URL(string: urlString) else { return nil }
+    func searchGameTags(_ query: String) async -> [GameTag] {
+        await searchGames(query).map(gameToTag)
+    }
 
+    func getGame(id: Int) async -> RawgGame? {
         do {
-            let (data, _) = try await URLSession.shared.data(from: url)
-            return try JSONDecoder().decode(RawgGame.self, from: data)
+            let game: RawgGame = try await client.functions.invoke(
+                "game-search",
+                options: FunctionInvokeOptions(body: ["gameId": id])
+            )
+            return game
         } catch {
             print("Rawg getGame error: \(error)")
             return nil
@@ -81,6 +88,22 @@ final class RawgService {
     }
 
     func gameToTag(_ game: RawgGame) -> GameTag {
-        GameTag(name: game.name, coverUrl: game.backgroundImage, rawgId: game.id)
+        GameTag(name: game.name, coverUrl: game.backgroundImage, rawgId: game.id > 0 ? game.id : nil)
+    }
+
+    private func merge(_ remote: [RawgGame], with local: [RawgGame]) -> [RawgGame] {
+        var seen = Set<String>()
+        return (remote + local).filter { game in
+            seen.insert(GameNameValidator.normalized(game.name)).inserted
+        }
+    }
+
+    private func addingCustomResult(to games: [RawgGame], query: String) -> [RawgGame] {
+        guard let customName = GameNameValidator.sanitized(query) else { return games }
+        let normalized = GameNameValidator.normalized(customName)
+        guard !games.contains(where: { GameNameValidator.normalized($0.name) == normalized }) else {
+            return games
+        }
+        return games + [RawgGame(id: Int.min, name: customName, backgroundImage: nil, rating: nil, released: nil)]
     }
 }
