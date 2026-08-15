@@ -5,11 +5,13 @@ struct ChatView: View {
     let chat: Chat
 
     @EnvironmentObject var theme: ThemeManager
+    @Environment(\.dismiss) private var dismiss
     @StateObject private var vm: ChatViewModel
     @State private var photoItem: PhotosPickerItem?
     @State private var showReportSheet = false
     @State private var showRatingSheet = false
     @State private var hasRated = false
+    @State private var showBlockConfirmation = false
 
     init(chat: Chat) {
         self.chat = chat
@@ -30,6 +32,9 @@ struct ChatView: View {
                 ScrollViewReader { proxy in
                     ScrollView {
                         LazyVStack(spacing: 8) {
+                            SafetyNotice()
+                                .padding(.bottom, 4)
+
                             ForEach(vm.messages) { message in
                                 MessageBubble(
                                     message: message,
@@ -48,8 +53,7 @@ struct ChatView: View {
                     }
                 }
 
-                // "Confirm account received" banner (exchange chats only, before rating)
-                if chat.chatType == "exchange" && !hasRated && !vm.messages.isEmpty {
+                if !hasRated && !vm.messages.isEmpty {
                     confirmBanner
                 }
 
@@ -76,6 +80,11 @@ struct ChatView: View {
                     } label: {
                         Label("chat.report".localized, systemImage: "flag")
                     }
+                    Button(role: .destructive) {
+                        showBlockConfirmation = true
+                    } label: {
+                        Label("chat.block".localized, systemImage: "person.fill.xmark")
+                    }
                 } label: {
                     Image(systemName: "ellipsis.circle")
                         .foregroundColor(theme.effectivePrimary)
@@ -90,20 +99,64 @@ struct ChatView: View {
             }
         }
         .sheet(isPresented: $showReportSheet) {
-            ReportSheet(username: vm.partnerProfile?.username ?? "")
+            ReportSheet(
+                username: vm.partnerProfile?.username ?? "",
+                onSubmit: { reason, details in
+                    guard let partnerUid = vm.partnerUid else { return }
+                    try await AppEnvironment.shared.db.submitReport(
+                        reporterId: vm.myUid,
+                        subjectId: partnerUid,
+                        reason: reason,
+                        details: details
+                    )
+                }
+            )
                 .environmentObject(theme)
         }
         .sheet(isPresented: $showRatingSheet) {
             RatingSheet(partnerUsername: vm.partnerProfile?.username ?? "") { rating, text in
                 Task {
                     guard let partnerUid = vm.partnerUid else { return }
-                    try? await AppEnvironment.shared.db.submitReview(
-                        fromUid: vm.myUid, toUid: partnerUid,
-                        chatId: chat.id, rating: rating, text: text)
-                    hasRated = true
+                    do {
+                        try await AppEnvironment.shared.db.submitReview(
+                            fromUid: vm.myUid, toUid: partnerUid,
+                            chatId: chat.id, rating: rating, text: text)
+                        hasRated = true
+                    } catch {
+                        vm.errorMessage = error.localizedDescription
+                    }
                 }
             }
             .environmentObject(theme)
+        }
+        .alert("common.error".localized, isPresented: Binding(
+            get: { vm.errorMessage != nil },
+            set: { if !$0 { vm.errorMessage = nil } }
+        )) {
+            Button("common.ok".localized, role: .cancel) {}
+        } message: {
+            Text(vm.errorMessage ?? "")
+        }
+        .confirmationDialog(
+            "chat.block.confirmation".localized,
+            isPresented: $showBlockConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("chat.block".localized, role: .destructive) {
+                Task {
+                    guard let partnerUid = vm.partnerUid else { return }
+                    do {
+                        try await AppEnvironment.shared.db.blockUser(
+                            blockerId: vm.myUid,
+                            blockedId: partnerUid
+                        )
+                        dismiss()
+                    } catch {
+                        vm.errorMessage = error.localizedDescription
+                    }
+                }
+            }
+            Button("cancel".localized, role: .cancel) {}
         }
     }
 
@@ -115,10 +168,10 @@ struct ChatView: View {
                 Image(systemName: "checkmark.seal.fill")
                     .foregroundColor(theme.effectivePrimary)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Подтвердить получение аккаунта")
+                    Text("chat.review.title".localized)
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundColor(theme.effectiveTextColor)
-                    Text("Оцени обмен и оставь отзыв")
+                    Text("chat.review.subtitle".localized)
                         .font(.system(size: 11))
                         .foregroundColor(theme.effectiveSecondaryTextColor)
                 }
@@ -163,6 +216,7 @@ struct ChatView: View {
                 .padding(.vertical, 10)
                 .background(theme.effectiveCardColor)
                 .cornerRadius(20)
+                .accessibilityIdentifier("chat.input")
 
             Button {
                 Task { await vm.sendText() }
@@ -190,6 +244,7 @@ struct ChatView: View {
                 }
             }
             .disabled(vm.inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || vm.isSending)
+            .accessibilityIdentifier("chat.send")
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
@@ -198,26 +253,46 @@ struct ChatView: View {
     }
 }
 
+private struct SafetyNotice: View {
+    @EnvironmentObject private var theme: ThemeManager
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 9) {
+            Image(systemName: "lock.shield.fill")
+                .foregroundStyle(theme.effectivePrimary)
+            Text("chat.safety.notice".localized)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(theme.effectiveSecondaryTextColor)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(12)
+        .background(theme.effectivePrimary.opacity(0.08), in: RoundedRectangle(cornerRadius: 14))
+    }
+}
+
 // MARK: - Report Sheet
 
 struct ReportSheet: View {
     let username: String
+    let onSubmit: (String, String) async throws -> Void
 
     @EnvironmentObject var theme: ThemeManager
     @Environment(\.dismiss) private var dismiss
 
     private let reasons = [
-        ("exclamationmark.bubble", "Spam"),
-        ("hand.raised", "Inappropriate content"),
-        ("person.fill.xmark", "Harassment or bullying"),
-        ("questionmark.circle", "Fake profile"),
-        ("person.badge.minus", "Underage user"),
-        ("ellipsis.circle", "Other reason")
+        ("exclamationmark.bubble", "report.reason.spam"),
+        ("hand.raised", "report.reason.content"),
+        ("person.fill.xmark", "report.reason.harassment"),
+        ("questionmark.circle", "report.reason.fake"),
+        ("person.badge.minus", "report.reason.underage"),
+        ("ellipsis.circle", "report.reason.other")
     ]
 
     @State private var selectedReason: String? = nil
     @State private var otherText = ""
     @State private var submitted = false
+    @State private var isSubmitting = false
+    @State private var errorMessage: String?
 
     var body: some View {
         NavigationView {
@@ -230,7 +305,7 @@ struct ReportSheet: View {
                     reasonsList
                 }
             }
-            .navigationTitle("Report \(username)")
+            .navigationTitle(String(format: "report.title".localized, username))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -239,23 +314,31 @@ struct ReportSheet: View {
                 }
                 if !submitted {
                     ToolbarItem(placement: .navigationBarTrailing) {
-                        Button("Send") {
-                            submitted = true
+                        Button("report.send".localized) {
+                            submit()
                         }
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundColor(selectedReason != nil ? theme.effectivePrimary : theme.effectiveSecondaryTextColor)
-                        .disabled(selectedReason == nil)
+                        .disabled(selectedReason == nil || isSubmitting)
                     }
                 }
             }
         }
         .presentationDetents([.medium, .large])
+        .alert("common.error".localized, isPresented: Binding(
+            get: { errorMessage != nil },
+            set: { if !$0 { errorMessage = nil } }
+        )) {
+            Button("common.ok".localized, role: .cancel) {}
+        } message: {
+            Text(errorMessage ?? "")
+        }
     }
 
     private var reasonsList: some View {
         ScrollView {
             VStack(spacing: 0) {
-                Text("Why are you reporting this user?")
+                Text("report.question".localized)
                     .font(.system(size: 14))
                     .foregroundColor(theme.effectiveSecondaryTextColor)
                     .multilineTextAlignment(.center)
@@ -276,7 +359,7 @@ struct ReportSheet: View {
                                     .foregroundColor(theme.effectivePrimary)
                                     .frame(width: 28)
 
-                                Text(reason)
+                                Text(reason.localized)
                                     .font(.system(size: 15))
                                     .foregroundColor(theme.effectiveTextColor)
 
@@ -305,8 +388,8 @@ struct ReportSheet: View {
                 .padding(.horizontal, 16)
 
                 // Extra text field when "Other reason" is selected
-                if selectedReason == "Other reason" {
-                    TextField("Add details (optional)", text: $otherText, axis: .vertical)
+                if selectedReason == "report.reason.other" {
+                    TextField("report.details".localized, text: $otherText, axis: .vertical)
                         .font(.system(size: 14))
                         .foregroundColor(theme.effectiveTextColor)
                         .lineLimit(3...6)
@@ -327,20 +410,39 @@ struct ReportSheet: View {
             Image(systemName: "checkmark.seal.fill")
                 .font(.system(size: 56))
                 .foregroundColor(.green)
-            Text("Report submitted")
+            Text("report.submitted".localized)
                 .font(.system(size: 20, weight: .semibold))
                 .foregroundColor(theme.effectiveTextColor)
-            Text("Thank you. We'll review your report and take action if needed.")
+            Text("report.submitted.subtitle".localized)
                 .font(.system(size: 14))
                 .foregroundColor(theme.effectiveSecondaryTextColor)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
-            Button("Done") { dismiss() }
+            Button("report.done".localized) { dismiss() }
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundColor(.white)
                 .padding(.horizontal, 32).padding(.vertical, 12)
                 .background(theme.effectivePrimary)
                 .clipShape(Capsule())
+        }
+    }
+
+    private func submit() {
+        guard let selectedReason else { return }
+        isSubmitting = true
+        Task {
+            do {
+                try await onSubmit(selectedReason, otherText.trimmingCharacters(in: .whitespacesAndNewlines))
+                await MainActor.run {
+                    submitted = true
+                    isSubmitting = false
+                }
+            } catch {
+                await MainActor.run {
+                    errorMessage = error.localizedDescription
+                    isSubmitting = false
+                }
+            }
         }
     }
 }

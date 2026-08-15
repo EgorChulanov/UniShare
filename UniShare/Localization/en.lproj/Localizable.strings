@@ -28,6 +28,16 @@
 "auth.error.invalid" = "Invalid email or password";
 "auth.welcome" = "Welcome to UniShare";
 "auth.subtitle" = "Connect with gamers worldwide";
+"auth.password.confirm" = "Repeat password";
+"auth.password.hint" = "10+ characters with upper, lower, number and symbol";
+"auth.confirmation.sent" = "We sent a confirmation link to your email";
+"auth.error.email" = "Enter a valid email";
+"auth.error.password.length" = "Password must contain at least 8 characters";
+"auth.error.password.strength" = "Use 10+ characters with an uppercase letter, lowercase letter, number and symbol";
+"auth.error.password.match" = "Passwords do not match";
+"auth.error.registered" = "An account with this email already exists";
+"auth.error.unconfirmed" = "Confirm your email using the link we sent";
+"auth.error.network" = "Cannot reach the server. Try again";
 
 // MARK: - Onboarding
 "onboarding.title.username" = "Choose a username";
@@ -42,13 +52,12 @@
 "onboarding.complete" = "Start exploring!";
 
 // MARK: - Tabs
-"tab.feed" = "Feed";
+"tab.feed" = "Home";
 "tab.chats" = "Chats";
-"tab.ai" = "AI";
 "tab.profile" = "Profile";
 
 // MARK: - Feed
-"feed.segment.exchange" = "Exchange";
+"feed.segment.exchange" = "Teammates";
 "feed.segment.skills" = "Skills";
 "feed.search.placeholder" = "Search by game...";
 "feed.empty" = "No more profiles";
@@ -61,29 +70,14 @@
 "chat.send" = "Send";
 "chat.empty" = "No messages yet";
 "chat.empty.subtitle" = "Start the conversation!";
-"chats.title" = "Messages";
 "chats.empty" = "No chats yet";
 "chats.empty.subtitle" = "Swipe right to start matching";
 "chats.requests" = "Requests";
 "chats.accept" = "Accept";
 "chats.decline" = "Decline";
-"chats.segment.exchange" = "Exchange";
-"chats.segment.skills" = "Skills";
 "chat.online" = "Online";
 "chat.offline" = "Offline";
 "chat.report" = "Report user";
-
-// MARK: - AI
-"ai.title" = "AI Assistant";
-"ai.placeholder" = "Ask about games...";
-"ai.send" = "Ask";
-"ai.thinking" = "Thinking...";
-"ai.tap" = "Tap or drag me";
-"ai.limit" = "Message is too long (max 100 characters)";
-"ai.command.recommend" = "Recommend games";
-"ai.command.exchange" = "Help with exchange";
-"ai.command.skill" = "Improve my skills";
-"ai.command.trending" = "Trending games";
 
 // MARK: - AirShare
 "airshare.title" = "AirShare";
@@ -93,10 +87,30 @@
 "airshare.found" = "Found nearby user";
 "airshare.success" = "Profile shared!";
 "airshare.match" = "It's a match!";
-"airshare.description" = "Hold your phones together and shake to exchange profiles with nearby players";
+"airshare.description" = "Hold your phones together and shake to share profiles with nearby players";
 
 // MARK: - Profile
 "profile.edit" = "Edit Profile";
+"profile.error.avatar.policy" = "Avatar storage is not configured. Apply the avatar Storage migration in Supabase.";
+"subscription.edit" = "Subscription";
+"subscription.details" = "Plan details";
+"subscription.plan.placeholder" = "Plan, for example Premium";
+"subscription.has.expiry" = "Has an expiry date";
+"subscription.expiry" = "Expires";
+"subscription.expires" = "Until %@";
+"subscription.remove" = "Remove subscription";
+"subscription.plan" = "Plan";
+"subscription.period" = "Billing period";
+"subscription.duration" = "Duration";
+"subscription.started" = "Started";
+"subscription.auto.renew" = "Auto-renew";
+"subscription.remaining" = "Remaining";
+"subscription.days.remaining" = "%d days remaining";
+"subscription.period.1d" = "1 day";
+"subscription.period.1m" = "1 month";
+"subscription.period.3m" = "3 months";
+"subscription.period.6m" = "6 months";
+"subscription.period.12m" = "12 months";
 "profile.games" = "Games";
 "profile.subscriptions" = "Subscriptions";
 "profile.platforms" = "Platforms";
@@ -122,6 +136,90 @@
 "widget.chats" = "Chats";
 "widget.open.chats" = "Open Chats";
 "widget.open.airshare" = "AirShare";
-"widget.open.ai" = "AI";
 "widget.open.profile" = "Profile";
-"profile.settings" = "Settings";
+
+// MARK: - Common
+"common.error" = "Error";
+"common.ok" = "OK";
+"feed.airshare.nearby" = "AirShare nearby";
+"chats.request.exchange" = "wants to play together";
+"chat.review.title" = "Rate your teammate";
+"chat.review.subtitle" = "Share how your session went";
+"chat.safety.notice" = "Keep platform passwords, security codes, payment details and account access out of chat.";
+"rating.title" = "Rate @%@";
+"rating.subtitle" = "How was your gaming session?";
+"rating.comment" = "Short review (optional)";
+"rating.sent" = "Sent";
+"rating.submit" = "Send Review";
+"skills.setup.question" = "What are your gaming skills?";
+"skills.setup.question.subtitle" = "Select everything that fits so other players can find you.";
+"skills.setup.custom" = "Add your own skill...";
+"skills.setup.about.title" = "About you";
+"skills.setup.about.subtitle" = "Briefly describe your experience and the games you enjoy.";
+"skills.setup.about.example" = "For example: I have played EA Sports FC for five years and enjoy teaching tactics.";
+"skills.setup.portfolio.title" = "Highlights";
+"skills.setup.portfolio.subtitle" = "Add screenshots from streams or gaming achievements.";
+"skills.setup.portfolio.add" = "Add Photos";
+"skills.setup.portfolio.more" = "Add More";
+"skills.setup.portfolio.help" = "Photos help other players understand your experience.";
+"skills.setup.your" = "Your skills";
+"skills.setup.confirm" = "After saving, this profile will appear to players searching by skills.";
+"skills.empty" = "No skills added";
+"feed.platforms.empty" = "No platforms added";
+"feed.swipe.match" = "Match";
+"feed.swipe.like" = "Like";
+"feed.swipe.pass" = "Pass";
+"profile.games.add.hint" = "Tap to add games";
+"onboarding.username.minimum" = "At least 3 characters";
+"onboarding.games.search" = "Search games";
+"onboarding.games.selected" = "Selected: %d";
+"profile.username" = "Username";
+"profile.status" = "Status";
+
+// MARK: - Reports
+"report.title" = "Report %@";
+"report.send" = "Send";
+"report.question" = "Why are you reporting this user?";
+"report.reason.spam" = "Spam";
+"report.reason.content" = "Inappropriate content";
+"report.reason.harassment" = "Harassment or bullying";
+"report.reason.fake" = "Fake profile";
+"report.reason.underage" = "Underage user";
+"report.reason.other" = "Other reason";
+"report.details" = "Add details (optional)";
+"report.submitted" = "Report submitted";
+"report.submitted.subtitle" = "We will review the report and take action if needed.";
+"report.done" = "Done";
+"chat.block" = "Block user";
+"chat.block.confirmation" = "This user will disappear from your feed and will no longer be able to interact with you.";
+"game.search.empty" = "Nothing found. Check the title.";
+"game.search.custom.hint" = "If a game is missing from the catalog, you can add the entered title manually.";
+"game.search.catalog.unavailable" = "The online game catalog is temporarily unavailable.";
+"game.search.powered.rawg" = "Game data and images by RAWG";
+"profile.error.save.verify" = "Could not verify the saved profile. Please try again.";
+"profile.error.username" = "The username must be between 3 and 30 characters.";
+"profile.error.status.length" = "The status cannot exceed 180 characters.";
+"profile.error.platform.required" = "Select at least one platform.";
+"airshare.verifying" = "Verifying profile…";
+"airshare.bluetooth.off" = "Turn on Bluetooth";
+"airshare.bluetooth.denied" = "Allow Bluetooth in Settings";
+"airshare.bluetooth.unsupported" = "AirShare is not supported on this device";
+"airshare.verify.failed" = "The profile could not be verified through UniShare.";
+"airshare.me" = "Me";
+"airshare.nearby" = "Nearby players";
+"airshare.skip" = "Skip";
+"airshare.like" = "Like";
+"settings.about" = "About UniShare";
+"settings.privacy" = "Privacy Policy";
+"settings.terms" = "Terms and Community Rules";
+"settings.support" = "Contact Support";
+"settings.delete.account" = "Delete Account";
+"settings.delete.title" = "Delete your account?";
+"settings.delete.message" = "Your profile, messages, uploaded photos and other UniShare data will be permanently deleted. This cannot be undone.";
+"settings.delete.confirm" = "Delete Account Permanently";
+"settings.delete.cancel" = "Cancel";
+"chat.error.content.blocked" = "This message may contain credentials, payment data, threats, or other prohibited content. Remove it and try again.";
+"auth.consent" = "I agree to the processing of my data to provide UniShare and accept:";
+"auth.or" = "or";
+"auth.apple.consent" = "By continuing with Apple, you accept the Terms and Privacy Policy.";
+"auth.apple.error" = "Apple did not return a valid sign-in credential.";

@@ -11,7 +11,7 @@ jobs:
     runs-on: macos-26
     environment: testflight
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Install tooling
         run: brew install xcodegen
       - name: Create build configuration

@@ -9,11 +9,11 @@ struct AirShareView: View {
     @State private var selectedProfile: ReceivedProfile?
     @State private var showProfileCard = false
     @State private var pulse = false
+    @State private var errorMessage: String?
 
     var body: some View {
         ZStack {
-            theme.effectiveBackground.ignoresSafeArea()
-            GrainOverlay(opacity: 0.14)
+            BrandBackground()
 
             // Ambient glow behind phones
             Circle()
@@ -32,7 +32,7 @@ struct AirShareView: View {
                     Text("AirShare")
                         .font(.system(size: 28, weight: .bold))
                         .foregroundColor(theme.effectiveTextColor)
-                    Text("Держи телефон рядом с другим устройством.\nПрофили обменяются автоматически.")
+                    Text("airshare.description".localized)
                         .font(.system(size: 14))
                         .foregroundColor(theme.effectiveSecondaryTextColor)
                         .multilineTextAlignment(.center)
@@ -58,7 +58,10 @@ struct AirShareView: View {
         .onAppear { pulse = true }
         .onDisappear { manager.stop() }
         .onChange(of: manager.discoveredProfiles.count) { count in
-            if count > 0 { HapticsManager.shared.notification(.success) }
+            if count > 0 {
+                HapticsManager.shared.notification(.success)
+                Task { await verifyDiscoveredProfiles() }
+            }
         }
         .sheet(isPresented: $showProfileCard) {
             if let profile = selectedProfile {
@@ -70,6 +73,14 @@ struct AirShareView: View {
                 .environmentObject(theme)
                 .environmentObject(env)
             }
+        }
+        .alert("common.error".localized, isPresented: Binding(
+            get: { errorMessage != nil },
+            set: { if !$0 { errorMessage = nil } }
+        )) {
+            Button("common.ok".localized, role: .cancel) {}
+        } message: {
+            Text(errorMessage ?? "")
         }
     }
 
@@ -96,7 +107,7 @@ struct AirShareView: View {
                             .offset(x: -2, y: 6)
                     }
                 }
-                Text(myProfile?.username ?? "Я")
+                Text(myProfile?.username ?? "airshare.me".localized)
                     .font(.system(size: 11))
                     .foregroundColor(theme.effectiveSecondaryTextColor)
             }
@@ -156,6 +167,7 @@ struct AirShareView: View {
         case .holding: return theme.effectivePrimary
         case .sent: return .green
         case .received: return .green
+        case .bluetoothOff, .permissionDenied, .unsupported: return .orange
         }
     }
 
@@ -163,7 +175,7 @@ struct AirShareView: View {
 
     private var discoveredList: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Найдены поблизости")
+            Text("airshare.nearby".localized)
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundColor(theme.effectiveSecondaryTextColor)
                 .padding(.horizontal, 20)
@@ -185,6 +197,11 @@ struct AirShareView: View {
                                     .font(.system(size: 12))
                                     .foregroundColor(theme.effectiveSecondaryTextColor)
                                     .lineLimit(1)
+                            }
+                            if !profile.isVerified {
+                                ProgressView()
+                                    .controlSize(.small)
+                                    .tint(theme.effectivePrimary)
                             }
                         }
 
@@ -220,17 +237,39 @@ struct AirShareView: View {
 
     private func sendLike(to profile: ReceivedProfile) async {
         guard let myUid = env.auth.uid else { return }
+        guard profile.isVerified else {
+            errorMessage = "airshare.verify.failed".localized
+            return
+        }
         let requestId = "\(myUid)_\(profile.uid)_exchange"
         let request = LikeRequest(id: requestId, from: myUid, to: profile.uid, requestType: "exchange", createdAt: Date())
-        try? await env.db.sendLikeRequest(request)
-
-        if let existingId = try? await env.db.checkMutualLike(fromUid: myUid, toUid: profile.uid, requestType: "exchange") {
-            _ = try? await env.db.createChat(participants: [myUid, profile.uid], chatType: "exchange")
-            try? await env.db.deleteLikeRequest(id: existingId)
-            HapticsManager.shared.playMatch()
-            TabBarState.shared.switchTo(.chats)
+        do {
+            let chatId = try await env.db.sendLikeRequest(request)
+            if chatId != nil {
+                HapticsManager.shared.playMatch()
+                TabBarState.shared.switchTo(.chats)
+            }
+            showProfileCard = false
+        } catch {
+            errorMessage = error.localizedDescription
         }
-        showProfileCard = false
+    }
+
+    private func verifyDiscoveredProfiles() async {
+        let pending = manager.discoveredProfiles.filter { !$0.isVerified }
+        for nearby in pending {
+            do {
+                guard let profile = try await env.db.getUser(uid: nearby.uid),
+                      profile.onboardingComplete else {
+                    manager.reject(uid: nearby.uid)
+                    continue
+                }
+                manager.verify(nearby, with: profile)
+            } catch {
+                manager.reject(uid: nearby.uid)
+                errorMessage = "airshare.verify.failed".localized
+            }
+        }
     }
 }
 
@@ -245,8 +284,7 @@ struct AirShareProfileCard: View {
 
     var body: some View {
         ZStack {
-            theme.effectiveBackground.ignoresSafeArea()
-            GrainOverlay(opacity: 0.14)
+            BrandBackground()
 
             VStack(spacing: 0) {
                 Capsule()
@@ -292,7 +330,7 @@ struct AirShareProfileCard: View {
 
                 HStack(spacing: 24) {
                     Button(action: onDismiss) {
-                        Label("Пропустить", systemImage: "xmark")
+                        Label("airshare.skip".localized, systemImage: "xmark")
                             .font(.system(size: 15, weight: .semibold))
                             .foregroundColor(.red)
                             .frame(maxWidth: .infinity)
@@ -302,7 +340,7 @@ struct AirShareProfileCard: View {
                     }
 
                     Button(action: onLike) {
-                        Label("Лайк", systemImage: "heart.fill")
+                        Label("airshare.like".localized, systemImage: "heart.fill")
                             .font(.system(size: 15, weight: .semibold))
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)

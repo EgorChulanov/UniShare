@@ -1,5 +1,4 @@
 import SwiftUI
-import PhotosUI
 
 struct ProfileView: View {
     @EnvironmentObject var env: AppEnvironment
@@ -24,7 +23,6 @@ struct ProfileView: View {
     var body: some View {
         ZStack {
             theme.effectiveBackground.ignoresSafeArea()
-            GrainOverlay(opacity: 0.14)
 
             if vm.isLoading && vm.profile == nil {
                 ProgressView().tint(theme.effectivePrimary)
@@ -67,6 +65,7 @@ struct ProfileView: View {
                                     .padding()
                                     .glass(cornerRadius: 14)
                                 }
+                                .accessibilityIdentifier("profile.settings")
                                 .padding(.horizontal, 16)
                                 .padding(.bottom, 32)
                             }
@@ -95,23 +94,26 @@ struct ProfileView: View {
                 .environmentObject(theme)
             }
         }
+        .alert("common.error".localized, isPresented: Binding(
+            get: { vm.errorMessage != nil },
+            set: { if !$0 { vm.errorMessage = nil } }
+        )) {
+            Button("common.ok".localized, role: .cancel) {}
+        } message: {
+            Text(vm.errorMessage ?? "")
+        }
     }
 
-    // MARK: - Figma-style centered hero header
+    // MARK: - Profile header
 
     private func profileHero(profile: UserProfile) -> some View {
-        ZStack(alignment: .top) {
-            // Gradient glow from top (matches Figma dark bg + pink radial)
-            RadialGradient(
-                colors: [theme.effectivePrimary.opacity(0.55), .clear],
-                center: .top, startRadius: 0, endRadius: 300
-            )
-            .frame(height: 320)
-            .ignoresSafeArea(edges: .top)
-
-            VStack(spacing: 10) {
-                // Avatar with edit button
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(alignment: .center, spacing: 18) {
                 ZStack(alignment: .bottomTrailing) {
+                    Circle()
+                        .fill(theme.effectivePrimary.opacity(0.32))
+                        .frame(width: 116, height: 116)
+                        .blur(radius: 22)
                     AvatarView(url: profile.avatarUrl, size: 100, showBorder: true)
                     Button {
                         vm.startEditing(); showEditProfile = true
@@ -124,55 +126,63 @@ struct ProfileView: View {
                     }
                     .offset(x: 3, y: 3)
                 }
-                .padding(.top, 20)
 
-                // Username
-                HStack(spacing: 8) {
-                    Text("@\(profile.username)")
-                        .font(.system(size: 22, weight: .bold))
-                        .foregroundColor(theme.effectiveTextColor)
+                VStack(alignment: .leading, spacing: 7) {
+                    HStack(spacing: 7) {
+                        Text("@\(profile.username)")
+                            .font(.system(size: 21, weight: .bold, design: .rounded))
+                            .foregroundColor(theme.effectiveTextColor)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.75)
+                            .accessibilityIdentifier("profile.username")
+                        if profile.rating >= 4.5 {
+                            Image(systemName: "checkmark.seal.fill")
+                                .foregroundStyle(theme.effectivePrimary)
+                        }
+                    }
+
+                    if let status = profile.status, !status.isEmpty {
+                        Text(status)
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundColor(theme.effectiveSecondaryTextColor)
+                            .lineLimit(2)
+                    }
+
                     Button {
                         vm.startEditing(); showEditProfile = true
                     } label: {
-                        Image(systemName: "pencil.circle.fill")
-                            .font(.system(size: 17))
-                            .foregroundColor(theme.effectivePrimary.opacity(0.8))
+                        Label("profile.edit".localized, systemImage: "pencil")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(theme.effectiveTextColor)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 7)
+                            .background(theme.effectiveCardColor, in: Capsule())
+                            .overlay(Capsule().stroke(theme.effectiveTextColor.opacity(0.12)))
                     }
+                    .buttonStyle(.plain)
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
 
-                // Status
-                if let status = profile.status, !status.isEmpty {
-                    Text(status)
-                        .font(.system(size: 13))
-                        .foregroundColor(theme.effectiveSecondaryTextColor)
-                        .multilineTextAlignment(.center)
-                }
-
-                // Platforms + rating — "PC · PlayStation · Nintendo · ★ 4.8"
-                let platforms = profile.platforms.compactMap { Platform(rawValue: $0) }
-                if !platforms.isEmpty || profile.rating > 0 {
-                    HStack(spacing: 6) {
-                        ForEach(Array(platforms.enumerated()), id: \.0) { idx, p in
-                            if idx > 0 { Text("·").foregroundColor(theme.effectiveSecondaryTextColor) }
-                            Text(p.rawValue)
-                                .font(.system(size: 12))
-                                .foregroundColor(theme.effectiveSecondaryTextColor)
-                        }
-                        if profile.rating > 0 {
-                            Text("·").foregroundColor(theme.effectiveSecondaryTextColor)
-                            Image(systemName: "star.fill")
-                                .font(.system(size: 10)).foregroundColor(.yellow)
-                            Text(String(format: "%.1f", profile.rating))
-                                .font(.system(size: 12))
-                                .foregroundColor(theme.effectiveSecondaryTextColor)
-                        }
+            let platforms = profile.platforms.compactMap { Platform(rawValue: $0) }
+            if !platforms.isEmpty || profile.rating > 0 {
+                HStack(spacing: 8) {
+                    PlatformBadgeRow(platforms: platforms, size: 30)
+                    Spacer()
+                    if profile.rating > 0 {
+                        Label(String(format: "%.1f", profile.rating), systemImage: "star.fill")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(theme.effectiveTextColor)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(theme.effectiveCardColor, in: Capsule())
                     }
-                    .padding(.top, 2)
                 }
             }
-            .frame(maxWidth: .infinity)
-            .padding(.bottom, 20)
         }
+        .padding(.horizontal, 20)
+        .padding(.top, 18)
+        .padding(.bottom, 8)
     }
 
     // MARK: - Games card
@@ -210,109 +220,6 @@ struct ProfileView: View {
         )
     }
 
-    // MARK: - Profile Card (legacy — kept for compilation)
-
-    private func profileCard(profile: UserProfile) -> some View {
-        VStack(spacing: 0) {
-            // ── Top: avatar + info ──
-            HStack(alignment: .top, spacing: 14) {
-                ZStack(alignment: .bottomTrailing) {
-                    AvatarView(url: profile.avatarUrl, size: 68, showBorder: true)
-                    Button {
-                        vm.startEditing()
-                        showEditProfile = true
-                    } label: {
-                        Circle()
-                            .fill(theme.effectivePrimary)
-                            .frame(width: 24, height: 24)
-                            .overlay(
-                                Image(systemName: "camera.fill")
-                                    .font(.system(size: 10))
-                                    .foregroundColor(.white)
-                            )
-                    }
-                    .offset(x: 2, y: 2)
-                }
-
-                VStack(alignment: .leading, spacing: 5) {
-                    HStack(spacing: 8) {
-                        Text(profile.username)
-                            .font(.system(size: 18, weight: .bold))
-                            .foregroundColor(theme.effectiveTextColor)
-                            .lineLimit(1)
-                        Button {
-                            vm.startEditing()
-                            showEditProfile = true
-                        } label: {
-                            Image(systemName: "pencil.circle.fill")
-                                .font(.system(size: 16))
-                                .foregroundColor(theme.effectivePrimary.opacity(0.8))
-                        }
-                    }
-
-                    if let status = profile.status, !status.isEmpty {
-                        Text(status)
-                            .font(.system(size: 13))
-                            .foregroundColor(theme.effectiveSecondaryTextColor)
-                            .lineLimit(1)
-                    }
-
-                    // Rating
-                    HStack(spacing: 3) {
-                        ForEach(1...5, id: \.self) { i in
-                            Image(systemName: "star.fill")
-                                .font(.system(size: 10))
-                                .foregroundColor(Double(i) <= profile.rating ? .yellow : theme.effectiveSecondaryTextColor.opacity(0.3))
-                        }
-                        if profile.rating > 0 {
-                            Text(String(format: "%.1f", profile.rating))
-                                .font(.system(size: 11))
-                                .foregroundColor(theme.effectiveSecondaryTextColor)
-                        }
-                    }
-
-                    // Platform badges
-                    HStack(spacing: 5) {
-                        ForEach(profile.platforms.compactMap { Platform(rawValue: $0) }, id: \.rawValue) { p in
-                            PlatformBadge(platform: p, size: 17)
-                        }
-                    }
-                }
-                Spacer()
-            }
-            .padding(16)
-
-            // ── Per-platform game rows ──
-            let platforms = profile.platforms.compactMap { Platform(rawValue: $0) }
-
-            if platforms.isEmpty {
-                Text("onboarding.title.platform".localized)
-                    .font(.system(size: 13))
-                    .foregroundColor(theme.effectiveSecondaryTextColor)
-                    .padding()
-            } else {
-                ForEach(Array(platforms.enumerated()), id: \.1.rawValue) { idx, platform in
-                    Divider().padding(.horizontal, 16).background(theme.effectiveBackground.opacity(0.4))
-                    profilePlatformRow(
-                        platform: platform,
-                        games: profile.platformGames[platform.rawValue] ?? [],
-                        isTrailing: idx % 2 == 0
-                    )
-                }
-            }
-        }
-        .background(theme.effectiveCardColor)
-        .cornerRadius(20)
-        .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.08), lineWidth: 1))
-        .shadow(color: .black.opacity(0.2), radius: 10, x: 0, y: 4)
-        .padding(.horizontal, 16)
-        .contentShape(Rectangle())
-        .onTapGesture {
-            vm.startEditing()
-            showEditProfile = true
-        }
-    }
-
     private func profilePlatformRow(platform: Platform, games: [String], isTrailing: Bool) -> some View {
         VStack(alignment: isTrailing ? .trailing : .leading, spacing: 8) {
             Text(platform.rawValue)
@@ -324,7 +231,7 @@ struct ProfileView: View {
                 if isTrailing { Spacer(minLength: 0) }
                 HStack(spacing: 10) {
                     if games.isEmpty {
-                        Text("Tap to add games")
+                        Text("profile.games.add.hint".localized)
                             .font(.system(size: 12))
                             .foregroundColor(theme.effectiveSecondaryTextColor)
                     } else {
@@ -342,15 +249,7 @@ struct ProfileView: View {
 
     private func profileGameCircle(name: String, color: Color) -> some View {
         VStack(spacing: 3) {
-            ZStack {
-                Circle()
-                    .fill(color.opacity(0.18))
-                    .overlay(Circle().stroke(color.opacity(0.45), lineWidth: 1))
-                Text(String(name.prefix(2)).uppercased())
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundColor(color)
-            }
-            .frame(width: 44, height: 44)
+            ProfileGameArtwork(name: name, fallbackColor: color)
 
             Text(name.components(separatedBy: " ").first ?? name)
                 .font(.system(size: 8))
@@ -443,14 +342,38 @@ struct ProfileView: View {
 
             VStack(spacing: 8) {
                 ForEach(subs) { sub in
-                    HStack(spacing: 12) {
-                        Image(systemName: sub.iconName)
-                            .foregroundColor(theme.effectivePrimary)
-                            .frame(width: 22)
-                        Text(sub.name)
-                            .font(.system(size: 14))
-                            .foregroundColor(theme.effectiveTextColor)
+                    VStack(alignment: .leading, spacing: 9) {
+                        HStack(spacing: 12) {
+                        BrandIcon(assetName: sub.brandAssetName, systemName: sub.iconName)
+                            .foregroundStyle(theme.effectivePrimary)
+                            .frame(width: 22, height: 22)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(sub.name)
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundColor(theme.effectiveTextColor)
+                            if let plan = sub.planName, !plan.isEmpty {
+                                Text(plan).font(.system(size: 11)).foregroundStyle(theme.effectiveSecondaryTextColor)
+                            }
+                            if let date = sub.expiresAt {
+                                Text(String(format: "subscription.expires".localized, date.formatted(date: .abbreviated, time: .omitted)))
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(theme.effectiveSecondaryTextColor)
+                            }
+                        }
                         Spacer()
+                            if sub.autoRenew == true {
+                                Image(systemName: "arrow.triangle.2.circlepath")
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .foregroundStyle(theme.effectivePrimary)
+                            }
+                        }
+                        if let progress = sub.remainingFraction, let days = sub.daysRemaining {
+                            ProgressView(value: progress)
+                                .tint(theme.effectivePrimary)
+                            Text(String(format: "subscription.days.remaining".localized, days))
+                                .font(.system(size: 10, weight: .medium))
+                                .foregroundStyle(theme.effectiveSecondaryTextColor)
+                        }
                     }
                     .padding(.horizontal, 16).padding(.vertical, 10)
                     .glass(cornerRadius: 12)
@@ -461,365 +384,28 @@ struct ProfileView: View {
     }
 }
 
-// MARK: - Edit Profile Sheet
-
-struct EditProfileSheet: View {
-    @ObservedObject var vm: ProfileViewModel
-    @EnvironmentObject var theme: ThemeManager
-    @EnvironmentObject var localization: LocalizationManager
-    @Environment(\.dismiss) private var dismiss
-    @State private var editPhotoItem: PhotosPickerItem?
+private struct ProfileGameArtwork: View {
+    let name: String
+    let fallbackColor: Color
+    @State private var coverURL: String?
 
     var body: some View {
-        NavigationView {
-            ZStack {
-                theme.effectiveBackground.ignoresSafeArea()
-
-                ScrollView {
-                    VStack(spacing: 24) {
-                        // Avatar
-                        VStack(spacing: 10) {
-                            ZStack(alignment: .bottomTrailing) {
-                                Group {
-                                    if let img = vm.editAvatar {
-                                        Image(uiImage: img).resizable().scaledToFill()
-                                    } else {
-                                        AvatarView(url: vm.profile?.avatarUrl, size: 90)
-                                    }
-                                }
-                                .frame(width: 90, height: 90)
-                                .clipShape(Circle())
-
-                                Circle()
-                                    .fill(theme.effectivePrimary)
-                                    .frame(width: 26, height: 26)
-                                    .overlay(Image(systemName: "camera.fill").font(.system(size: 11)).foregroundColor(.white))
-                            }
-
-                            PhotosPicker(selection: $editPhotoItem, matching: .images) {
-                                Text("profile.change.avatar".localized)
-                                    .font(.system(size: 14))
-                                    .foregroundColor(theme.effectivePrimary)
-                            }
-                            .onChange(of: editPhotoItem) { item in
-                                Task {
-                                    if let data = try? await item?.loadTransferable(type: Data.self),
-                                       let img = UIImage(data: data) {
-                                        vm.editAvatar = img
-                                    }
-                                }
-                            }
-                        }
-                        .padding(.top, 8)
-
-                        // Username
-                        editField(title: "Username") {
-                            HStack {
-                                Image(systemName: "at").foregroundColor(theme.effectiveSecondaryTextColor)
-                                TextField("Username", text: $vm.editUsername)
-                                    .foregroundColor(theme.effectiveTextColor)
-                                    .autocapitalization(.none)
-                            }
-                            .padding()
-                            .glass(cornerRadius: 14)
-                        }
-
-                        // Status
-                        editField(title: "Status") {
-                            HStack {
-                                Image(systemName: "number").foregroundColor(theme.effectiveSecondaryTextColor)
-                                TextField("profile.status.placeholder".localized, text: $vm.editStatus)
-                                    .foregroundColor(theme.effectiveTextColor)
-                            }
-                            .padding()
-                            .glass(cornerRadius: 14)
-                        }
-
-                        // Platforms
-                        editField(title: "profile.platforms".localized) {
-                            VStack(spacing: 8) {
-                                ForEach(Platform.allCases, id: \.rawValue) { platform in
-                                    let selected = vm.editPlatforms.contains(platform)
-                                    Button {
-                                        if selected {
-                                            vm.editPlatforms.remove(platform)
-                                            if vm.editActiveGamePlatform == platform {
-                                                vm.editActiveGamePlatform = vm.editPlatforms.first
-                                            }
-                                        } else {
-                                            vm.editPlatforms.insert(platform)
-                                            if vm.editActiveGamePlatform == nil { vm.editActiveGamePlatform = platform }
-                                        }
-                                    } label: {
-                                        HStack(spacing: 12) {
-                                            PlatformBadge(platform: platform, size: 28)
-                                            Text(platform.rawValue)
-                                                .font(.system(size: 14))
-                                                .foregroundColor(theme.effectiveTextColor)
-                                                .lineLimit(1)
-                                            Spacer()
-                                            Image(systemName: selected ? "checkmark.circle.fill" : "circle")
-                                                .foregroundColor(selected ? theme.effectivePrimary : theme.effectiveSecondaryTextColor)
-                                        }
-                                        .padding(12)
-                                        .glass(cornerRadius: 12)
-                                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(selected ? theme.effectivePrimary : Color.clear, lineWidth: 1.5))
-                                    }
-                                }
-                            }
-                        }
-
-                        // Games per platform
-                        if !vm.editPlatforms.isEmpty {
-                            gamesEditor
-                        }
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 32)
-                }
-            }
-            .navigationTitle("Edit Profile")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("cancel".localized) {
-                        vm.cancelEditing()
-                        dismiss()
-                    }
-                    .foregroundColor(theme.effectiveSecondaryTextColor)
-                }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
-                        Task { await vm.saveChanges(); dismiss() }
-                    } label: {
-                        if vm.isLoading {
-                            ProgressView().scaleEffect(0.8)
-                        } else {
-                            Text("save".localized).foregroundColor(theme.effectivePrimary)
-                        }
-                    }
-                    .disabled(vm.isLoading)
-                }
+        ZStack {
+            Circle().fill(fallbackColor.opacity(0.14))
+            if let coverURL {
+                AsyncImageView(url: coverURL)
+                    .frame(width: 44, height: 44)
+                    .clipShape(Circle())
+            } else {
+                Text(String(name.prefix(2)).uppercased())
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(fallbackColor)
             }
         }
-    }
-
-    // MARK: - Games Editor
-
-    private var gamesEditor: some View {
-        let sortedPlatforms = Platform.allCases.filter { vm.editPlatforms.contains($0) }
-        return editField(title: "profile.games".localized) {
-            VStack(spacing: 12) {
-                // Platform tabs
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        ForEach(sortedPlatforms, id: \.rawValue) { platform in
-                            let isActive = vm.editActiveGamePlatform == platform
-                            Button { vm.editActiveGamePlatform = platform } label: {
-                                HStack(spacing: 6) {
-                                    PlatformBadge(platform: platform, size: 18)
-                                    Text(platform.rawValue)
-                                        .font(.system(size: 13, weight: .semibold))
-                                        .foregroundColor(isActive ? .white : theme.effectiveTextColor)
-                                        .lineLimit(1)
-                                }
-                                .padding(.horizontal, 12).padding(.vertical, 8)
-                                .background(
-                                    isActive
-                                        ? LinearGradient(colors: [theme.effectivePrimary, theme.effectiveTertiary], startPoint: .leading, endPoint: .trailing)
-                                        : LinearGradient(colors: [theme.effectiveCardColor, theme.effectiveCardColor], startPoint: .leading, endPoint: .trailing)
-                                )
-                                .cornerRadius(20)
-                            }
-                        }
-                    }
-                }
-
-                if let activePlatform = vm.editActiveGamePlatform {
-                    // Search field
-                    HStack {
-                        Image(systemName: "magnifyingglass")
-                            .foregroundColor(theme.effectiveSecondaryTextColor)
-                        TextField("onboarding.games.search".localized, text: $vm.gameSearchQuery)
-                            .foregroundColor(theme.effectiveTextColor)
-                            .autocapitalization(.none)
-                            .onChange(of: vm.gameSearchQuery) { vm.searchGames($0) }
-                        if !vm.gameSearchQuery.isEmpty {
-                            Button { vm.gameSearchQuery = "" } label: {
-                                Image(systemName: "xmark.circle.fill")
-                                    .foregroundColor(theme.effectiveSecondaryTextColor)
-                            }
-                        }
-                    }
-                    .padding(.horizontal, 14).padding(.vertical, 10)
-                    .glass(cornerRadius: 12)
-
-                    // Selected games chips
-                    let selected = vm.editGamesByPlatform[activePlatform] ?? []
-                    if !selected.isEmpty {
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 8) {
-                                ForEach(selected) { tag in
-                                    Button { vm.toggleGame(tag, for: activePlatform) } label: {
-                                        HStack(spacing: 6) {
-                                            Text(tag.name)
-                                                .font(.system(size: 13))
-                                                .foregroundColor(.white)
-                                                .lineLimit(1)
-                                            Image(systemName: "xmark")
-                                                .font(.system(size: 10, weight: .bold))
-                                                .foregroundColor(.white.opacity(0.8))
-                                        }
-                                        .padding(.horizontal, 12).padding(.vertical, 7)
-                                        .background(activePlatform.color.opacity(0.85))
-                                        .cornerRadius(16)
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    // Search results
-                    if vm.isSearchingGames {
-                        HStack { Spacer(); ProgressView().tint(theme.effectivePrimary); Spacer() }
-                    } else if !vm.gameSearchQuery.isEmpty {
-                        if vm.gameSearchResults.isEmpty {
-                            Text("No results — check RAWG_API_KEY in Secrets.xcconfig")
-                                .font(.system(size: 12))
-                                .foregroundColor(theme.effectiveSecondaryTextColor)
-                                .padding(.top, 4)
-                        } else {
-                            VStack(spacing: 6) {
-                                ForEach(vm.gameSearchResults.prefix(5)) { tag in
-                                    let isAdded = (vm.editGamesByPlatform[activePlatform] ?? []).contains { $0.name == tag.name }
-                                    Button { vm.toggleGame(tag, for: activePlatform) } label: {
-                                        HStack(spacing: 12) {
-                                            if let url = tag.coverUrl {
-                                                AsyncImageView(url: url)
-                                                    .frame(width: 44, height: 30)
-                                                    .clipShape(RoundedRectangle(cornerRadius: 6))
-                                            } else {
-                                                RoundedRectangle(cornerRadius: 6)
-                                                    .fill(theme.effectiveCardColor)
-                                                    .frame(width: 44, height: 30)
-                                            }
-                                            Text(tag.name)
-                                                .font(.system(size: 14))
-                                                .foregroundColor(theme.effectiveTextColor)
-                                                .lineLimit(1)
-                                            Spacer()
-                                            Image(systemName: isAdded ? "checkmark.circle.fill" : "plus.circle")
-                                                .foregroundColor(isAdded ? theme.effectivePrimary : theme.effectiveSecondaryTextColor)
-                                        }
-                                        .padding(.horizontal, 12).padding(.vertical, 8)
-                                        .glass(cornerRadius: 12)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    private func editField(title: String, @ViewBuilder content: () -> some View) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title)
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundColor(theme.effectiveSecondaryTextColor)
-            content()
-        }
-    }
-}
-
-// MARK: - Settings Sheet
-
-struct SettingsSheet: View {
-    @ObservedObject var vm: ProfileViewModel
-    @EnvironmentObject var theme: ThemeManager
-    @EnvironmentObject var localization: LocalizationManager
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        NavigationView {
-            ZStack {
-                theme.effectiveBackground.ignoresSafeArea()
-                List {
-                    Section("Color Theme") {
-                        ForEach(CardColorTheme.all) { ct in
-                            Button {
-                                theme.setCardColor(ct)
-                            } label: {
-                                HStack {
-                                    Circle().fill(ct.primary).frame(width: 24, height: 24)
-                                    Text(ct.name).foregroundColor(theme.effectiveTextColor)
-                                    Spacer()
-                                    if theme.currentCardColor.id == ct.id {
-                                        Image(systemName: "checkmark").foregroundColor(theme.effectivePrimary)
-                                    }
-                                }
-                            }
-                            .listRowBackground(theme.effectiveCardColor)
-                        }
-                    }
-                    Section("App Theme") {
-                        ForEach(AppTheme.allCases, id: \.rawValue) { appTheme in
-                            Button {
-                                theme.setTheme(appTheme)
-                            } label: {
-                                HStack {
-                                    Text(appTheme.displayName).foregroundColor(theme.effectiveTextColor)
-                                    Spacer()
-                                    if theme.currentTheme == appTheme {
-                                        Image(systemName: "checkmark").foregroundColor(theme.effectivePrimary)
-                                    }
-                                }
-                            }
-                            .listRowBackground(theme.effectiveCardColor)
-                        }
-                    }
-                    Section("Language") {
-                        ForEach([("ru", "Русский"), ("en", "English"), ("uk", "Українська"), ("be", "Беларуская")], id: \.0) { code, name in
-                            Button {
-                                localization.setLanguage(code)
-                            } label: {
-                                HStack {
-                                    Text(name).foregroundColor(theme.effectiveTextColor)
-                                    Spacer()
-                                    if localization.currentLanguage == code {
-                                        Image(systemName: "checkmark").foregroundColor(theme.effectivePrimary)
-                                    }
-                                }
-                            }
-                            .listRowBackground(theme.effectiveCardColor)
-                        }
-                    }
-                    Section {
-                        Button(role: .destructive) {
-                            try? vm.signOut()
-                            dismiss()
-                        } label: {
-                            HStack {
-                                Image(systemName: "rectangle.portrait.and.arrow.right")
-                                Text("profile.logout".localized)
-                            }
-                        }
-                        .listRowBackground(theme.effectiveCardColor)
-                    }
-                }
-                .scrollContentBackground(.hidden)
-            }
-            .navigationTitle("profile.settings".localized)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button { dismiss() } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundColor(theme.effectiveSecondaryTextColor)
-                    }
-                }
-            }
+        .frame(width: 44, height: 44)
+        .overlay(Circle().stroke(fallbackColor.opacity(0.28), lineWidth: 1))
+        .task(id: name) {
+            coverURL = await AppEnvironment.shared.rawg.searchGames(name).first?.backgroundImage
         }
     }
 }

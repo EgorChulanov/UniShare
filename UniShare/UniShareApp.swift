@@ -2,6 +2,7 @@ import SwiftUI
 
 @main
 struct UniShareApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var env = AppEnvironment.shared
     @StateObject private var theme = ThemeManager.shared
     @StateObject private var localization = LocalizationManager.shared
@@ -18,7 +19,9 @@ struct UniShareApp: App {
                 .environmentObject(localization)
                 .preferredColorScheme(theme.effectiveColorScheme)
                 .onOpenURL { url in
-                    TabBarState.shared.handleDeepLink(url)
+                    if !env.auth.handleOpenURL(url) {
+                        TabBarState.shared.handleDeepLink(url)
+                    }
                 }
                 .onReceive(NotificationCenter.default.publisher(for: UIApplication.willResignActiveNotification)) { _ in
                     Task {

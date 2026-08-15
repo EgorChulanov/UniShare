@@ -35,9 +35,17 @@ final class AvatarCacheService: ObservableObject {
     }
 
     func loadUserAvatar(from urlString: String?) async {
-        guard let urlString, !urlString.isEmpty else { return }
+        guard let urlString, !urlString.isEmpty else {
+            await MainActor.run { cachedAvatar = nil }
+            return
+        }
         if let image = await loadImage(from: urlString) {
             await MainActor.run { cachedAvatar = image }
         }
+    }
+
+    func clearCache() {
+        cache.removeAllObjects()
+        cachedAvatar = nil
     }
 }

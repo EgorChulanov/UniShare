@@ -1,0 +1,3 @@
+"NSPhotoLibraryUsageDescription" = "Choose a profile photo or an image to share in a chat.";
+"NSBluetoothAlwaysUsageDescription" = "Find nearby players when you open AirShare.";
+"NSMotionUsageDescription" = "Detect a shake gesture while you use AirShare.";

@@ -7,14 +7,14 @@ final class FeedViewModel: ObservableObject {
     @Published var exchangeCards: [ProfileCard] = []
     @Published var skillCards: [ProfileCard] = []
     @Published var isLoading = false
+    @Published var errorMessage: String?
     @Published var selectedSegment: FeedSegment = .exchange
+    @Published var stories: [CommunityStory] = []
 
     @Published var searchQuery = ""
     @Published var searchResults: [GameTag] = []
     @Published var isSearching = false
 
-    private var dislikedUids: Set<String> = []
-    private var likedUids: Set<String> = []
     private var undoStack: [ProfileCard] = []
 
     @AppStorage(AppConstants.Feed.undoCountKey) private var undoCount = 0
@@ -42,24 +42,28 @@ final class FeedViewModel: ObservableObject {
         isLoading = true
         defer { isLoading = false }
 
-        let excludeUids = [myUid] + Array(dislikedUids) + Array(likedUids)
-
-        async let exchangeProfiles = (try? await db.getFeedUsers(
-            excludeUids: excludeUids,
-            limit: AppConstants.Feed.initialBatchSize,
-            skillsOnly: false
+        async let exchangeProfiles = (try? await db.getFeedProfiles(
+            kind: "exchange", limit: AppConstants.Feed.initialBatchSize
         )) ?? []
 
-        async let skillProfiles = (try? await db.getFeedUsers(
-            excludeUids: excludeUids,
-            limit: AppConstants.Feed.initialBatchSize,
-            skillsOnly: true
+        async let skillProfiles = (try? await db.getFeedProfiles(
+            kind: "skills", limit: AppConstants.Feed.initialBatchSize
         )) ?? []
 
-        let (ep, sp) = await (exchangeProfiles, skillProfiles)
+        async let loadedStories = (try? await db.getStories(userId: myUid)) ?? []
+        let (ep, sp, storyItems) = await (exchangeProfiles, skillProfiles, loadedStories)
 
         exchangeCards = await buildCards(from: ep)
         skillCards = await buildCards(from: sp)
+        stories = storyItems
+    }
+
+    func markStoryViewed(_ story: CommunityStory) async {
+        guard let uid = auth.uid else { return }
+        if let index = stories.firstIndex(where: { $0.id == story.id }) {
+            stories[index].isSeen = true
+        }
+        try? await db.markStoryViewed(storyId: story.id, userId: uid)
     }
 
     private func buildCards(from profiles: [UserProfile]) async -> [ProfileCard] {
@@ -122,7 +126,6 @@ final class FeedViewModel: ObservableObject {
 
     func swipeRight(card: ProfileCard, requestType: String) async {
         guard let myUid = auth.uid else { return }
-        likedUids.insert(card.userId)
         removeCard(card, from: requestType)
 
         let requestId = "\(myUid)_\(card.userId)_\(requestType)"
@@ -133,36 +136,52 @@ final class FeedViewModel: ObservableObject {
             requestType: requestType,
             createdAt: Date()
         )
-        try? await db.sendLikeRequest(request)
-
-        if let existingId = try? await db.checkMutualLike(fromUid: myUid, toUid: card.userId, requestType: requestType) {
-            _ = try? await db.createChat(participants: [myUid, card.userId], chatType: requestType)
-            try? await db.deleteLikeRequest(id: existingId)
-            HapticsManager.shared.playMatch()
+        do {
+            if try await db.sendLikeRequest(request) != nil {
+                HapticsManager.shared.playMatch()
+            }
+        } catch {
+            if requestType == "exchange" { exchangeCards.insert(card, at: 0) }
+            else { skillCards.insert(card, at: 0) }
+            errorMessage = error.localizedDescription
+            return
         }
 
         await loadOneMore(requestType: requestType)
     }
 
     func swipeLeft(card: ProfileCard, requestType: String) {
-        dislikedUids.insert(card.userId)
         undoStack.append(card)
         if undoStack.count > 3 { undoStack.removeFirst() }
         removeCard(card, from: requestType)
         HapticsManager.shared.playSwipeLeft()
-        Task { await loadOneMore(requestType: requestType) }
+        Task {
+            do {
+                try await db.recordDislike(targetUid: card.userId, kind: requestType)
+                await loadOneMore(requestType: requestType)
+            } catch {
+                undoStack.removeAll { $0.userId == card.userId }
+                if requestType == "exchange" { exchangeCards.insert(card, at: 0) }
+                else { skillCards.insert(card, at: 0) }
+                errorMessage = error.localizedDescription
+            }
+        }
     }
 
     func undo(requestType: String) {
         guard canUndo, let card = undoStack.popLast() else { return }
-        dislikedUids.remove(card.userId)
-        if requestType == "exchange" {
-            exchangeCards.insert(card, at: 0)
-        } else {
-            skillCards.insert(card, at: 0)
+        Task {
+            do {
+                guard try await db.undoDislike(targetUid: card.userId, kind: requestType) else { return }
+                if requestType == "exchange" { exchangeCards.insert(card, at: 0) }
+                else { skillCards.insert(card, at: 0) }
+                undoCount += 1
+                HapticsManager.shared.impact(.medium)
+            } catch {
+                undoStack.append(card)
+                errorMessage = error.localizedDescription
+            }
         }
-        undoCount += 1
-        HapticsManager.shared.impact(.medium)
     }
 
     private func removeCard(_ card: ProfileCard, from requestType: String) {
@@ -174,10 +193,8 @@ final class FeedViewModel: ObservableObject {
     }
 
     private func loadOneMore(requestType: String) async {
-        guard let myUid = auth.uid else { return }
-        let excludeUids = [myUid] + Array(dislikedUids) + Array(likedUids)
-        let skillsOnly = requestType == "skills"
-        let profiles = (try? await db.getFeedUsers(excludeUids: excludeUids, limit: 1, skillsOnly: skillsOnly)) ?? []
+        guard auth.uid != nil else { return }
+        let profiles = (try? await db.getFeedProfiles(kind: requestType, limit: 1)) ?? []
         for profile in profiles {
             let card = await buildCard(from: profile)
             if requestType == "exchange" { exchangeCards.append(card) }
@@ -192,13 +209,13 @@ final class FeedViewModel: ObservableObject {
         searchTask = Task {
             try? await Task.sleep(nanoseconds: 400_000_000)
             guard !Task.isCancelled else { return }
-            let results = await rawg.searchGames(query).map { rawg.gameToTag($0) }
+            let results = await rawg.searchGameTags(query)
             await MainActor.run { searchResults = results; isSearching = false }
         }
     }
 }
 
-enum FeedSegment: String, CaseIterable {
+enum FeedSegment: String, CaseIterable, Hashable {
     case exchange, skills
 
     var localizedKey: String {

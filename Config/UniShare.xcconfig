@@ -1,12 +1,14 @@
 // Shared build settings for all configurations
 
-PRODUCT_BUNDLE_IDENTIFIER = com.CHULANOV.UniShare
+UNISHARE_APP_BUNDLE_ID = com.egorchulanov.unishare
+UNISHARE_WIDGET_BUNDLE_ID = com.egorchulanov.unishare.Widget
+PRODUCT_BUNDLE_IDENTIFIER = $(UNISHARE_APP_BUNDLE_ID)
 MARKETING_VERSION = 1.0.0
 CURRENT_PROJECT_VERSION = 1
 IPHONEOS_DEPLOYMENT_TARGET = 16.1
 SWIFT_VERSION = 5.9
-TARGETED_DEVICE_FAMILY = 1
+TARGETED_DEVICE_FAMILY = 1,2
 
-APP_GROUP_ID = group.com.CHULANOV.UniShare
+APP_GROUP_ID = group.com.egorchulanov.unishare
 
 #include "Secrets.xcconfig"

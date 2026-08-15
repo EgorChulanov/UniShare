@@ -13,13 +13,16 @@ final class AirShareManager: NSObject, ObservableObject {
     private var profileChar: CBMutableCharacteristic?
     private var connectedPeripherals: [CBPeripheral] = []
     private var seenUIDs: Set<String> = []
+    private var connectionTimeouts: [UUID: Task<Void, Never>] = [:]
+    private var myUID: String?
 
     var myProfileData: Data?
 
     // MARK: - Start / Stop
 
     func start(with profile: UserProfile) {
-        myProfileData = try? JSONEncoder().encode(profile)
+        myUID = profile.uid
+        myProfileData = try? JSONEncoder().encode(AirSharePayload(uid: profile.uid))
         status = .searching
         centralManager  = CBCentralManager(delegate: self, queue: .main)
         peripheralManager = CBPeripheralManager(delegate: self, queue: .main)
@@ -35,6 +38,31 @@ final class AirShareManager: NSObject, ObservableObject {
         discoveredProfiles = []
         seenUIDs = []
         connectedPeripherals = []
+        connectionTimeouts.values.forEach { $0.cancel() }
+        connectionTimeouts = [:]
+        myUID = nil
+    }
+
+    func verify(_ profile: ReceivedProfile, with authoritativeProfile: UserProfile) {
+        guard profile.uid == authoritativeProfile.uid else { return }
+        let verified = ReceivedProfile(
+            uid: authoritativeProfile.uid,
+            username: authoritativeProfile.username,
+            avatarUrl: authoritativeProfile.avatarUrl,
+            games: Array(authoritativeProfile.games.prefix(6)),
+            platforms: authoritativeProfile.platforms.compactMap(Platform.init(rawValue:)),
+            isVerified: true
+        )
+        if let index = discoveredProfiles.firstIndex(where: { $0.uid == profile.uid }) {
+            discoveredProfiles[index] = verified
+            status = .received(verified)
+        }
+    }
+
+    func reject(uid: String) {
+        discoveredProfiles.removeAll { $0.uid == uid }
+        seenUIDs.remove(uid)
+        if discoveredProfiles.isEmpty { status = .searching }
     }
 }
 
@@ -42,7 +70,15 @@ final class AirShareManager: NSObject, ObservableObject {
 
 extension AirShareManager: CBCentralManagerDelegate {
     func centralManagerDidUpdateState(_ central: CBCentralManager) {
-        guard central.state == .poweredOn else { return }
+        guard central.state == .poweredOn else {
+            switch central.state {
+            case .poweredOff: status = .bluetoothOff
+            case .unauthorized: status = .permissionDenied
+            case .unsupported: status = .unsupported
+            default: break
+            }
+            return
+        }
         central.scanForPeripherals(
             withServices: [kServiceUUID],
             options: [CBCentralManagerScanOptionAllowDuplicatesKey: false]
@@ -59,21 +95,35 @@ extension AirShareManager: CBCentralManagerDelegate {
         central.connect(peripheral, options: nil)
         status = .holding
         HapticsManager.shared.impact(.light)
+        connectionTimeouts[peripheral.identifier]?.cancel()
+        connectionTimeouts[peripheral.identifier] = Task { @MainActor [weak self, weak central, weak peripheral] in
+            try? await Task.sleep(nanoseconds: 8_000_000_000)
+            guard !Task.isCancelled, let central, let peripheral else { return }
+            central.cancelPeripheralConnection(peripheral)
+            self?.connectionTimeouts[peripheral.identifier] = nil
+            if self?.discoveredProfiles.isEmpty == true { self?.status = .searching }
+        }
     }
 
     func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
+        connectionTimeouts[peripheral.identifier]?.cancel()
+        connectionTimeouts[peripheral.identifier] = nil
         peripheral.discoverServices([kServiceUUID])
     }
 
     func centralManager(_ central: CBCentralManager,
                         didDisconnectPeripheral peripheral: CBPeripheral, error: Error?) {
         connectedPeripherals.removeAll { $0 == peripheral }
+        connectionTimeouts[peripheral.identifier]?.cancel()
+        connectionTimeouts[peripheral.identifier] = nil
         if discoveredProfiles.isEmpty { status = .searching }
     }
 
     func centralManager(_ central: CBCentralManager,
                         didFailToConnect peripheral: CBPeripheral, error: Error?) {
         connectedPeripherals.removeAll { $0 == peripheral }
+        connectionTimeouts[peripheral.identifier]?.cancel()
+        connectionTimeouts[peripheral.identifier] = nil
     }
 }
 
@@ -99,19 +149,22 @@ extension AirShareManager: CBPeripheralDelegate {
                     didUpdateValueFor characteristic: CBCharacteristic, error: Error?) {
         guard error == nil,
               let data = characteristic.value,
-              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let uid = json["uid"] as? String,
-              let username = json["username"] as? String,
-              !seenUIDs.contains(uid)
+              let payload = try? JSONDecoder().decode(AirSharePayload.self, from: data),
+              payload.version == AirSharePayload.currentVersion,
+              payload.expiresAt > Date(),
+              UUID(uuidString: payload.uid) != nil,
+              payload.uid != myUID,
+              !seenUIDs.contains(payload.uid)
         else { return }
 
-        seenUIDs.insert(uid)
+        seenUIDs.insert(payload.uid)
         let profile = ReceivedProfile(
-            uid: uid,
-            username: username,
-            avatarUrl: json["avatarUrl"] as? String,
-            games: json["games"] as? [String] ?? [],
-            platforms: (json["platforms"] as? [String] ?? []).compactMap { Platform(rawValue: $0) }
+            uid: payload.uid,
+            username: "airshare.verifying".localized,
+            avatarUrl: nil,
+            games: [],
+            platforms: [],
+            isVerified: false
         )
         DispatchQueue.main.async {
             self.discoveredProfiles.append(profile)
@@ -168,6 +221,7 @@ extension AirShareManager: CBPeripheralManagerDelegate {
 enum AirShareStatus {
     case idle, searching, holding, sent
     case received(ReceivedProfile)
+    case bluetoothOff, permissionDenied, unsupported
 
     var description: String {
         switch self {
@@ -175,6 +229,9 @@ enum AirShareStatus {
         case .holding:          return "airshare.hold".localized
         case .sent:             return "airshare.success".localized
         case .received:         return "airshare.found".localized
+        case .bluetoothOff:     return "airshare.bluetooth.off".localized
+        case .permissionDenied: return "airshare.bluetooth.denied".localized
+        case .unsupported:      return "airshare.bluetooth.unsupported".localized
         }
     }
 }
@@ -186,4 +243,19 @@ struct ReceivedProfile: Identifiable {
     let avatarUrl: String?
     let games: [String]
     let platforms: [Platform]
+    let isVerified: Bool
+}
+
+private struct AirSharePayload: Codable {
+    static let currentVersion = 1
+
+    let version: Int
+    let uid: String
+    let expiresAt: Date
+
+    init(uid: String) {
+        version = Self.currentVersion
+        self.uid = uid
+        expiresAt = Date().addingTimeInterval(120)
+    }
 }

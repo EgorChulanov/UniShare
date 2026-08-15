@@ -28,6 +28,16 @@
 "auth.error.invalid" = "Неверный email или пароль";
 "auth.welcome" = "Добро пожаловать в UniShare";
 "auth.subtitle" = "Находи геймеров по всему миру";
+"auth.password.confirm" = "Повторите пароль";
+"auth.password.hint" = "10+ символов: заглавная, строчная, цифра и знак";
+"auth.confirmation.sent" = "Мы отправили ссылку подтверждения на вашу почту";
+"auth.error.email" = "Введите корректный email";
+"auth.error.password.length" = "Пароль должен содержать минимум 8 символов";
+"auth.error.password.strength" = "Используйте 10+ символов: заглавную и строчную буквы, цифру и специальный знак";
+"auth.error.password.match" = "Пароли не совпадают";
+"auth.error.registered" = "Аккаунт с такой почтой уже существует";
+"auth.error.unconfirmed" = "Подтвердите email по ссылке из письма";
+"auth.error.network" = "Нет соединения с сервером. Попробуйте ещё раз";
 
 // MARK: - Onboarding
 "onboarding.title.username" = "Выбери никнейм";
@@ -42,13 +52,12 @@
 "onboarding.complete" = "Начать!";
 
 // MARK: - Tabs
-"tab.feed" = "Лента";
+"tab.feed" = "Главное";
 "tab.chats" = "Чаты";
-"tab.ai" = "ИИ";
 "tab.profile" = "Профиль";
 
 // MARK: - Feed
-"feed.segment.exchange" = "Обмен";
+"feed.segment.exchange" = "Тиммейты";
 "feed.segment.skills" = "Навыки";
 "feed.search.placeholder" = "Поиск по игре...";
 "feed.empty" = "Анкеты закончились";
@@ -61,29 +70,14 @@
 "chat.send" = "Отправить";
 "chat.empty" = "Пока нет сообщений";
 "chat.empty.subtitle" = "Начни общение!";
-"chats.title" = "Сообщения";
 "chats.empty" = "Чатов пока нет";
 "chats.empty.subtitle" = "Свайпай вправо, чтобы найти совпадения";
 "chats.requests" = "Заявки";
 "chats.accept" = "Принять";
 "chats.decline" = "Отклонить";
-"chats.segment.exchange" = "Обмен";
-"chats.segment.skills" = "Навыки";
 "chat.online" = "Онлайн";
 "chat.offline" = "Оффлайн";
 "chat.report" = "Пожаловаться";
-
-// MARK: - AI
-"ai.title" = "ИИ Ассистент";
-"ai.placeholder" = "Спроси об играх...";
-"ai.send" = "Спросить";
-"ai.thinking" = "Думаю...";
-"ai.tap" = "Нажми или перетащи меня";
-"ai.limit" = "Сообщение слишком длинное (макс. 100 символов)";
-"ai.command.recommend" = "Посоветуй игры";
-"ai.command.exchange" = "Помоги с обменом";
-"ai.command.skill" = "Улучши мои навыки";
-"ai.command.trending" = "Популярные игры";
 
 // MARK: - AirShare
 "airshare.title" = "AirShare";
@@ -93,10 +87,30 @@
 "airshare.found" = "Найден пользователь рядом";
 "airshare.success" = "Профиль отправлен!";
 "airshare.match" = "Это совпадение!";
-"airshare.description" = "Держите телефоны рядом и потрясите, чтобы обменяться профилями с ближайшими игроками";
+"airshare.description" = "Держите телефоны рядом и потрясите, чтобы поделиться профилями с игроками поблизости";
 
 // MARK: - Profile
 "profile.edit" = "Редактировать";
+"profile.error.avatar.policy" = "Хранилище аватаров не настроено. Примените миграцию Storage в Supabase.";
+"subscription.edit" = "Подписка";
+"subscription.details" = "Параметры тарифа";
+"subscription.plan.placeholder" = "Тариф, например Premium";
+"subscription.has.expiry" = "Есть дата окончания";
+"subscription.expiry" = "Действует до";
+"subscription.expires" = "До %@";
+"subscription.remove" = "Удалить подписку";
+"subscription.plan" = "Тариф";
+"subscription.period" = "Период оплаты";
+"subscription.duration" = "Срок действия";
+"subscription.started" = "Начало";
+"subscription.auto.renew" = "Автопродление";
+"subscription.remaining" = "Осталось";
+"subscription.days.remaining" = "Осталось дней: %d";
+"subscription.period.1d" = "1 день";
+"subscription.period.1m" = "1 месяц";
+"subscription.period.3m" = "3 месяца";
+"subscription.period.6m" = "6 месяцев";
+"subscription.period.12m" = "12 месяцев";
 "profile.games" = "Игры";
 "profile.subscriptions" = "Подписки";
 "profile.platforms" = "Платформы";
@@ -122,6 +136,90 @@
 "widget.chats" = "Чаты";
 "widget.open.chats" = "Открыть чаты";
 "widget.open.airshare" = "AirShare";
-"widget.open.ai" = "ИИ";
 "widget.open.profile" = "Профиль";
-"profile.settings" = "Настройки";
+
+// MARK: - Common
+"common.error" = "Ошибка";
+"common.ok" = "Понятно";
+"feed.airshare.nearby" = "AirShare рядом";
+"chats.request.exchange" = "хочет сыграть вместе";
+"chat.review.title" = "Оценить тиммейта";
+"chat.review.subtitle" = "Расскажите, как прошла совместная игра";
+"chat.safety.notice" = "Не отправляйте в чат пароли платформ, коды безопасности, платёжные данные и доступ к аккаунтам.";
+"rating.title" = "Оцените @%@";
+"rating.subtitle" = "Как прошла совместная игра?";
+"rating.comment" = "Короткий отзыв (необязательно)";
+"rating.sent" = "Отправлено";
+"rating.submit" = "Отправить отзыв";
+"skills.setup.question" = "Какие у вас игровые навыки?";
+"skills.setup.question.subtitle" = "Выберите подходящие варианты, чтобы другие игроки могли вас найти.";
+"skills.setup.custom" = "Добавить свой навык...";
+"skills.setup.about.title" = "О вас";
+"skills.setup.about.subtitle" = "Кратко опишите опыт и игры, которые вам нравятся.";
+"skills.setup.about.example" = "Например: пять лет играю в EA Sports FC и люблю объяснять тактики.";
+"skills.setup.portfolio.title" = "Достижения";
+"skills.setup.portfolio.subtitle" = "Добавьте скриншоты стримов или игровых достижений.";
+"skills.setup.portfolio.add" = "Добавить фото";
+"skills.setup.portfolio.more" = "Добавить ещё";
+"skills.setup.portfolio.help" = "Фото помогут другим игрокам понять ваш опыт.";
+"skills.setup.your" = "Ваши навыки";
+"skills.setup.confirm" = "После сохранения анкета появится у игроков, которые ищут по навыкам.";
+"skills.empty" = "Навыки не добавлены";
+"feed.platforms.empty" = "Платформы не добавлены";
+"feed.swipe.match" = "Мэтч";
+"feed.swipe.like" = "Лайк";
+"feed.swipe.pass" = "Пропустить";
+"profile.games.add.hint" = "Нажмите, чтобы добавить игры";
+"onboarding.username.minimum" = "Минимум 3 символа";
+"onboarding.games.search" = "Найти игру";
+"onboarding.games.selected" = "Выбрано: %d";
+"profile.username" = "Имя пользователя";
+"profile.status" = "Статус";
+
+// MARK: - Reports
+"report.title" = "Жалоба на %@";
+"report.send" = "Отправить";
+"report.question" = "Почему вы хотите пожаловаться на пользователя?";
+"report.reason.spam" = "Спам";
+"report.reason.content" = "Недопустимый контент";
+"report.reason.harassment" = "Оскорбления или травля";
+"report.reason.fake" = "Поддельный профиль";
+"report.reason.underage" = "Несовершеннолетний пользователь";
+"report.reason.other" = "Другая причина";
+"report.details" = "Добавьте подробности (необязательно)";
+"report.submitted" = "Жалоба отправлена";
+"report.submitted.subtitle" = "Мы проверим жалобу и примем меры при необходимости.";
+"report.done" = "Готово";
+"chat.block" = "Заблокировать";
+"chat.block.confirmation" = "Пользователь исчезнет из ленты и не сможет взаимодействовать с вами.";
+"game.search.empty" = "Ничего не найдено. Проверьте название.";
+"game.search.custom.hint" = "Если игры нет в каталоге, введённое название можно добавить вручную.";
+"game.search.catalog.unavailable" = "Онлайн-каталог игр временно недоступен.";
+"game.search.powered.rawg" = "Данные и изображения игр предоставлены RAWG";
+"profile.error.save.verify" = "Не удалось подтвердить сохранение профиля. Попробуйте ещё раз.";
+"profile.error.username" = "Имя должно содержать от 3 до 30 символов.";
+"profile.error.status.length" = "Статус не может быть длиннее 180 символов.";
+"profile.error.platform.required" = "Выберите хотя бы одну платформу.";
+"airshare.verifying" = "Проверяем профиль…";
+"airshare.bluetooth.off" = "Включите Bluetooth";
+"airshare.bluetooth.denied" = "Разрешите Bluetooth в Настройках";
+"airshare.bluetooth.unsupported" = "AirShare не поддерживается на этом устройстве";
+"airshare.verify.failed" = "Не удалось подтвердить профиль через UniShare.";
+"airshare.me" = "Я";
+"airshare.nearby" = "Найдены поблизости";
+"airshare.skip" = "Пропустить";
+"airshare.like" = "Лайк";
+"settings.about" = "О приложении";
+"settings.privacy" = "Политика конфиденциальности";
+"settings.terms" = "Правила и условия";
+"settings.support" = "Связаться с поддержкой";
+"settings.delete.account" = "Удалить аккаунт";
+"settings.delete.title" = "Удалить аккаунт?";
+"settings.delete.message" = "Профиль, сообщения, загруженные фотографии и остальные данные UniShare будут удалены без возможности восстановления.";
+"settings.delete.confirm" = "Удалить аккаунт навсегда";
+"settings.delete.cancel" = "Отмена";
+"chat.error.content.blocked" = "Сообщение может содержать пароль, платёжные данные, угрозы или другой запрещённый контент. Удалите их и повторите отправку.";
+"auth.consent" = "Я согласен на обработку данных для работы UniShare и принимаю:";
+"auth.or" = "или";
+"auth.apple.consent" = "Продолжая с Apple, вы принимаете Условия и Политику конфиденциальности.";
+"auth.apple.error" = "Apple не вернул корректные данные для входа.";

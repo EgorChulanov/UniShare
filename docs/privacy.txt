@@ -1,0 +1,25 @@
+UNISHARE PRIVACY POLICY
+Effective: August 10, 2026
+
+UniShare is a social discovery and messaging service for gaming communities. This policy explains what data is processed and why.
+
+DATA WE PROCESS
+We process your email address and account identifier for authentication; profile name, avatar, platforms, games, skills and subscription details that you choose to publish; product interactions such as swipes, likes and story views; blocks and reports; messages and images you send; device tokens for notifications; and operational timestamps needed to deliver the service and prevent abuse.
+
+HOW DATA IS USED
+Data is used only to create your account and profile, show relevant profiles, create matches and chats, deliver content and notifications, provide safety tools, investigate reports, secure the service and comply with legal obligations. UniShare does not sell personal data and does not use cross-app tracking.
+
+STORAGE AND PROCESSORS
+Account and application data is hosted using Supabase infrastructure. Game metadata and artwork queries are proxied to RAWG without exposing your identity or API credentials. Apple processes information when you use Apple platform services. Data may be processed outside your country under the safeguards offered by these providers.
+
+NEARBY SHARING
+AirShare uses Bluetooth, local networking and motion signals only while you use the nearby-sharing feature. UniShare does not collect precise location data.
+
+CONTROL AND DELETION
+You can edit profile information in the app. Settings includes permanent account deletion, which removes the authentication account, profile, chats, messages, uploaded files and associated application data, subject only to legally required fraud or safety retention.
+
+SAFETY
+Never send passwords, recovery codes, payment details or identity documents through UniShare. Reports may be reviewed to protect users and enforce the community rules.
+
+CONTACT
+Privacy and support requests: official@egorchulanov.ru

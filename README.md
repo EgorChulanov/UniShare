@@ -1,149 +1,80 @@
 # UniShare
 
-A modern iOS social app for exchanging gaming accounts, subscriptions, and skills. Built with SwiftUI, Firebase, and a touch of AI.
+Нативная социальная сеть для поиска тиммейтов по играм, платформам и навыкам. Проект основан на SwiftUI и реальном backend Supabase, а не на локальном mock-слое. UniShare не продаёт, не передаёт и не предоставляет доступ к игровым аккаунтам.
 
-## Features
+## Что работает
 
-- **Exchange Feed** — Swipe-based discovery of profiles for game account exchanges
-- **Skills Feed** — Connect with users based on gaming skills
-- **AI Assistant** — ChatGPT-powered game recommendations
-- **AirShare** — Bluetooth/Multipeer exchange by holding phones together
-- **Real-time Chat** — Firebase Firestore messaging with image sharing
-- **Widgets** — Home screen and Control Center widgets
+- Email/password регистрация и подтверждение почты через Supabase Auth
+- Onboarding и создание реальной анкеты
+- Лента анкет с выбором платформ и игр из RAWG
+- Атомарные лайки и взаимный мэтч через Postgres RPC
+- Realtime-чаты и приватные изображения в Supabase Storage
+- Квадратные community stories, управляемые из базы
+- Профиль, отзывы, блокировки и жалобы
+- AirShare через Multipeer Connectivity
+- AirShare и Home Screen widgets
+- Русская, английская, украинская и белорусская локализации
 
-## Design
+## Стек
 
-**Liquid Nebula** palette · Dark glassmorphism · Animated gradients
+- iOS 16.1+, SwiftUI, Swift 5.9
+- Supabase Auth, Postgres, Realtime, Storage
+- XcodeGen и Swift Package Manager
+- RAWG для каталога игр
+- Manrope, Archivo Black и Plus Jakarta Sans
 
-| Color | Hex |
-|---|---|
-| Primary (coral) | `#E94560` |
-| Background (navy) | `#1A1A2E` |
-| Tertiary (purple) | `#4A148C` |
-| Neutral (dark blue) | `#0F3460` |
-
-## Requirements
-
-- **iOS** 16.1+
-- **Xcode** 15.0+
-- **Swift** 5.9+
-- Homebrew (for XcodeGen)
-
----
-
-## Setup
-
-### 1. Clone
+## Быстрый запуск
 
 ```bash
-git clone https://github.com/egorchulanov/unishare.git
-cd unishare
+git clone https://github.com/EgorChulanov/UniShare.git
+cd UniShare
+make bootstrap
 ```
 
-### 2. Install XcodeGen & generate project
+Заполните локальный `Config/Secrets.xcconfig`:
+
+```xcconfig
+SUPABASE_URL = https:/$()/PROJECT_REF.supabase.co
+SUPABASE_PUBLISHABLE_KEY = sb_publishable_YOUR_KEY_HERE
+SUPABASE_ANON_KEY = $(SUPABASE_PUBLISHABLE_KEY)
+```
+
+Не заменяйте `/$()/` на `//`: в `.xcconfig` двойной слеш начинает комментарий,
+и Xcode передаст приложению только `https:`.
+
+Каталожный RAWG key хранится только как Supabase Edge Function secret. После `supabase link` используйте `supabase secrets set RAWG_API_KEY=...`; не добавляйте ключ в Xcode или `Info.plist`.
+
+Схема устанавливается всеми файлами из `supabase/migrations/` по порядку, затем `supabase/seed.sql`. Для локальной базы это делает `make backend-reset`; для hosted-проекта используйте `supabase db push` после проверки `supabase link`.
+
+Полная настройка Supabase, DataGrip, Auth callback и stories описана в [`docs/SUPABASE_SETUP.md`](docs/SUPABASE_SETUP.md).
+Готовый prompt для следующих задач Codex находится в [`docs/CODEX_PROMPT.md`](docs/CODEX_PROMPT.md).
 
 ```bash
-brew install xcodegen
-xcodegen generate
+make generate
+make open
 ```
 
-### 3. Configure API Keys
+Выберите Development Team в Xcode и запустите приложение.
 
-```bash
-cp Config/Secrets.xcconfig.template Config/Secrets.xcconfig
-```
+## Архитектура
 
-Edit `Config/Secrets.xcconfig` — **этот файл не попадёт в git**:
-
-```
-OPENAI_API_KEY = sk-...your-key...
-RAWG_API_KEY = your-rawg-key
-```
-
-- **OpenAI key**: https://platform.openai.com/api-keys
-- **Rawg key**: https://rawg.io/apidocs (free tier)
-
-### 4. Configure Firebase
-
-1. Create a Firebase project at https://console.firebase.google.com
-2. Add an iOS app with bundle ID `com.CHULANOV.UniShare`
-3. Download `GoogleService-Info.plist` → place it in `UniShare/` folder
-4. Enable **Authentication** (Email/Password), **Firestore**, and **Storage**
-
-> `GoogleService-Info.plist` is gitignored and will never be committed.
-
-### 5. Open in Xcode
-
-```bash
-open UniShare.xcodeproj
-```
-
-Select your **Development Team** in Signing & Capabilities, then press `Command+R`.
-
----
-
-## Security — для контрибьюторов
-
-| Файл | Статус |
-|---|---|
-| `Config/Secrets.xcconfig` | Gitignored — **никогда не коммитить** |
-| `GoogleService-Info.plist` | Gitignored — **никогда не коммитить** |
-| `Config/Secrets.xcconfig.template` | Коммитится — только с placeholder значениями |
-
-Если случайно закоммитил ключи — немедленно отзови их в соответствующей консоли.
-
----
-
-## Architecture
-
-```
+```text
 UniShare/
-├── Core/            # ThemeManager, LocalizationManager, HapticsManager
-├── Navigation/      # TabBarView, TabBarState
-├── Features/        # Self-contained feature slices
-│   ├── Auth/
-│   ├── Onboarding/
-│   ├── Feed/
-│   ├── Chat/
-│   ├── AI/
-│   ├── AirShare/
-│   └── Profile/
-├── Models/          # Shared data types
-├── Services/        # Firebase, OpenAI, Rawg wrappers
-├── Cache/           # Image & data caches
-└── Components/      # Reusable SwiftUI views
+├── Core/          # окружение, тема, локализация, haptics
+├── Features/      # Auth, Onboarding, Feed, Chat, AirShare, Profile
+├── Models/        # модели приложения
+├── Services/      # Supabase, RAWG, Storage
+├── Cache/         # аватары, игры и пользовательские данные
+└── Components/    # переиспользуемые SwiftUI-компоненты
+supabase/
+├── migrations/   # схема, RLS, RPC, Storage policies
+└── seed.sql       # стартовые stories
 ```
 
-## Firestore Security Rules
+## Безопасность
 
-```js
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /users/{userId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth.uid == userId;
-    }
-    match /chats/{chatId} {
-      allow read, write: if request.auth.uid in resource.data.participants;
-    }
-    match /chats/{chatId}/messages/{msgId} {
-      allow read, write: if request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
-    }
-    match /likeRequests/{reqId} {
-      allow read: if request.auth.uid == resource.data.to || request.auth.uid == resource.data.from;
-      allow create: if request.auth.uid == request.resource.data.from;
-      allow delete: if request.auth.uid == resource.data.to || request.auth.uid == resource.data.from;
-    }
-  }
-}
-```
+`Config/Secrets.xcconfig` не должен попадать в Git. В iOS допустим только Supabase publishable key; database password, `service_role` и secret keys должны оставаться на сервере.
 
-## Contributing
+Проверки: `make test-static`, `make test-backend` и `make test-e2e`.
 
-PRs welcome. Please follow existing code style and SwiftUI patterns.  
-Never commit secrets — see Security section above.
-
-## License
-
-MIT
+Hosted-проект `kwonpzkzthprilrhncik` синхронизирован 11 августа 2026 года: RLS/Storage/RPC миграции и Edge Functions `delete-account`, `game-search`, `send-push`, `legal` развёрнуты, local multi-user E2E повторно прошёл, а hosted multi-user E2E проходил ранее. Секреты RAWG/APNs и production SMTP настраиваются отдельно в Supabase Dashboard и не хранятся в репозитории.

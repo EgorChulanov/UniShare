@@ -8,6 +8,7 @@ final class ChatViewModel: ObservableObject {
     @Published var isSending = false
     @Published var partnerProfile: UserProfile?
     @Published var isPartnerOnline = false
+    @Published var errorMessage: String?
 
     let chat: Chat
 
@@ -17,6 +18,7 @@ final class ChatViewModel: ObservableObject {
     private let auth: SupabaseAuthService
     private let db: SupabaseService
     private let storage: SupabaseStorageService
+    private var signedImageURLs: [String: String] = [:]
 
     var myUid: String { auth.uid ?? "" }
     var partnerUid: String? { chat.participants.first { $0 != auth.uid } }
@@ -49,8 +51,25 @@ final class ChatViewModel: ObservableObject {
 
     private func startMessageListener() {
         cancelMessages = db.listenToMessages(chatId: chat.id) { [weak self] messages in
-            Task { @MainActor [weak self] in self?.messages = messages }
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                self.messages = await self.resolveImageURLs(in: messages)
+            }
         }
+    }
+
+    private func resolveImageURLs(in messages: [Message]) async -> [Message] {
+        var resolved = messages
+        for index in resolved.indices {
+            guard let path = resolved[index].imageUrl, !path.hasPrefix("http") else { continue }
+            if let cached = signedImageURLs[path] {
+                resolved[index].imageUrl = cached
+            } else if let signed = try? await storage.signedChatImageURL(path: path) {
+                signedImageURLs[path] = signed
+                resolved[index].imageUrl = signed
+            }
+        }
+        return resolved
     }
 
     private func startStatusListener() {
@@ -60,7 +79,7 @@ final class ChatViewModel: ObservableObject {
     }
 
     private func markAsRead() async {
-        try? await db.markChatAsRead(chatId: chat.id, uid: myUid)
+        try? await db.markChatAsRead(chatId: chat.id)
     }
 
     func sendText() async {
@@ -80,14 +99,9 @@ final class ChatViewModel: ObservableObject {
 
         do {
             try await db.sendMessage(msg, chatId: chat.id)
-            try await db.updateChatLastMessage(
-                chatId: chat.id,
-                message: text,
-                senderId: myUid,
-                participants: chat.participants
-            )
         } catch {
-            print("Send message failed: \(error)")
+            inputText = text
+            errorMessage = friendlyMessage(for: error)
         }
     }
 
@@ -105,14 +119,15 @@ final class ChatViewModel: ObservableObject {
                 readBy: [myUid]
             )
             try await db.sendMessage(msg, chatId: chat.id)
-            try await db.updateChatLastMessage(
-                chatId: chat.id,
-                message: "📷 Photo",
-                senderId: myUid,
-                participants: chat.participants
-            )
         } catch {
-            print("Send image failed: \(error)")
+            errorMessage = friendlyMessage(for: error)
         }
+    }
+
+    private func friendlyMessage(for error: Error) -> String {
+        if error.localizedDescription.localizedCaseInsensitiveContains("community rules") {
+            return "chat.error.content.blocked".localized
+        }
+        return error.localizedDescription
     }
 }

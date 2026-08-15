@@ -5,7 +5,11 @@ import ObjectiveC
 // Replaces UIFont.systemFont(...) with Manrope everywhere in the app.
 
 enum ManropeFontSwizzle {
+    private static var didApply = false
+
     static func apply() {
+        guard !didApply else { return }
+        didApply = true
         swizzle(#selector(UIFont.systemFont(ofSize:weight:)), with: #selector(UIFont._manrope(ofSize:weight:)))
         swizzle(#selector(UIFont.systemFont(ofSize:)),        with: #selector(UIFont._manrope(ofSize:)))
         swizzle(#selector(UIFont.boldSystemFont(ofSize:)),    with: #selector(UIFont._manropeBold(ofSize:)))

@@ -4,15 +4,15 @@ import Combine
 final class ThemeManager: ObservableObject {
     static let shared = ThemeManager()
 
-    @AppStorage("app_theme") private var storedTheme: String = AppTheme.dark.rawValue
-    @AppStorage("card_color_theme") private var storedCardColorId: String = "mocha_mousse_2025"
+    @AppStorage("app_theme") private var storedTheme: String = AppTheme.system.rawValue
+    @AppStorage("card_color_theme") private var storedCardColorId: String = "signal_blue"
 
-    @Published var currentTheme: AppTheme = .dark
-    @Published var currentCardColor: CardColorTheme = .mochaMousse2025
+    @Published var currentTheme: AppTheme = .system
+    @Published var currentCardColor: CardColorTheme = .signalBlue
 
     private init() {
-        currentTheme = AppTheme(rawValue: storedTheme) ?? .dark
-        currentCardColor = CardColorTheme.all.first { $0.id == storedCardColorId } ?? .mochaMousse2025
+        currentTheme = AppTheme(rawValue: storedTheme) ?? .system
+        currentCardColor = CardColorTheme.all.first { $0.id == storedCardColorId } ?? .signalBlue
     }
 
     // MARK: - Computed Appearance
@@ -61,8 +61,8 @@ final class ThemeManager: ObservableObject {
 
     func applyTabBarAppearance() {
         let appearance = UITabBarAppearance()
-        appearance.configureWithOpaqueBackground()
-        appearance.backgroundColor = UIColor(currentCardColor.neutral)
+        appearance.configureWithDefaultBackground()
+        appearance.backgroundColor = UIColor(currentCardColor.neutral).withAlphaComponent(0.92)
 
         let itemAppearance = UITabBarItemAppearance()
         itemAppearance.normal.iconColor = UIColor(currentCardColor.textColor.opacity(0.5))

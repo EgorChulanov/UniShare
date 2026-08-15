@@ -30,6 +30,13 @@ final class ProfileViewModel: ObservableObject {
     private let rawg: RawgService
     private var searchTask: Task<Void, Never>?
 
+    var canSaveChanges: Bool {
+        ProfileInputValidator.username(editUsername) != nil
+            && editStatus.count <= 180
+            && !editPlatforms.isEmpty
+            && !isLoading
+    }
+
     init(auth: SupabaseAuthService, db: SupabaseService, storage: SupabaseStorageService, rawg: RawgService) {
         self.auth = auth
         self.db = db
@@ -41,9 +48,13 @@ final class ProfileViewModel: ObservableObject {
         guard let uid = auth.uid else { return }
         isLoading = true
         defer { isLoading = false }
-        profile = try? await db.getUser(uid: uid)
-        if let p = profile {
-            await AvatarCacheService.shared.loadUserAvatar(from: p.avatarUrl)
+        do {
+            profile = try await db.getUser(uid: uid)
+            if let profile {
+                await AvatarCacheService.shared.loadUserAvatar(from: profile.avatarUrl)
+            }
+        } catch {
+            errorMessage = error.localizedDescription
         }
     }
 
@@ -73,8 +84,20 @@ final class ProfileViewModel: ObservableObject {
         isEditing = false
     }
 
-    func saveChanges() async {
-        guard let uid = auth.uid, var p = profile else { return }
+    func saveChanges() async -> Bool {
+        guard let uid = auth.uid, var p = profile else { return false }
+        guard let username = ProfileInputValidator.username(editUsername) else {
+            errorMessage = "profile.error.username".localized
+            return false
+        }
+        guard editStatus.count <= 180 else {
+            errorMessage = "profile.error.status.length".localized
+            return false
+        }
+        guard !editPlatforms.isEmpty else {
+            errorMessage = "profile.error.platform.required".localized
+            return false
+        }
         isLoading = true
         defer { isLoading = false }
 
@@ -85,11 +108,12 @@ final class ProfileViewModel: ObservableObject {
                 await AvatarCacheService.shared.loadUserAvatar(from: url)
             }
 
-            p.username = editUsername
-            p.status = editStatus.isEmpty ? nil : editStatus
-            p.platforms = editPlatforms.map { $0.rawValue }
+            p.username = username
+            let normalizedStatus = editStatus.trimmingCharacters(in: .whitespacesAndNewlines)
+            p.status = normalizedStatus.isEmpty ? nil : normalizedStatus
+            p.platforms = Platform.allCases.filter(editPlatforms.contains).map(\.rawValue)
             p.skills = editSkills
-            p.subscriptions = editSubscriptions
+            p.subscriptions = uniqueSubscriptions(editSubscriptions)
             var newPlatformGames: [String: [String]] = [:]
             var allGames: [String] = []
             for platform in editPlatforms {
@@ -98,8 +122,8 @@ final class ProfileViewModel: ObservableObject {
                 allGames.append(contentsOf: names)
             }
             p.platformGames = newPlatformGames
-            p.games = Array(Set(allGames))
-            p.wantedGames = editWantedGames.map { $0.name }
+            p.games = GameNameValidator.uniqueNames(allGames)
+            p.wantedGames = GameNameValidator.uniqueNames(editWantedGames.map { $0.name })
 
             let data: [String: AnyEncodable] = [
                 "username": AnyEncodable(p.username),
@@ -110,27 +134,34 @@ final class ProfileViewModel: ObservableObject {
                 "platforms": AnyEncodable(p.platforms),
                 "platform_games": AnyEncodable(p.platformGames),
                 "skills": AnyEncodable(p.skills),
-                "subscriptions": AnyEncodable(p.subscriptions.map { ["name": $0.name, "icon_name": $0.iconName, "url": $0.url ?? ""] })
+                "subscriptions": AnyEncodable(p.subscriptions.map { subscriptionPayload($0) })
             ]
             try await db.updateUser(uid: uid, data: data)
-            profile = p
+            guard let persistedProfile = try await db.getUser(uid: uid) else {
+                throw ProfileSaveError.profileNotReturned
+            }
+            profile = persistedProfile
             isEditing = false
+            NotificationCenter.default.post(name: .uniShareProfileDidUpdate, object: nil)
 
             let avatar = AvatarCacheService.shared.cachedAvatar
             WidgetDataService.shared.updateWidgetData(
-                username: p.username,
+                username: persistedProfile.username,
                 avatar: avatar,
                 unreadCount: 0,
                 likesCount: 0
             )
+            return true
         } catch {
             errorMessage = error.localizedDescription
+            return false
         }
     }
 
     func toggleGame(_ tag: GameTag, for platform: Platform) {
         var list = editGamesByPlatform[platform] ?? []
-        if let idx = list.firstIndex(where: { $0.name == tag.name }) {
+        let normalizedName = GameNameValidator.normalized(tag.name)
+        if let idx = list.firstIndex(where: { GameNameValidator.normalized($0.name) == normalizedName }) {
             list.remove(at: idx)
         } else {
             list.append(tag)
@@ -138,22 +169,98 @@ final class ProfileViewModel: ObservableObject {
         editGamesByPlatform[platform] = list
     }
 
+    func toggleSubscription(_ subscription: LocalUserSubscription) {
+        let normalizedName = subscription.name.lowercased()
+        if editSubscriptions.contains(where: { $0.name.lowercased() == normalizedName }) {
+            editSubscriptions.removeAll { $0.name.lowercased() == normalizedName }
+        } else {
+            editSubscriptions.append(subscription)
+        }
+        editSubscriptions = uniqueSubscriptions(editSubscriptions)
+    }
+
+    func updateSubscription(_ subscription: LocalUserSubscription) {
+        var subscription = subscription
+        subscription.url = nil
+        subscription.details = nil
+        subscription.sharedSlots = nil
+        editSubscriptions.removeAll { $0.name.caseInsensitiveCompare(subscription.name) == .orderedSame }
+        editSubscriptions.append(subscription)
+        editSubscriptions = uniqueSubscriptions(editSubscriptions)
+    }
+
+    func removeSubscription(named name: String) {
+        editSubscriptions.removeAll { $0.name.caseInsensitiveCompare(name) == .orderedSame }
+    }
+
     func searchGames(_ query: String) {
         searchTask?.cancel()
-        guard !query.isEmpty else { gameSearchResults = []; return }
+        guard GameNameValidator.sanitized(query) != nil else {
+            gameSearchResults = []
+            isSearchingGames = false
+            return
+        }
         isSearchingGames = true
         searchTask = Task {
             try? await Task.sleep(nanoseconds: 400_000_000)
             guard !Task.isCancelled else { return }
-            let results = await rawg.searchGames(query).map { rawg.gameToTag($0) }
-            await MainActor.run {
-                gameSearchResults = results
-                isSearchingGames = false
-            }
+            let results = await rawg.searchGameTags(query)
+            guard !Task.isCancelled else { return }
+            gameSearchResults = results
+            isSearchingGames = false
         }
     }
 
-    func signOut() throws {
-        try auth.signOut()
+    func signOut() async throws {
+        try await auth.signOut()
+    }
+
+    func deleteAccount() async throws {
+        isLoading = true
+        defer { isLoading = false }
+        try await auth.deleteAccount()
+        AvatarCacheService.shared.clearCache()
+    }
+
+    private func uniqueSubscriptions(_ subscriptions: [LocalUserSubscription]) -> [LocalUserSubscription] {
+        var seen = Set<String>()
+        return subscriptions.filter { seen.insert($0.name.lowercased()).inserted }
+    }
+
+
+    private func subscriptionPayload(_ subscription: LocalUserSubscription) -> [String: AnyEncodable] {
+        var payload: [String: AnyEncodable] = [
+            "name": AnyEncodable(subscription.name),
+            "icon_name": AnyEncodable(subscription.iconName),
+            "plan_name": AnyEncodable(subscription.planName ?? ""),
+            "billing_cycle_id": AnyEncodable(subscription.billingCycleId ?? ""),
+            "auto_renew": AnyEncodable(subscription.autoRenew == true)
+        ]
+        if let expiresAt = subscription.expiresAt {
+            payload["expires_at"] = AnyEncodable(ISO8601DateFormatter().string(from: expiresAt))
+        }
+        if let startedAt = subscription.startedAt {
+            payload["started_at"] = AnyEncodable(ISO8601DateFormatter().string(from: startedAt))
+        }
+        return payload
+    }
+}
+
+enum ProfileInputValidator {
+    static func username(_ value: String) -> String? {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard (3...30).contains(trimmed.count),
+              trimmed.unicodeScalars.allSatisfy({ !CharacterSet.controlCharacters.contains($0) }) else {
+            return nil
+        }
+        return trimmed
+    }
+}
+
+private enum ProfileSaveError: LocalizedError {
+    case profileNotReturned
+
+    var errorDescription: String? {
+        "profile.error.save.verify".localized
     }
 }

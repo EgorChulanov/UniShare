@@ -4,8 +4,7 @@ import SwiftUI
 enum AppTab: Int {
     case feed = 0
     case chats = 1
-    case ai = 2
-    case profile = 3
+    case profile = 2
 }
 
 final class TabBarState: ObservableObject {
@@ -23,6 +22,8 @@ final class TabBarState: ObservableObject {
     func handleDeepLink(_ url: URL) {
         guard url.scheme == AppConstants.DeepLink.scheme else { return }
         switch url.host {
+        case "feed":
+            selectedTab = .feed
         case "chats":
             selectedTab = .chats
         case "airshare":
@@ -30,8 +31,6 @@ final class TabBarState: ObservableObject {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                 self.showAirShare = true
             }
-        case "ai":
-            selectedTab = .ai
         case "profile":
             selectedTab = .profile
         default:

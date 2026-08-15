@@ -11,86 +11,39 @@ struct CardColorTheme: Identifiable, Equatable {
     var neutral: Color      // neutral dark
     var cardSurface: Color  // card background
 
-    // Adaptive text color based on background luminance
     var textColor: Color {
-        background.isLight ? Color.black : Color.white
+        Color(uiColor: .label)
     }
 
     var secondaryTextColor: Color {
-        textColor.opacity(0.6)
+        Color(uiColor: .secondaryLabel)
     }
 
     // MARK: Presets
 
-    static let liquidNebula = CardColorTheme(
-        id: "liquid_nebula",
-        name: "Liquid Nebula",
-        primary: Color(hex: "#E94560"),
-        background: Color(hex: "#1A1A2E"),
-        tertiary: Color(hex: "#4A148C"),
-        neutral: Color(hex: "#0F3460"),
-        cardSurface: Color(hex: "#16213E")
+    static let signalBlue = CardColorTheme(
+        id: "signal_blue",
+        name: "Signal Blue",
+        primary: Color(hex: "#0057FF"),
+        background: Color(uiColor: UIColor { traits in
+            traits.userInterfaceStyle == .dark
+                ? UIColor(red: 14 / 255, green: 17 / 255, blue: 23 / 255, alpha: 1)
+                : UIColor(red: 248 / 255, green: 247 / 255, blue: 244 / 255, alpha: 1)
+        }),
+        tertiary: Color(hex: "#4D8BFF"),
+        neutral: Color(uiColor: UIColor { traits in
+            traits.userInterfaceStyle == .dark
+                ? UIColor(red: 23 / 255, green: 27 / 255, blue: 36 / 255, alpha: 1)
+                : .white
+        }),
+        cardSurface: Color(uiColor: UIColor { traits in
+            traits.userInterfaceStyle == .dark
+                ? UIColor(red: 23 / 255, green: 27 / 255, blue: 36 / 255, alpha: 1)
+                : .white
+        })
     )
 
-    static let peachFuzz2024 = CardColorTheme(
-        id: "peach_fuzz_2024",
-        name: "Peach Fuzz 2024",
-        primary: Color(hex: "#FFBE98"),
-        background: Color(hex: "#1C1010"),
-        tertiary: Color(hex: "#D4845A"),
-        neutral: Color(hex: "#2C1A15"),
-        cardSurface: Color(hex: "#221512")
-    )
-
-    static let vivaMagenta2023 = CardColorTheme(
-        id: "viva_magenta_2023",
-        name: "Viva Magenta 2023",
-        primary: Color(hex: "#BB2649"),
-        background: Color(hex: "#1A0D10"),
-        tertiary: Color(hex: "#8B1A2F"),
-        neutral: Color(hex: "#2D0E18"),
-        cardSurface: Color(hex: "#220B13")
-    )
-
-    static let veryPeri2022 = CardColorTheme(
-        id: "very_peri_2022",
-        name: "Very Peri 2022",
-        primary: Color(hex: "#6667AB"),
-        background: Color(hex: "#0D0D1A"),
-        tertiary: Color(hex: "#4445A8"),
-        neutral: Color(hex: "#121230"),
-        cardSurface: Color(hex: "#0F0F22")
-    )
-
-    static let ultimateGray2021 = CardColorTheme(
-        id: "ultimate_gray_2021",
-        name: "Ultimate Gray 2021",
-        primary: Color(hex: "#939597"),
-        background: Color(hex: "#111111"),
-        tertiary: Color(hex: "#F5DF4D"),
-        neutral: Color(hex: "#1E1E1E"),
-        cardSurface: Color(hex: "#181818")
-    )
-
-    // Pantone 2025: Mocha Mousse — warm dark cocoa surfaces
-    static let mochaMousse2025 = CardColorTheme(
-        id: "mocha_mousse_2025",
-        name: "Mocha Mousse 2025",
-        primary: Color(hex: "#A47864"),
-        background: Color(hex: "#120D0A"),
-        tertiary: Color(hex: "#6667AB"),   // Very Peri as secondary accent
-        neutral: Color(hex: "#1F1612"),
-        cardSurface: Color(hex: "#1F1612")
-    )
-
-    static let all: [CardColorTheme] = [
-        .mochaMousse2025,
-        .liquidNebula,
-        .peachFuzz2024,
-        .vivaMagenta2023,
-        .veryPeri2022,
-        .ultimateGray2021
-    ]
+    static let all: [CardColorTheme] = [.signalBlue]
 }
 
 // MARK: - AppTheme

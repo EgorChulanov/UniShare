@@ -28,6 +28,16 @@
 "auth.error.invalid" = "Невірний email або пароль";
 "auth.welcome" = "Ласкаво просимо до UniShare";
 "auth.subtitle" = "Знаходь геймерів по всьому світу";
+"auth.password.confirm" = "Повторіть пароль";
+"auth.password.hint" = "10+ символів: велика, мала, цифра та знак";
+"auth.confirmation.sent" = "Ми надіслали посилання для підтвердження на вашу пошту";
+"auth.error.email" = "Введіть коректний email";
+"auth.error.password.length" = "Пароль має містити щонайменше 8 символів";
+"auth.error.password.strength" = "Використовуйте 10+ символів: велику й малу літери, цифру та спеціальний знак";
+"auth.error.password.match" = "Паролі не збігаються";
+"auth.error.registered" = "Акаунт із такою поштою вже існує";
+"auth.error.unconfirmed" = "Підтвердьте email за посиланням із листа";
+"auth.error.network" = "Немає з’єднання із сервером. Спробуйте ще раз";
 
 // MARK: - Onboarding
 "onboarding.title.username" = "Обери нікнейм";
@@ -42,13 +52,12 @@
 "onboarding.complete" = "Почати!";
 
 // MARK: - Tabs
-"tab.feed" = "Стрічка";
+"tab.feed" = "Головна";
 "tab.chats" = "Чати";
-"tab.ai" = "ШІ";
 "tab.profile" = "Профіль";
 
 // MARK: - Feed
-"feed.segment.exchange" = "Обмін";
+"feed.segment.exchange" = "Тіммейти";
 "feed.segment.skills" = "Навички";
 "feed.search.placeholder" = "Пошук по грі...";
 "feed.empty" = "Анкети закінчились";
@@ -66,22 +75,9 @@
 "chats.requests" = "Заявки";
 "chats.accept" = "Прийняти";
 "chats.decline" = "Відхилити";
-"chats.segment.exchange" = "Обмін";
-"chats.segment.skills" = "Навички";
 "chat.online" = "Онлайн";
 "chat.offline" = "Офлайн";
 "chat.report" = "Поскаржитись";
-
-// MARK: - AI
-"ai.title" = "ШІ Асистент";
-"ai.placeholder" = "Запитай про ігри...";
-"ai.send" = "Запитати";
-"ai.thinking" = "Думаю...";
-"ai.limit" = "Повідомлення надто довге (макс. 100 символів)";
-"ai.command.recommend" = "Порадь ігри";
-"ai.command.exchange" = "Допоможи з обміном";
-"ai.command.skill" = "Покращи мої навички";
-"ai.command.trending" = "Популярні ігри";
 
 // MARK: - AirShare
 "airshare.title" = "AirShare";
@@ -91,10 +87,30 @@
 "airshare.found" = "Знайдено користувача поряд";
 "airshare.success" = "Профіль надіслано!";
 "airshare.match" = "Це збіг!";
-"airshare.description" = "Тримайте телефони поряд і потрусіть, щоб обмінятися профілями з найближчими гравцями";
+"airshare.description" = "Тримайте телефони поряд і потрусіть, щоб поділитися профілями з гравцями поблизу";
 
 // MARK: - Profile
 "profile.edit" = "Редагувати";
+"profile.error.avatar.policy" = "Сховище аватарів не налаштоване. Застосуйте міграцію Storage у Supabase.";
+"subscription.edit" = "Підписка";
+"subscription.details" = "Параметри тарифу";
+"subscription.plan.placeholder" = "Тариф, наприклад Premium";
+"subscription.has.expiry" = "Є дата завершення";
+"subscription.expiry" = "Діє до";
+"subscription.expires" = "До %@";
+"subscription.remove" = "Видалити підписку";
+"subscription.plan" = "Тариф";
+"subscription.period" = "Період оплати";
+"subscription.duration" = "Термін дії";
+"subscription.started" = "Початок";
+"subscription.auto.renew" = "Автопродовження";
+"subscription.remaining" = "Залишилося";
+"subscription.days.remaining" = "Залишилося днів: %d";
+"subscription.period.1d" = "1 день";
+"subscription.period.1m" = "1 місяць";
+"subscription.period.3m" = "3 місяці";
+"subscription.period.6m" = "6 місяців";
+"subscription.period.12m" = "12 місяців";
 "profile.games" = "Ігри";
 "profile.subscriptions" = "Підписки";
 "profile.platforms" = "Платформи";
@@ -120,6 +136,90 @@
 "widget.chats" = "Чати";
 "widget.open.chats" = "Відкрити чати";
 "widget.open.airshare" = "AirShare";
-"widget.open.ai" = "ШІ";
 "widget.open.profile" = "Профіль";
-"profile.settings" = "Налаштування";
+
+// MARK: - Common
+"common.error" = "Помилка";
+"common.ok" = "Зрозуміло";
+"feed.airshare.nearby" = "AirShare поруч";
+"chats.request.exchange" = "хоче зіграти разом";
+"chat.review.title" = "Оцінити тіммейта";
+"chat.review.subtitle" = "Розкажіть, як пройшла спільна гра";
+"chat.safety.notice" = "Не надсилайте в чат паролі платформ, коди безпеки, платіжні дані та доступ до акаунтів.";
+"rating.title" = "Оцініть @%@";
+"rating.subtitle" = "Як пройшла спільна гра?";
+"rating.comment" = "Короткий відгук (необов'язково)";
+"rating.sent" = "Надіслано";
+"rating.submit" = "Надіслати відгук";
+"skills.setup.question" = "Які у вас ігрові навички?";
+"skills.setup.question.subtitle" = "Оберіть відповідні варіанти, щоб інші гравці могли вас знайти.";
+"skills.setup.custom" = "Додати власну навичку...";
+"skills.setup.about.title" = "Про вас";
+"skills.setup.about.subtitle" = "Коротко опишіть досвід та ігри, які вам подобаються.";
+"skills.setup.about.example" = "Наприклад: п'ять років граю в EA Sports FC і люблю пояснювати тактики.";
+"skills.setup.portfolio.title" = "Досягнення";
+"skills.setup.portfolio.subtitle" = "Додайте знімки стримів або ігрових досягнень.";
+"skills.setup.portfolio.add" = "Додати фото";
+"skills.setup.portfolio.more" = "Додати ще";
+"skills.setup.portfolio.help" = "Фото допоможуть іншим гравцям зрозуміти ваш досвід.";
+"skills.setup.your" = "Ваші навички";
+"skills.setup.confirm" = "Після збереження профіль побачать гравці, які шукають за навичками.";
+"skills.empty" = "Навички не додані";
+"feed.platforms.empty" = "Платформи не додані";
+"feed.swipe.match" = "Метч";
+"feed.swipe.like" = "Лайк";
+"feed.swipe.pass" = "Пропустити";
+"profile.games.add.hint" = "Натисніть, щоб додати ігри";
+"onboarding.username.minimum" = "Щонайменше 3 символи";
+"onboarding.games.search" = "Знайти гру";
+"onboarding.games.selected" = "Вибрано: %d";
+"profile.username" = "Ім'я користувача";
+"profile.status" = "Статус";
+
+// MARK: - Reports
+"report.title" = "Скарга на %@";
+"report.send" = "Надіслати";
+"report.question" = "Чому ви хочете поскаржитися на користувача?";
+"report.reason.spam" = "Спам";
+"report.reason.content" = "Неприйнятний контент";
+"report.reason.harassment" = "Образи або цькування";
+"report.reason.fake" = "Підроблений профіль";
+"report.reason.underage" = "Неповнолітній користувач";
+"report.reason.other" = "Інша причина";
+"report.details" = "Додайте подробиці (необов'язково)";
+"report.submitted" = "Скаргу надіслано";
+"report.submitted.subtitle" = "Ми перевіримо скаргу та за потреби вживемо заходів.";
+"report.done" = "Готово";
+"chat.block" = "Заблокувати";
+"chat.block.confirmation" = "Користувач зникне зі стрічки й більше не зможе взаємодіяти з вами.";
+"game.search.empty" = "Нічого не знайдено. Перевірте назву.";
+"game.search.custom.hint" = "Якщо гри немає в каталозі, введену назву можна додати вручну.";
+"game.search.catalog.unavailable" = "Онлайн-каталог ігор тимчасово недоступний.";
+"game.search.powered.rawg" = "Дані та зображення ігор надані RAWG";
+"profile.error.save.verify" = "Не вдалося підтвердити збереження профілю. Спробуйте ще раз.";
+"profile.error.username" = "Ім’я має містити від 3 до 30 символів.";
+"profile.error.status.length" = "Статус не може бути довшим за 180 символів.";
+"profile.error.platform.required" = "Оберіть хоча б одну платформу.";
+"airshare.verifying" = "Перевіряємо профіль…";
+"airshare.bluetooth.off" = "Увімкніть Bluetooth";
+"airshare.bluetooth.denied" = "Дозвольте Bluetooth у Параметрах";
+"airshare.bluetooth.unsupported" = "AirShare не підтримується на цьому пристрої";
+"airshare.verify.failed" = "Не вдалося підтвердити профіль через UniShare.";
+"airshare.me" = "Я";
+"airshare.nearby" = "Знайдені поблизу";
+"airshare.skip" = "Пропустити";
+"airshare.like" = "Лайк";
+"settings.about" = "Про UniShare";
+"settings.privacy" = "Політика конфіденційності";
+"settings.terms" = "Правила та умови";
+"settings.support" = "Зв'язатися з підтримкою";
+"settings.delete.account" = "Видалити обліковий запис";
+"settings.delete.title" = "Видалити обліковий запис?";
+"settings.delete.message" = "Профіль, повідомлення, завантажені фотографії та інші дані UniShare буде видалено без можливості відновлення.";
+"settings.delete.confirm" = "Видалити назавжди";
+"settings.delete.cancel" = "Скасувати";
+"chat.error.content.blocked" = "Повідомлення може містити пароль, платіжні дані, погрози або інший заборонений вміст. Видаліть їх і повторіть надсилання.";
+"auth.consent" = "Я погоджуюся на обробку даних для роботи UniShare та приймаю:";
+"auth.or" = "або";
+"auth.apple.consent" = "Продовжуючи з Apple, ви приймаєте Умови та Політику конфіденційності.";
+"auth.apple.error" = "Apple не повернув коректні дані для входу.";

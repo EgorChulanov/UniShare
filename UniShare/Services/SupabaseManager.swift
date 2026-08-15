@@ -5,6 +5,7 @@ final class SupabaseManager {
     static let shared = SupabaseManager()
 
     let client: SupabaseClient
+    let isConfigured: Bool
 
     // Fallback JWT used only when Secrets.xcconfig values aren't resolved.
     // It is syntactically valid (3-part JWT) so the SDK won't crash,
@@ -14,26 +15,55 @@ final class SupabaseManager {
         ".eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsYWNlaG9sZGVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE2MDAwMDAwMDAsImV4cCI6MTkwMDAwMDAwMH0" +
         ".cGxhY2Vob2xkZXI"
 
-    private init() {
-        let urlString = Bundle.main.infoDictionary?["SUPABASE_URL"] as? String ?? ""
-        let key       = Bundle.main.infoDictionary?["SUPABASE_ANON_KEY"] as? String ?? ""
+    private static func isAllowedURL(_ url: URL?) -> Bool {
+        guard let url,
+              let host = url.host,
+              !host.isEmpty,
+              !host.contains("YOUR_PROJECT") else {
+            return false
+        }
+        if url.scheme == "https" { return true }
+#if DEBUG
+        return url.scheme == "http" && ["127.0.0.1", "localhost"].contains(host)
+#else
+        return false
+#endif
+    }
 
-        // Detect unresolved xcconfig variables like "$(SUPABASE_URL)"
-        let validURL = urlString.hasPrefix("https://")
-            ? URL(string: urlString)!
+    private init() {
+        let environment = ProcessInfo.processInfo.environment
+        let urlString = environment["UNISHARE_SUPABASE_URL"]
+            ?? Bundle.main.infoDictionary?["SUPABASE_URL"] as? String
+            ?? ""
+        let key = environment["UNISHARE_SUPABASE_KEY"]
+            ?? (Bundle.main.infoDictionary?["SUPABASE_PUBLISHABLE_KEY"] as? String)
+            ?? (Bundle.main.infoDictionary?["SUPABASE_ANON_KEY"] as? String)
+            ?? ""
+
+        let configuredURL = URL(string: urlString)
+        let hasValidURL = Self.isAllowedURL(configuredURL)
+        let validURL = hasValidURL
+            ? configuredURL!
             : URL(string: "https://placeholder.supabase.co")!
 
-        // A valid Supabase JWT always has exactly 3 dot-separated parts
-        let validKey = key.components(separatedBy: ".").count == 3
-            ? key
-            : Self.placeholderKey
+        let isLegacyAnonKey = key.components(separatedBy: ".").count == 3
+        let isPublishableKey = key.hasPrefix("sb_publishable_")
+        let validKey = isLegacyAnonKey || isPublishableKey ? key : Self.placeholderKey
+        isConfigured = hasValidURL && (isLegacyAnonKey || isPublishableKey)
 
-        if !urlString.hasPrefix("https://") || key.components(separatedBy: ".").count != 3 {
-            print("⚠️ SupabaseManager: credentials not resolved.")
-            print("   SUPABASE_URL = '\(urlString)'")
-            print("   Fix: run 'make generate' from the project root, then clean-build in Xcode.")
+        if !isConfigured {
+            print("SupabaseManager: credentials are not configured. Run 'make secrets', then 'make generate'.")
         }
 
-        client = SupabaseClient(supabaseURL: validURL, supabaseKey: validKey)
+        client = SupabaseClient(
+            supabaseURL: validURL,
+            supabaseKey: validKey,
+            options: SupabaseClientOptions(
+                auth: .init(
+                    redirectToURL: URL(string: "unishare://auth-callback"),
+                    emitLocalSessionAsInitialSession: true
+                )
+            )
+        )
     }
 }
