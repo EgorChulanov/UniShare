@@ -4,18 +4,15 @@ import Combine
 
 final class SupabaseAuthService: ObservableObject {
     @Published var isAuthenticated = false
+    @Published private(set) var uid: String?
 
     private let client = SupabaseManager.shared.client
     private var authListenerTask: Task<Void, Never>?
 
-    var uid: String? {
-        // Synchronously retrieve the cached session user id
-        client.auth.currentUser?.id.uuidString
-    }
-
     init() {
         // Seed initial state from the cached session synchronously
-        self.isAuthenticated = client.auth.currentUser != nil
+        uid = client.auth.currentUser?.id.uuidString
+        isAuthenticated = uid != nil
 
         // Watch auth state changes via the async stream
         authListenerTask = Task { [weak self] in
@@ -31,6 +28,7 @@ final class SupabaseAuthService: ObservableObject {
                     authenticated = session.map { !$0.isExpired } ?? false
                 }
                 await MainActor.run { [weak self] in
+                    self?.uid = authenticated ? session?.user.id.uuidString : nil
                     self?.isAuthenticated = authenticated
                 }
             }
