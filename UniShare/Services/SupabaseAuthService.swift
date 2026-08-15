@@ -11,7 +11,9 @@ final class SupabaseAuthService: ObservableObject {
 
     init() {
         // Seed initial state from the cached session synchronously
-        uid = client.auth.currentUser?.id.uuidString
+        let currentSession = client.auth.currentSession
+        SupabaseManager.shared.database.setAuth(currentSession?.accessToken)
+        uid = currentSession?.user.id.uuidString
         isAuthenticated = uid != nil
 
         // Watch auth state changes via the async stream
@@ -28,6 +30,7 @@ final class SupabaseAuthService: ObservableObject {
                     authenticated = session.map { !$0.isExpired } ?? false
                 }
                 await MainActor.run { [weak self] in
+                    SupabaseManager.shared.database.setAuth(authenticated ? session?.accessToken : nil)
                     self?.uid = authenticated ? session?.user.id.uuidString : nil
                     self?.isAuthenticated = authenticated
                 }

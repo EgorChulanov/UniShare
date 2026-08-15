@@ -414,18 +414,19 @@ private struct BlockInsert: Encodable {
 
 final class SupabaseService {
     private let client = SupabaseManager.shared.client
+    private let database = SupabaseManager.shared.database
 
     // MARK: - Users
 
     func createUser(_ profile: UserProfile) async throws {
         let row = UserRow.from(profile)
-        try await client.from("users")
+        try await database.from("users")
             .upsert(row, onConflict: "uid")
             .execute()
     }
 
     func getUser(uid: String) async throws -> UserProfile? {
-        let rows: [UserRow] = try await client.from("users")
+        let rows: [UserRow] = try await database.from("users")
             .select()
             .eq("uid", value: uid)
             .limit(1)
@@ -435,14 +436,14 @@ final class SupabaseService {
     }
 
     func updateUser(uid: String, data: [String: AnyEncodable]) async throws {
-        try await client.from("users")
+        try await database.from("users")
             .update(data)
             .eq("uid", value: uid)
             .execute()
     }
 
     func getFeedUsers(excludeUids: [String], limit: Int = 3, skillsOnly: Bool = false) async throws -> [UserProfile] {
-        var query = client.from("users")
+        var query = database.from("users")
             .select()
             .eq("onboarding_complete", value: true)
 
@@ -463,7 +464,7 @@ final class SupabaseService {
     }
 
     func getFeedProfiles(kind: String, limit: Int = 12) async throws -> [UserProfile] {
-        let rows: [UserRow] = try await client.rpc(
+        let rows: [UserRow] = try await database.rpc(
             "get_feed_profiles",
             params: FeedParams(kind: kind, batchLimit: limit)
         )
@@ -473,7 +474,7 @@ final class SupabaseService {
     }
 
     func recordDislike(targetUid: String, kind: String) async throws {
-        try await client.rpc(
+        try await database.rpc(
             "record_swipe",
             params: SwipeParams(targetUid: targetUid, kind: kind, swipeDecision: "dislike")
         )
@@ -481,7 +482,7 @@ final class SupabaseService {
     }
 
     func undoDislike(targetUid: String, kind: String) async throws -> Bool {
-        try await client.rpc(
+        try await database.rpc(
             "undo_dislike",
             params: UndoSwipeParams(targetUid: targetUid, kind: kind)
         )
@@ -504,7 +505,7 @@ final class SupabaseService {
     // MARK: - Like Requests
 
     func sendLikeRequest(_ request: LikeRequest) async throws -> String? {
-        let rows: [MatchResultRow] = try await client.rpc(
+        let rows: [MatchResultRow] = try await database.rpc(
             "send_like",
             params: SendLikeParams(
                 targetUid: request.to,
@@ -518,7 +519,7 @@ final class SupabaseService {
     }
 
     func deleteLikeRequest(id: String) async throws {
-        try await client.from("like_requests")
+        try await database.from("like_requests")
             .delete()
             .eq("id", value: id)
             .execute()
@@ -527,7 +528,7 @@ final class SupabaseService {
     func listenToLikeRequests(toUid: String, requestType: String, completion: @escaping ([LikeRequest]) -> Void) -> () -> Void {
         let task = Task {
             while !Task.isCancelled {
-                let rows: [LikeRequestRow] = (try? await client.from("like_requests")
+                let rows: [LikeRequestRow] = (try? await database.from("like_requests")
                     .select()
                     .eq("to_uid", value: toUid)
                     .eq("request_type", value: requestType)
@@ -543,7 +544,7 @@ final class SupabaseService {
     // MARK: - Chats
 
     func acceptLikeRequest(id: String) async throws -> String {
-        let chatId: String = try await client.rpc(
+        let chatId: String = try await database.rpc(
             "accept_like_request",
             params: AcceptLikeParams(requestId: id)
         )
@@ -557,7 +558,7 @@ final class SupabaseService {
         let changes = channel.postgresChange(AnyAction.self, schema: "public", table: "chats")
         let task = Task {
             let refresh = {
-                let rows: [ChatRow] = (try? await self.client.from("chats")
+                let rows: [ChatRow] = (try? await self.database.from("chats")
                     .select()
                     .contains("participants", value: [uid])
                     .execute()
@@ -589,7 +590,7 @@ final class SupabaseService {
     }
 
     func markChatAsRead(chatId: String) async throws {
-        try await client.rpc(
+        try await database.rpc(
             "mark_chat_read",
             params: MarkChatReadParams(targetChatId: chatId)
         )
@@ -599,7 +600,7 @@ final class SupabaseService {
     // MARK: - Messages
 
     func sendMessage(_ message: Message, chatId: String) async throws {
-        try await client.rpc(
+        try await database.rpc(
             "send_chat_message",
             params: SendMessageParams(
                 messageId: message.id,
@@ -621,7 +622,7 @@ final class SupabaseService {
         )
         let task = Task {
             let refresh = {
-                let rows: [MessageRow] = (try? await self.client.from("messages")
+                let rows: [MessageRow] = (try? await self.database.from("messages")
                     .select()
                     .eq("chat_id", value: chatId)
                     .order("created_at", ascending: true)
@@ -653,13 +654,13 @@ final class SupabaseService {
     // MARK: - Community Stories
 
     func getStories(userId: String) async throws -> [CommunityStory] {
-        async let storyRows: [StoryRow] = client.from("stories")
+        async let storyRows: [StoryRow] = database.from("stories")
             .select()
             .order("priority", ascending: false)
             .order("published_at", ascending: false)
             .execute()
             .value
-        async let viewRows: [StoryViewRow] = client.from("story_views")
+        async let viewRows: [StoryViewRow] = database.from("story_views")
             .select("story_id")
             .eq("user_id", value: userId)
             .execute()
@@ -672,7 +673,7 @@ final class SupabaseService {
 
     func markStoryViewed(storyId: String, userId: String) async throws {
         let row = StoryViewInsert(storyId: storyId, userId: userId, viewedAt: Date())
-        try await client.from("story_views")
+        try await database.from("story_views")
             .upsert(row, onConflict: "story_id,user_id")
             .execute()
     }
@@ -686,13 +687,13 @@ final class SupabaseService {
             reason: reason,
             details: details
         )
-        try await client.from("reports")
+        try await database.from("reports")
             .insert(report)
             .execute()
     }
 
     func blockUser(blockerId: String, blockedId: String) async throws {
-        try await client.from("blocks")
+        try await database.from("blocks")
             .upsert(BlockInsert(blockerId: blockerId, blockedId: blockedId))
             .execute()
     }
@@ -700,7 +701,7 @@ final class SupabaseService {
     // MARK: - Reviews
 
     func submitReview(_ review: Review) async throws {
-        try await client.from("reviews")
+        try await database.from("reviews")
             .insert(review)
             .execute()
     }
@@ -720,7 +721,7 @@ final class SupabaseService {
 
     func hasReviewed(fromUid: String, toUid: String, chatId: String) async throws -> Bool {
         let id = "\(fromUid)_\(toUid)_\(chatId)"
-        let rows: [Review] = (try? await client.from("reviews")
+        let rows: [Review] = (try? await database.from("reviews")
             .select()
             .eq("id", value: id)
             .limit(1)
@@ -730,7 +731,7 @@ final class SupabaseService {
     }
 
     func getReviews(forUid: String) async throws -> [Review] {
-        let reviews: [Review] = try await client.from("reviews")
+        let reviews: [Review] = try await database.from("reviews")
             .select()
             .eq("to_uid", value: forUid)
             .order("created_at", ascending: false)
