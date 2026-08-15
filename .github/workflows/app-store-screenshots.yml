@@ -55,6 +55,11 @@ jobs:
             -destination "platform=iOS Simulator,id=$device_id" \
             -resultBundlePath "Results-$SHOT_FAMILY.xcresult" \
             -only-testing:UniShareUITests/AppStoreScreenshotTests/testCaptureAppStoreScreenshots \
+            "UNISHARE_SCREENSHOT_URL=$UNISHARE_SCREENSHOT_URL" \
+            "UNISHARE_SCREENSHOT_KEY=$UNISHARE_SCREENSHOT_KEY" \
+            "UNISHARE_SCREENSHOT_EMAIL=$UNISHARE_SCREENSHOT_EMAIL" \
+            "UNISHARE_SCREENSHOT_PASSWORD=$UNISHARE_SCREENSHOT_PASSWORD" \
+            "UNISHARE_SCREENSHOT_DEVICE=$UNISHARE_SCREENSHOT_DEVICE" \
             CODE_SIGNING_ALLOWED=NO
           mkdir -p "screenshots/$SHOT_FAMILY"
           xcrun xcresulttool export attachments \
