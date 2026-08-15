@@ -141,6 +141,8 @@
 // MARK: - Common
 "common.error" = "Помилка";
 "common.ok" = "Зрозуміло";
+"common.network_error" = "Не вдалося завантажити профіль. Перевірте з'єднання та повторіть спробу.";
+"common.retry" = "Повторити";
 "feed.airshare.nearby" = "AirShare поруч";
 "chats.request.exchange" = "хоче зіграти разом";
 "chat.review.title" = "Оцінити тіммейта";

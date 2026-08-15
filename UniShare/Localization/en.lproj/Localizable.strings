@@ -141,6 +141,8 @@
 // MARK: - Common
 "common.error" = "Error";
 "common.ok" = "OK";
+"common.network_error" = "We couldn't load your profile. Check your connection and try again.";
+"common.retry" = "Try Again";
 "feed.airshare.nearby" = "AirShare nearby";
 "chats.request.exchange" = "wants to play together";
 "chat.review.title" = "Rate your teammate";

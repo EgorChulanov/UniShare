@@ -6,6 +6,7 @@ final class SupabaseManager {
 
     let client: SupabaseClient
     let isConfigured: Bool
+    lazy var database = client.schema("public")
 
     // Fallback JWT used only when Secrets.xcconfig values aren't resolved.
     // It is syntactically valid (3-part JWT) so the SDK won't crash,

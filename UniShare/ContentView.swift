@@ -9,6 +9,7 @@ struct ContentView: View {
     @State private var greetingDone = false
     @State private var onboardingComplete = false
     @State private var isCheckingOnboarding = true
+    @State private var onboardingError: String?
 
     var body: some View {
         ZStack {
@@ -19,6 +20,8 @@ struct ContentView: View {
                     // Brief loading while we check onboarding status
                     ProgressView()
                         .tint(theme.effectivePrimary)
+                } else if onboardingError != nil {
+                    onboardingLoadFailure
                 } else if !onboardingComplete {
                     OnboardingView(onComplete: {
                         onboardingComplete = true
@@ -61,26 +64,71 @@ struct ContentView: View {
             return
         }
         isCheckingOnboarding = true
-        let profile = try? await env.db.getUser(uid: uid)
-        await MainActor.run {
-            onboardingComplete = profile?.onboardingComplete ?? false
-            if onboardingComplete {
-                Task { await PushNotificationService.shared.activateForAuthenticatedUser() }
+        onboardingError = nil
+
+        do {
+            let profile = try await loadProfile(uid: uid)
+            await applyOnboardingResult(profile)
+        } catch {
+            await MainActor.run {
+                onboardingError = error.localizedDescription
+                isCheckingOnboarding = false
             }
-            if AppConstants.isUITesting {
-                greetingDone = true
-                showGreeting = false
-            } else if onboardingComplete && !greetingDone {
-                showGreeting = true
-            }
-            isCheckingOnboarding = false
         }
+    }
+
+    private func loadProfile(uid: String) async throws -> UserProfile? {
+        var lastError: Error?
+        for delay in [UInt64(0), 400_000_000, 1_000_000_000] {
+            if delay > 0 { try await Task.sleep(nanoseconds: delay) }
+            do {
+                return try await env.db.getUser(uid: uid)
+            } catch {
+                lastError = error
+            }
+        }
+        throw lastError ?? URLError(.unknown)
+    }
+
+    @MainActor
+    private func applyOnboardingResult(_ profile: UserProfile?) {
+        onboardingComplete = profile?.onboardingComplete ?? false
+        if onboardingComplete {
+            Task { await PushNotificationService.shared.activateForAuthenticatedUser() }
+        }
+        if AppConstants.isUITesting {
+            greetingDone = true
+            showGreeting = false
+        } else if onboardingComplete && !greetingDone {
+            showGreeting = true
+        }
+        isCheckingOnboarding = false
+    }
+
+    private var onboardingLoadFailure: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "wifi.exclamationmark")
+                .font(.system(size: 30, weight: .semibold))
+                .foregroundStyle(theme.effectivePrimary)
+            Text("common.network_error".localized)
+                .font(.headline)
+                .foregroundStyle(theme.effectiveTextColor)
+                .multilineTextAlignment(.center)
+            Button("common.retry".localized) {
+                Task { await checkOnboardingStatus() }
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(theme.effectivePrimary)
+        }
+        .padding(24)
+        .accessibilityIdentifier("onboarding.load.error")
     }
 
     private func resetState() {
         showGreeting = false
         greetingDone = false
         onboardingComplete = false
+        onboardingError = nil
         isCheckingOnboarding = true
     }
 }

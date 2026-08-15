@@ -53,9 +53,12 @@ final class FeedViewModel: ObservableObject {
         async let loadedStories = (try? await db.getStories(userId: myUid)) ?? []
         let (ep, sp, storyItems) = await (exchangeProfiles, skillProfiles, loadedStories)
 
-        exchangeCards = await buildCards(from: ep)
-        skillCards = await buildCards(from: sp)
+        exchangeCards = ep.map { buildCard(from: $0, coverUrlMap: [:]) }
+        skillCards = sp.map { buildCard(from: $0, coverUrlMap: [:]) }
         stories = storyItems
+
+        Task { await enrichCards(from: ep, requestType: "exchange") }
+        Task { await enrichCards(from: sp, requestType: "skills") }
     }
 
     func markStoryViewed(_ story: CommunityStory) async {
@@ -66,10 +69,10 @@ final class FeedViewModel: ObservableObject {
         try? await db.markStoryViewed(storyId: story.id, userId: uid)
     }
 
-    private func buildCards(from profiles: [UserProfile]) async -> [ProfileCard] {
+    private func buildCardsWithCovers(from profiles: [UserProfile]) async -> [ProfileCard] {
         await withTaskGroup(of: ProfileCard?.self) { group in
             for profile in profiles {
-                group.addTask { await self.buildCard(from: profile) }
+                group.addTask { await self.buildCardWithCovers(from: profile) }
             }
             var result: [ProfileCard] = []
             for await card in group {
@@ -79,7 +82,7 @@ final class FeedViewModel: ObservableObject {
         }
     }
 
-    private func buildCard(from profile: UserProfile) async -> ProfileCard {
+    private func buildCardWithCovers(from profile: UserProfile) async -> ProfileCard {
         let allNames = Array(Set(profile.platformGames.values.flatMap { $0 } + profile.games)).prefix(12)
 
         let coverUrlMap: [String: String] = await withTaskGroup(of: (String, String?).self) { group in
@@ -98,6 +101,10 @@ final class FeedViewModel: ObservableObject {
             return result
         }
 
+        return buildCard(from: profile, coverUrlMap: coverUrlMap)
+    }
+
+    private func buildCard(from profile: UserProfile, coverUrlMap: [String: String]) -> ProfileCard {
         let platformGameTags = profile.platformGames.mapValues { names in
             names.map { name in GameTag(name: name, coverUrl: coverUrlMap[name]) }
         }
@@ -122,6 +129,21 @@ final class FeedViewModel: ObservableObject {
             status: profile.status,
             rating: profile.rating
         )
+    }
+
+    private func enrichCards(from profiles: [UserProfile], requestType: String) async {
+        let enriched = await buildCardsWithCovers(from: profiles)
+        guard !Task.isCancelled else { return }
+
+        for card in enriched {
+            if requestType == "exchange",
+               let index = exchangeCards.firstIndex(where: { $0.userId == card.userId }) {
+                exchangeCards[index] = card
+            } else if requestType == "skills",
+                      let index = skillCards.firstIndex(where: { $0.userId == card.userId }) {
+                skillCards[index] = card
+            }
+        }
     }
 
     func swipeRight(card: ProfileCard, requestType: String) async {
@@ -196,10 +218,11 @@ final class FeedViewModel: ObservableObject {
         guard auth.uid != nil else { return }
         let profiles = (try? await db.getFeedProfiles(kind: requestType, limit: 1)) ?? []
         for profile in profiles {
-            let card = await buildCard(from: profile)
+            let card = buildCard(from: profile, coverUrlMap: [:])
             if requestType == "exchange" { exchangeCards.append(card) }
             else { skillCards.append(card) }
         }
+        Task { await enrichCards(from: profiles, requestType: requestType) }
     }
 
     func searchGames(_ query: String) {

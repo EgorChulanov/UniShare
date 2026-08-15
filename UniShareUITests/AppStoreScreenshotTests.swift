@@ -30,14 +30,11 @@ final class AppStoreScreenshotTests: XCTestCase {
         app.buttons["auth.submit"].tap()
 
         XCTAssertTrue(app.buttons["feed.like"].waitForExistence(timeout: 20))
+        let loadedCard = app.descendants(matching: .any).matching(
+            NSPredicate(format: "identifier BEGINSWITH 'feed.card.' AND identifier != 'feed.card.info'")
+        ).firstMatch
+        XCTAssertTrue(loadedCard.waitForExistence(timeout: 20))
         capture("01-home", device: device)
-
-        let cardInfo = app.buttons["feed.card.info"]
-        if cardInfo.waitForExistence(timeout: 5) {
-            cardInfo.tap()
-            capture("02-player-profile", device: device)
-            app.swipeDown()
-        }
 
         app.buttons["tab.chats"].tap()
         let chatRow = app.buttons.matching(
