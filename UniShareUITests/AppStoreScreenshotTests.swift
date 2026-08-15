@@ -30,11 +30,13 @@ final class AppStoreScreenshotTests: XCTestCase {
         app.buttons["auth.submit"].tap()
 
         XCTAssertTrue(app.buttons["feed.like"].waitForExistence(timeout: 20))
+        let cardInfo = app.buttons["feed.card.info"]
+        XCTAssertTrue(cardInfo.waitForExistence(timeout: 20))
         capture("01-home", device: device)
 
-        let cardInfo = app.buttons["feed.card.info"]
-        if cardInfo.waitForExistence(timeout: 5) {
+        if cardInfo.exists {
             cardInfo.tap()
+            XCTAssertTrue(app.navigationBars.firstMatch.waitForExistence(timeout: 8))
             capture("02-player-profile", device: device)
             app.swipeDown()
         }
