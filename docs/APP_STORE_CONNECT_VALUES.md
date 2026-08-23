@@ -18,7 +18,7 @@
 - In-app purchases: None
 - Non-exempt encryption: No. The app uses Apple system cryptography and TLS only.
 
-The app must be described only as teammate discovery, mutual matching, private chat and nearby profile discovery. It does not sell, transfer, lend or exchange gaming accounts, credentials, licenses or payment access.
+The app is a teammate-discovery, mutual-matching, private-chat and nearby-profile service. Describe all implemented functions and their access paths. It does not sell, transfer, lend or exchange gaming accounts, credentials, licenses or payment access.
 
 ## App Privacy answers
 
@@ -59,6 +59,7 @@ Review flow:
 4. Open a profile or chat menu to report or block a user.
 5. Open Profile -> Settings -> Delete Account to permanently remove the Auth identity, profile, chats, messages, push token and uploaded files.
 6. AirShare is optional and requires two nearby devices with Bluetooth and Local Network access. The core app can be reviewed without AirShare.
+7. Profile -> Settings -> How UniShare Works lists every feature and its visible navigation path. There are no hidden gestures, review-specific accounts, regions, dates or remote feature flags.
 
 The production Supabase backend must remain available during review. App Review credentials must belong to a dedicated non-admin account with a completed fictional profile; production owner or database credentials must never be entered in Review Notes.
 

@@ -19,7 +19,7 @@ struct FeedView: View {
     }
 
     private var currentCards: [ProfileCard] {
-        vm.selectedSegment == .exchange ? vm.exchangeCards : vm.skillCards
+        vm.selectedSegment == .teammates ? vm.teammateCards : vm.skillCards
     }
 
     var body: some View {
@@ -69,11 +69,11 @@ struct FeedView: View {
                         ProgressView()
                             .tint(theme.effectivePrimary)
                             .scaleEffect(1.4)
-                    } else if vm.selectedSegment == .exchange {
+                    } else if vm.selectedSegment == .teammates {
                         FeedCardsOverlay(
-                            cards: vm.exchangeCards,
-                            onSwipeRight: { card in Task { await vm.swipeRight(card: card, requestType: "exchange") } },
-                            onSwipeLeft:  { card in vm.swipeLeft(card: card, requestType: "exchange") }
+                            cards: vm.teammateCards,
+                            onSwipeRight: { card in Task { await vm.swipeRight(card: card, requestType: "teammates") } },
+                            onSwipeLeft:  { card in vm.swipeLeft(card: card, requestType: "teammates") }
                         )
                     } else {
                         SkillCardsOverlay(

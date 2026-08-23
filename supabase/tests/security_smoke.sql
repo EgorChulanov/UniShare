@@ -32,17 +32,17 @@ $$;
 do $$
 begin
     if not exists (
-        select 1 from public.get_feed_profiles('exchange', 10)
+        select 1 from public.get_feed_profiles('teammates', 10)
         where uid = '00000000-0000-4000-8000-000000000002'
     ) then raise exception 'eligible profile is missing from feed'; end if;
 end;
 $$;
 
-select public.record_swipe('00000000-0000-4000-8000-000000000002', 'exchange', 'dislike');
+select public.record_swipe('00000000-0000-4000-8000-000000000002', 'teammates', 'dislike');
 do $$
 begin
     if exists (
-        select 1 from public.get_feed_profiles('exchange', 10)
+        select 1 from public.get_feed_profiles('teammates', 10)
         where uid = '00000000-0000-4000-8000-000000000002'
     ) then raise exception 'disliked profile remained in feed'; end if;
 end;
@@ -50,7 +50,7 @@ $$;
 
 do $$
 begin
-    if not public.undo_dislike('00000000-0000-4000-8000-000000000002', 'exchange') then
+    if not public.undo_dislike('00000000-0000-4000-8000-000000000002', 'teammates') then
         raise exception 'recent dislike could not be undone';
     end if;
 end;
@@ -67,7 +67,7 @@ $$;
 
 do $$
 begin
-    perform public.create_or_get_chat('00000000-0000-4000-8000-000000000002', 'exchange');
+    perform public.create_or_get_chat('00000000-0000-4000-8000-000000000002', 'teammates');
     raise exception 'create_or_get_chat must not be callable by authenticated users';
 exception
     when insufficient_privilege then null;
@@ -76,7 +76,7 @@ $$;
 
 select * from public.send_like(
     '00000000-0000-4000-8000-000000000002',
-    'exchange',
+    'teammates',
     'attacker-controlled-id'
 );
 
@@ -84,7 +84,7 @@ do $$
 begin
     if not exists (
         select 1 from public.like_requests
-        where id = '00000000-0000-4000-8000-000000000001_00000000-0000-4000-8000-000000000002_exchange'
+        where id = '00000000-0000-4000-8000-000000000001_00000000-0000-4000-8000-000000000002_teammates'
     ) then
         raise exception 'send_like accepted a caller-controlled identifier';
     end if;
@@ -95,7 +95,7 @@ select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000003
 do $$
 begin
     perform public.accept_like_request(
-        '00000000-0000-4000-8000-000000000001_00000000-0000-4000-8000-000000000002_exchange'
+        '00000000-0000-4000-8000-000000000001_00000000-0000-4000-8000-000000000002_teammates'
     );
     raise exception 'a third party accepted another user request';
 exception
@@ -106,7 +106,7 @@ $$;
 
 select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000002', false);
 select public.accept_like_request(
-    '00000000-0000-4000-8000-000000000001_00000000-0000-4000-8000-000000000002_exchange'
+    '00000000-0000-4000-8000-000000000001_00000000-0000-4000-8000-000000000002_teammates'
 );
 
 do $$

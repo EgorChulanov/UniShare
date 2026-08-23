@@ -60,6 +60,7 @@ test-backend:
 test-static:
 	@ruby scripts/check_localizations.rb
 	@ruby scripts/check_release_metadata.rb
+	@ruby scripts/check_release_transparency.rb
 	@./scripts/check_legal_pages.sh
 	@plutil -lint UniShare/Info.plist UniShare/PrivacyInfo.xcprivacy UniShare/UniShare.entitlements
 

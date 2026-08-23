@@ -26,7 +26,6 @@ struct TabBarView: View {
         .onReceive(NotificationCenter.default.publisher(for: .uniShareProfileDidUpdate)) { _ in
             Task { await refreshAvatar() }
         }
-        .onAppear { ShakeDetectionService.shared.start() }
         .sheet(isPresented: $tabState.showAirShare) { AirShareView() }
     }
 

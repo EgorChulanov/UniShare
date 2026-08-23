@@ -241,8 +241,8 @@ struct AirShareView: View {
             errorMessage = "airshare.verify.failed".localized
             return
         }
-        let requestId = "\(myUid)_\(profile.uid)_exchange"
-        let request = LikeRequest(id: requestId, from: myUid, to: profile.uid, requestType: "exchange", createdAt: Date())
+        let requestId = "\(myUid)_\(profile.uid)_teammates"
+        let request = LikeRequest(id: requestId, from: myUid, to: profile.uid, requestType: "teammates", createdAt: Date())
         do {
             let chatId = try await env.db.sendLikeRequest(request)
             if chatId != nil {

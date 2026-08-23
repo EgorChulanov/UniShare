@@ -39,11 +39,11 @@ Required protected GitHub environment variables:
 - UI XCTest is not yet a valid runtime pass: on 11 August both the normal runner and an isolated `test-without-building` run reached the booted iOS 27 beta simulator but produced no `XCTRunner` process or test event. The deterministic suite covers registration, onboarding, game selection, profile deletion, a seeded second user, mutual match, chat creation and message delivery; repeat it on a stable Xcode/runtime or a connected physical device before external TestFlight.
 - App Store server-side acceptance, runtime UI XCTest and release screenshots remain pending until the stable Xcode toolchain is installed.
 
-## Existing review suspension
+## Guideline 5.6 review history
 
-The existing App Store Connect record `6753741153`, version `1.0.1 (2)`, is marked `Guideline 5.6 - Developer Code of Conduct - Review Suspended`. Apple explicitly states that replies and resubmissions for that record will not be reviewed. Do not upload another build to that record.
+The earlier App Store Connect record `6753741153`, version `1.0.1 (2)`, is marked `Guideline 5.6 - Developer Code of Conduct - Review Suspended`. Apple states that replies and resubmissions for that record will not be reviewed.
 
-The replacement record is App Store Connect app `6800433788`. All uploads must use `com.egorchulanov.unishare`; never reuse the suspended record or its old bundle identifier.
+App Store Connect app `6800433788` was rejected on 19 August 2026 under the same guideline because Apple identified features that appeared intentionally hidden. Do not create another App Store Connect record or change identity to work around either decision. Continue only through transparent correspondence or an appeal on the current submission, with the remediation documented in `docs/APP_REVIEW_5_6_REMEDIATION.md`.
 
 ## Review configuration
 
@@ -52,7 +52,7 @@ The replacement record is App Store Connect app `6800433788`. All uploads must u
 - Privacy policy: `https://kwonpzkzthprilrhncik.supabase.co/functions/v1/legal/privacy`
 - Support URL: `https://kwonpzkzthprilrhncik.supabase.co/functions/v1/legal/support`
 - Encryption declaration: only Apple platform cryptography and HTTPS are used; `ITSAppUsesNonExemptEncryption` is `false`.
-- Review notes must explain AirShare Bluetooth use, teammate discovery, the mutual-like flow, reporting/blocking, content filtering and account deletion. State clearly that UniShare does not support sales, transfers or credential sharing for gaming accounts.
+- Review notes must explain every feature and access path, including AirShare Bluetooth use, teammate discovery, Skills, stories, mutual matching, chats, image messages, ratings, reporting/blocking, content filtering and account deletion. State clearly that UniShare has no hidden gestures, review-specific behavior, sales, transfers or credential sharing.
 - Enable Push Notifications for the App ID before the first signed archive; APNs tokens are registered only for authenticated profiles and removed on logout/deletion.
 - Provide a dedicated least-privilege review account with a completed profile and a second seeded profile. Never place a production administrator credential in Review Notes.
 

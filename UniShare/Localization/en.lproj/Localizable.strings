@@ -57,7 +57,7 @@
 "tab.profile" = "Profile";
 
 // MARK: - Feed
-"feed.segment.exchange" = "Teammates";
+"feed.segment.teammates" = "Teammates";
 "feed.segment.skills" = "Skills";
 "feed.search.placeholder" = "Search by game...";
 "feed.empty" = "No more profiles";
@@ -83,11 +83,11 @@
 "airshare.title" = "AirShare";
 "airshare.searching" = "Searching...";
 "airshare.hold" = "Hold phones together";
-"airshare.shake" = "Shake to connect!";
+"airshare.shake" = "Open AirShare on both devices";
 "airshare.found" = "Found nearby user";
 "airshare.success" = "Profile shared!";
 "airshare.match" = "It's a match!";
-"airshare.description" = "Hold your phones together and shake to share profiles with nearby players";
+"airshare.description" = "Open AirShare on both nearby devices to discover each other's UniShare profile";
 
 // MARK: - Profile
 "profile.edit" = "Edit Profile";
@@ -144,7 +144,7 @@
 "common.network_error" = "We couldn't load your profile. Check your connection and try again.";
 "common.retry" = "Try Again";
 "feed.airshare.nearby" = "AirShare nearby";
-"chats.request.exchange" = "wants to play together";
+"chats.request.teammates" = "wants to play together";
 "chat.review.title" = "Rate your teammate";
 "chat.review.subtitle" = "Share how your session went";
 "chat.safety.notice" = "Keep platform passwords, security codes, payment details and account access out of chat.";
@@ -225,3 +225,17 @@
 "auth.or" = "or";
 "auth.apple.consent" = "By continuing with Apple, you accept the Terms and Privacy Policy.";
 "auth.apple.error" = "Apple did not return a valid sign-in credential.";
+"transparency.title" = "How UniShare Works";
+"transparency.features" = "Available features";
+"transparency.feed.title" = "Player discovery";
+"transparency.feed.detail" = "Open Home, choose Teammates or Skills, then swipe player profile cards.";
+"transparency.chat.title" = "Matches and chat";
+"transparency.chat.detail" = "A private chat appears after mutual interest. Chats support text, images, blocking and reports.";
+"transparency.airshare.title" = "Nearby profiles";
+"transparency.airshare.detail" = "Tap AirShare nearby on Home and open AirShare on a second nearby device. Bluetooth shares only a temporary profile identifier.";
+"transparency.profile.title" = "Public gaming profile";
+"transparency.profile.detail" = "Profile contains the games, platforms, skills and gaming memberships you choose to show.";
+"transparency.safety" = "Safety boundaries";
+"transparency.not.marketplace" = "UniShare is not a marketplace and does not arrange account or subscription transfers.";
+"transparency.no.credentials" = "Passwords, access codes, payment details and account-sale messages are blocked.";
+"transparency.report" = "Every chat includes block and report controls; account deletion is available in Settings.";

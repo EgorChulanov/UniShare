@@ -52,3 +52,12 @@ while kill -0 "$START_PID" 2>/dev/null; do
 done
 
 wait "$START_PID"
+trap - HUP INT TERM
+
+if services_ready; then
+    echo "Supabase local development setup is healthy."
+    exit 0
+fi
+
+echo "Supabase start exited before all required services became healthy." >&2
+exit 1

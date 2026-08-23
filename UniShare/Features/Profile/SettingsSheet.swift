@@ -49,6 +49,14 @@ struct SettingsSheet: View {
                         }
                     }
                     Section("settings.about".localized) {
+                        NavigationLink {
+                            ProductTransparencyView()
+                                .environmentObject(theme)
+                        } label: {
+                            Label("transparency.title".localized, systemImage: "info.circle.fill")
+                        }
+                        .accessibilityIdentifier("settings.howUniShareWorks")
+                        .listRowBackground(theme.effectiveCardColor)
                         Link(destination: AppConstants.Legal.privacyPolicy) {
                             Label("settings.privacy".localized, systemImage: "hand.raised.fill")
                         }

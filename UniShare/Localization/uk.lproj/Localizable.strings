@@ -57,7 +57,7 @@
 "tab.profile" = "Профіль";
 
 // MARK: - Feed
-"feed.segment.exchange" = "Тіммейти";
+"feed.segment.teammates" = "Тіммейти";
 "feed.segment.skills" = "Навички";
 "feed.search.placeholder" = "Пошук по грі...";
 "feed.empty" = "Анкети закінчились";
@@ -83,11 +83,11 @@
 "airshare.title" = "AirShare";
 "airshare.searching" = "Пошук...";
 "airshare.hold" = "Тримайте телефони поряд";
-"airshare.shake" = "Потрусіть для підключення!";
+"airshare.shake" = "Відкрийте AirShare на обох пристроях";
 "airshare.found" = "Знайдено користувача поряд";
 "airshare.success" = "Профіль надіслано!";
 "airshare.match" = "Це збіг!";
-"airshare.description" = "Тримайте телефони поряд і потрусіть, щоб поділитися профілями з гравцями поблизу";
+"airshare.description" = "Відкрийте AirShare на двох пристроях поруч, щоб знайти профілі одне одного";
 
 // MARK: - Profile
 "profile.edit" = "Редагувати";
@@ -144,7 +144,7 @@
 "common.network_error" = "Не вдалося завантажити профіль. Перевірте з'єднання та повторіть спробу.";
 "common.retry" = "Повторити";
 "feed.airshare.nearby" = "AirShare поруч";
-"chats.request.exchange" = "хоче зіграти разом";
+"chats.request.teammates" = "хоче зіграти разом";
 "chat.review.title" = "Оцінити тіммейта";
 "chat.review.subtitle" = "Розкажіть, як пройшла спільна гра";
 "chat.safety.notice" = "Не надсилайте в чат паролі платформ, коди безпеки, платіжні дані та доступ до акаунтів.";
@@ -225,3 +225,17 @@
 "auth.or" = "або";
 "auth.apple.consent" = "Продовжуючи з Apple, ви приймаєте Умови та Політику конфіденційності.";
 "auth.apple.error" = "Apple не повернув коректні дані для входу.";
+"transparency.title" = "Як працює UniShare";
+"transparency.features" = "Доступні функції";
+"transparency.feed.title" = "Пошук гравців";
+"transparency.feed.detail" = "Відкрийте Головну, виберіть Тіммейти або Навички та гортайте картки гравців.";
+"transparency.chat.title" = "Збіги й чат";
+"transparency.chat.detail" = "Приватний чат з'являється після взаємної зацікавленості. Доступні текст, фото, блокування та скарги.";
+"transparency.airshare.title" = "Профілі поруч";
+"transparency.airshare.detail" = "Натисніть AirShare поруч на Головній і відкрийте AirShare на другому пристрої. Bluetooth передає лише тимчасовий ідентифікатор профілю.";
+"transparency.profile.title" = "Публічний ігровий профіль";
+"transparency.profile.detail" = "Профіль показує вибрані вами ігри, платформи, навички та ігрові підписки.";
+"transparency.safety" = "Межі безпеки";
+"transparency.not.marketplace" = "UniShare не є маркетплейсом і не організовує передачу акаунтів або підписок.";
+"transparency.no.credentials" = "Паролі, коди доступу, платіжні дані та повідомлення про продаж акаунтів блокуються.";
+"transparency.report" = "У кожному чаті є блокування та скарга; видалити акаунт можна в Налаштуваннях.";

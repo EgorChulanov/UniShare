@@ -169,18 +169,18 @@ own_tokens=$(request GET "$TOKEN_A" '/rest/v1/device_tokens?select=token' '')
 assert "$own_tokens" 'length == 0'
 echo "E2E stage: push token isolation verified"
 
-feed=$(request POST "$TOKEN_A" '/rest/v1/rpc/get_feed_profiles' '{"kind":"exchange","batch_limit":10}')
+feed=$(request POST "$TOKEN_A" '/rest/v1/rpc/get_feed_profiles' '{"kind":"teammates","batch_limit":10}')
 assert "$feed" "map(.uid) | contains([\"$UID_B\",\"$UID_C\"])"
 
-request POST "$TOKEN_A" '/rest/v1/rpc/record_swipe' "$(jq -n --arg uid "$UID_C" '{target_uid:$uid,kind:"exchange",swipe_decision:"dislike"}')" >/dev/null
-feed=$(request POST "$TOKEN_A" '/rest/v1/rpc/get_feed_profiles' '{"kind":"exchange","batch_limit":10}')
+request POST "$TOKEN_A" '/rest/v1/rpc/record_swipe' "$(jq -n --arg uid "$UID_C" '{target_uid:$uid,kind:"teammates",swipe_decision:"dislike"}')" >/dev/null
+feed=$(request POST "$TOKEN_A" '/rest/v1/rpc/get_feed_profiles' '{"kind":"teammates","batch_limit":10}')
 assert "$feed" "map(.uid) | index(\"$UID_C\") == null"
-undone=$(request POST "$TOKEN_A" '/rest/v1/rpc/undo_dislike' "$(jq -n --arg uid "$UID_C" '{target_uid:$uid,kind:"exchange"}')")
+undone=$(request POST "$TOKEN_A" '/rest/v1/rpc/undo_dislike' "$(jq -n --arg uid "$UID_C" '{target_uid:$uid,kind:"teammates"}')")
 assert "$undone" '. == true'
 
-like_a=$(request POST "$TOKEN_A" '/rest/v1/rpc/send_like' "$(jq -n --arg uid "$UID_B" '{target_uid:$uid,kind:"exchange",request_id:"ignored-a"}')")
+like_a=$(request POST "$TOKEN_A" '/rest/v1/rpc/send_like' "$(jq -n --arg uid "$UID_B" '{target_uid:$uid,kind:"teammates",request_id:"ignored-a"}')")
 assert "$like_a" '.[0].matched == false'
-like_b=$(request POST "$TOKEN_B" '/rest/v1/rpc/send_like' "$(jq -n --arg uid "$UID_A" '{target_uid:$uid,kind:"exchange",request_id:"ignored-b"}')")
+like_b=$(request POST "$TOKEN_B" '/rest/v1/rpc/send_like' "$(jq -n --arg uid "$UID_A" '{target_uid:$uid,kind:"teammates",request_id:"ignored-b"}')")
 assert "$like_b" '.[0].matched == true and .[0].chat_id != null'
 CHAT_ID=$(printf '%s' "$like_b" | jq -er '.[0].chat_id')
 echo "E2E stage: mutual match created"

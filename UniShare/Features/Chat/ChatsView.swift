@@ -158,7 +158,7 @@ struct ChatsView: View {
     }
 
     private func typeBadge(_ type: String) -> some View {
-        Text((type == "skills" ? "feed.segment.skills" : "feed.segment.exchange").localized)
+        Text((type == "skills" ? "feed.segment.skills" : "feed.segment.teammates").localized)
             .font(.system(size: 10, weight: .semibold))
             .foregroundStyle(theme.effectiveSecondaryTextColor)
             .padding(.horizontal, 7)

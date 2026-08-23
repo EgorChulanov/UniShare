@@ -260,7 +260,7 @@ private struct ChatRow: Codable {
             participants: participants,
             lastMessage: lastMessage ?? "",
             lastMessageAt: lastMessageAt ?? Date(),
-            chatType: chatType ?? "exchange",
+            chatType: chatType ?? "teammates",
             unreadCounts: unreadCounts ?? [:],
             partnerStatus: "offline",
             partnerUid: partnerUid

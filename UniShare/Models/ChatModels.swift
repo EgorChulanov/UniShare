@@ -20,7 +20,7 @@ struct Chat: Identifiable {
     var participants: [String]
     var lastMessage: String
     var lastMessageAt: Date
-    var chatType: String  // "exchange" or "skills"
+    var chatType: String  // "teammates" or "skills"
     var unreadCounts: [String: Int]
     var partnerStatus: String  // "online" or "offline"
     var partnerUid: String
@@ -36,6 +36,6 @@ struct LikeRequest: Identifiable {
     var id: String
     var from: String
     var to: String
-    var requestType: String  // "exchange" or "skills"
+    var requestType: String  // "teammates" or "skills"
     var createdAt: Date
 }
