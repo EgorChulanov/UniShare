@@ -32,14 +32,18 @@ final class SupabaseManager {
     }
 
     private init() {
-        let environment = ProcessInfo.processInfo.environment
-        let urlString = environment["UNISHARE_SUPABASE_URL"]
-            ?? Bundle.main.infoDictionary?["SUPABASE_URL"] as? String
-            ?? ""
-        let key = environment["UNISHARE_SUPABASE_KEY"]
-            ?? (Bundle.main.infoDictionary?["SUPABASE_PUBLISHABLE_KEY"] as? String)
+        let bundleURL = Bundle.main.infoDictionary?["SUPABASE_URL"] as? String ?? ""
+        let bundleKey = (Bundle.main.infoDictionary?["SUPABASE_PUBLISHABLE_KEY"] as? String)
             ?? (Bundle.main.infoDictionary?["SUPABASE_ANON_KEY"] as? String)
             ?? ""
+#if DEBUG
+        let environment = ProcessInfo.processInfo.environment
+        let urlString = environment["UNISHARE_SUPABASE_URL"] ?? bundleURL
+        let key = environment["UNISHARE_SUPABASE_KEY"] ?? bundleKey
+#else
+        let urlString = bundleURL
+        let key = bundleKey
+#endif
 
         let configuredURL = URL(string: urlString)
         let hasValidURL = Self.isAllowedURL(configuredURL)

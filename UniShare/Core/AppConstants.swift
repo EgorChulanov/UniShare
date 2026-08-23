@@ -2,7 +2,11 @@ import Foundation
 
 enum AppConstants {
     static var isUITesting: Bool {
+#if DEBUG
         ProcessInfo.processInfo.environment["UNISHARE_UI_TESTING"] == "1"
+#else
+        false
+#endif
     }
 
     // MARK: - Bundle IDs
@@ -49,9 +53,4 @@ enum AppConstants {
         static let undoDateKey = "feed_undo_date"
     }
 
-    // MARK: - AirShare
-    enum AirShare {
-        static let serviceType = "unishare-ex"
-        static let shakeThreshold: Double = 2.5
-    }
 }

@@ -209,7 +209,7 @@ private struct E2EAPI: Sendable {
             path: "/rest/v1/rpc/send_like",
             method: "POST",
             token: session.accessToken,
-            body: ["target_uid": userID, "kind": "exchange", "request_id": UUID().uuidString]
+            body: ["target_uid": userID, "kind": "teammates", "request_id": UUID().uuidString]
         )
     }
 

@@ -3,17 +3,17 @@ import Foundation
 @MainActor
 final class ChatsViewModel: ObservableObject {
     @Published var chats: [Chat] = []
-    @Published var exchangeRequests: [LikeRequest] = []
+    @Published var teammateRequests: [LikeRequest] = []
     @Published var skillRequests: [LikeRequest] = []
     @Published var errorMessage: String?
     @Published var partnerProfiles: [String: UserProfile] = [:]
 
     var requests: [LikeRequest] {
-        (exchangeRequests + skillRequests).sorted { $0.createdAt > $1.createdAt }
+        (teammateRequests + skillRequests).sorted { $0.createdAt > $1.createdAt }
     }
 
     private var cancelChats: (() -> Void)?
-    private var cancelExchangeRequests: (() -> Void)?
+    private var cancelTeammateRequests: (() -> Void)?
     private var cancelSkillRequests: (() -> Void)?
     private let auth: SupabaseAuthService
     private let db: SupabaseService
@@ -26,7 +26,7 @@ final class ChatsViewModel: ObservableObject {
 
     deinit {
         cancelChats?()
-        cancelExchangeRequests?()
+        cancelTeammateRequests?()
         cancelSkillRequests?()
     }
 
@@ -40,8 +40,8 @@ final class ChatsViewModel: ObservableObject {
                 await self?.loadPartnerProfiles(for: chats)
             }
         }
-        cancelExchangeRequests = db.listenToLikeRequests(toUid: uid, requestType: "exchange") { [weak self] requests in
-            Task { @MainActor [weak self] in self?.exchangeRequests = requests }
+        cancelTeammateRequests = db.listenToLikeRequests(toUid: uid, requestType: "teammates") { [weak self] requests in
+            Task { @MainActor [weak self] in self?.teammateRequests = requests }
         }
         cancelSkillRequests = db.listenToLikeRequests(toUid: uid, requestType: "skills") { [weak self] requests in
             Task { @MainActor [weak self] in self?.skillRequests = requests }

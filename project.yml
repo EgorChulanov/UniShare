@@ -50,7 +50,6 @@ targets:
             CFBundleURLName: "$(PRODUCT_BUNDLE_IDENTIFIER)"
         NSPhotoLibraryUsageDescription: "UniShare needs photo library access to share images in chats"
         NSBluetoothAlwaysUsageDescription: "UniShare uses Bluetooth to find nearby users with AirShare"
-        NSMotionUsageDescription: "UniShare detects shake gestures for AirShare"
         UIAppFonts:
           - Manrope-Regular.ttf
           - Manrope-Medium.ttf

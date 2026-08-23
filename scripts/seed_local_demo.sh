@@ -95,9 +95,9 @@ upsert_profile "$MARINA_ID" "$MARINA_TOKEN" "MarinaPixel" "Nintendo weekends" "N
 match_users() {
     first_token=$1 first_target=$2 second_token=$3 second_target=$4
     request POST "$first_token" '/rest/v1/rpc/send_like' \
-        "$(jq -n --arg uid "$first_target" '{target_uid:$uid,kind:"exchange",request_id:"demo"}')" >/dev/null
+        "$(jq -n --arg uid "$first_target" '{target_uid:$uid,kind:"teammates",request_id:"demo"}')" >/dev/null
     result=$(request POST "$second_token" '/rest/v1/rpc/send_like' \
-        "$(jq -n --arg uid "$second_target" '{target_uid:$uid,kind:"exchange",request_id:"demo"}')")
+        "$(jq -n --arg uid "$second_target" '{target_uid:$uid,kind:"teammates",request_id:"demo"}')")
     printf '%s' "$result" | jq -er '.[0].chat_id'
 }
 

@@ -4,11 +4,11 @@ import Combine
 
 @MainActor
 final class FeedViewModel: ObservableObject {
-    @Published var exchangeCards: [ProfileCard] = []
+    @Published var teammateCards: [ProfileCard] = []
     @Published var skillCards: [ProfileCard] = []
     @Published var isLoading = false
     @Published var errorMessage: String?
-    @Published var selectedSegment: FeedSegment = .exchange
+    @Published var selectedSegment: FeedSegment = .teammates
     @Published var stories: [CommunityStory] = []
 
     @Published var searchQuery = ""
@@ -42,8 +42,8 @@ final class FeedViewModel: ObservableObject {
         isLoading = true
         defer { isLoading = false }
 
-        async let exchangeProfiles = (try? await db.getFeedProfiles(
-            kind: "exchange", limit: AppConstants.Feed.initialBatchSize
+        async let teammateProfiles = (try? await db.getFeedProfiles(
+            kind: "teammates", limit: AppConstants.Feed.initialBatchSize
         )) ?? []
 
         async let skillProfiles = (try? await db.getFeedProfiles(
@@ -51,13 +51,13 @@ final class FeedViewModel: ObservableObject {
         )) ?? []
 
         async let loadedStories = (try? await db.getStories(userId: myUid)) ?? []
-        let (ep, sp, storyItems) = await (exchangeProfiles, skillProfiles, loadedStories)
+        let (ep, sp, storyItems) = await (teammateProfiles, skillProfiles, loadedStories)
 
-        exchangeCards = ep.map { buildCard(from: $0, coverUrlMap: [:]) }
+        teammateCards = ep.map { buildCard(from: $0, coverUrlMap: [:]) }
         skillCards = sp.map { buildCard(from: $0, coverUrlMap: [:]) }
         stories = storyItems
 
-        Task { await enrichCards(from: ep, requestType: "exchange") }
+        Task { await enrichCards(from: ep, requestType: "teammates") }
         Task { await enrichCards(from: sp, requestType: "skills") }
     }
 
@@ -136,9 +136,9 @@ final class FeedViewModel: ObservableObject {
         guard !Task.isCancelled else { return }
 
         for card in enriched {
-            if requestType == "exchange",
-               let index = exchangeCards.firstIndex(where: { $0.userId == card.userId }) {
-                exchangeCards[index] = card
+            if requestType == "teammates",
+               let index = teammateCards.firstIndex(where: { $0.userId == card.userId }) {
+                teammateCards[index] = card
             } else if requestType == "skills",
                       let index = skillCards.firstIndex(where: { $0.userId == card.userId }) {
                 skillCards[index] = card
@@ -163,7 +163,7 @@ final class FeedViewModel: ObservableObject {
                 HapticsManager.shared.playMatch()
             }
         } catch {
-            if requestType == "exchange" { exchangeCards.insert(card, at: 0) }
+            if requestType == "teammates" { teammateCards.insert(card, at: 0) }
             else { skillCards.insert(card, at: 0) }
             errorMessage = error.localizedDescription
             return
@@ -183,7 +183,7 @@ final class FeedViewModel: ObservableObject {
                 await loadOneMore(requestType: requestType)
             } catch {
                 undoStack.removeAll { $0.userId == card.userId }
-                if requestType == "exchange" { exchangeCards.insert(card, at: 0) }
+                if requestType == "teammates" { teammateCards.insert(card, at: 0) }
                 else { skillCards.insert(card, at: 0) }
                 errorMessage = error.localizedDescription
             }
@@ -195,7 +195,7 @@ final class FeedViewModel: ObservableObject {
         Task {
             do {
                 guard try await db.undoDislike(targetUid: card.userId, kind: requestType) else { return }
-                if requestType == "exchange" { exchangeCards.insert(card, at: 0) }
+                if requestType == "teammates" { teammateCards.insert(card, at: 0) }
                 else { skillCards.insert(card, at: 0) }
                 undoCount += 1
                 HapticsManager.shared.impact(.medium)
@@ -207,8 +207,8 @@ final class FeedViewModel: ObservableObject {
     }
 
     private func removeCard(_ card: ProfileCard, from requestType: String) {
-        if requestType == "exchange" {
-            exchangeCards.removeAll { $0.id == card.id }
+        if requestType == "teammates" {
+            teammateCards.removeAll { $0.id == card.id }
         } else {
             skillCards.removeAll { $0.id == card.id }
         }
@@ -219,7 +219,7 @@ final class FeedViewModel: ObservableObject {
         let profiles = (try? await db.getFeedProfiles(kind: requestType, limit: 1)) ?? []
         for profile in profiles {
             let card = buildCard(from: profile, coverUrlMap: [:])
-            if requestType == "exchange" { exchangeCards.append(card) }
+            if requestType == "teammates" { teammateCards.append(card) }
             else { skillCards.append(card) }
         }
         Task { await enrichCards(from: profiles, requestType: requestType) }
@@ -239,18 +239,18 @@ final class FeedViewModel: ObservableObject {
 }
 
 enum FeedSegment: String, CaseIterable, Hashable {
-    case exchange, skills
+    case teammates, skills
 
     var localizedKey: String {
         switch self {
-        case .exchange: return "feed.segment.exchange"
+        case .teammates: return "feed.segment.teammates"
         case .skills: return "feed.segment.skills"
         }
     }
 
     var requestType: String {
         switch self {
-        case .exchange: return "exchange"
+        case .teammates: return "teammates"
         case .skills: return "skills"
         }
     }
