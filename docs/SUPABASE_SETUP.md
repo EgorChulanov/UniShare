@@ -77,7 +77,11 @@ make backend-demo
 
 Команда `supabase status` покажет локальные Project URL и anon key. Их можно временно записать в `Config/Secrets.xcconfig`: Debug-сборка разрешает HTTP только для `127.0.0.1` и `localhost`.
 
-RAWG key не записывается в Xcode. После `supabase link` настройте hosted secret:
+RAWG key не записывается в Xcode. Откройте
+`datagrip/50_game_catalog_admin.sql`, запустите блок **CREATE OR ROTATE
+RAWG KEY** и введите значение в диалоге параметров DataGrip. Ключ сохранится в
+Supabase Vault. Команда ниже нужна только как резервный вариант для старой
+версии функции:
 
 ```bash
 supabase secrets set RAWG_API_KEY=YOUR_VALUE
@@ -85,7 +89,10 @@ supabase functions deploy game-search
 supabase functions deploy delete-account
 ```
 
-Ключ провайдера нельзя хранить в `app_config`: эта таблица читается клиентом через RLS. Обновляйте секрет через Dashboard `Edge Functions -> Secrets` или команду выше. Названия, изображения и поисковые синонимы игр можно менять онлайн без ключа в `public.game_catalog_overrides`; функция сначала использует эту таблицу и кэш, а затем RAWG.
+Ключ провайдера нельзя хранить в `app_config`: эта таблица читается клиентом
+через RLS. Названия, изображения и поисковые синонимы игр можно менять онлайн
+без ключа в `public.game_catalog_overrides`; функция сначала использует эту
+таблицу и кэш, а затем RAWG.
 
 Для push-уведомлений создайте APNs key в Apple Developer и добавьте значения только как hosted Edge Function secrets:
 

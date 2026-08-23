@@ -19,6 +19,7 @@ final class ChatViewModel: ObservableObject {
     private let db: SupabaseService
     private let storage: SupabaseStorageService
     private var signedImageURLs: [String: String] = [:]
+    private var pendingMessages: [String: Message] = [:]
 
     var myUid: String { auth.uid ?? "" }
     var partnerUid: String? { chat.participants.first { $0 != auth.uid } }
@@ -53,7 +54,11 @@ final class ChatViewModel: ObservableObject {
         cancelMessages = db.listenToMessages(chatId: chat.id) { [weak self] messages in
             Task { @MainActor [weak self] in
                 guard let self else { return }
-                self.messages = await self.resolveImageURLs(in: messages)
+                var resolved = await self.resolveImageURLs(in: messages)
+                let receivedIDs = Set(resolved.map(\.id))
+                for id in receivedIDs { self.pendingMessages.removeValue(forKey: id) }
+                resolved.append(contentsOf: self.pendingMessages.values.filter { !receivedIDs.contains($0.id) })
+                self.messages = resolved.sorted { $0.createdAt < $1.createdAt }
             }
         }
     }
@@ -96,10 +101,15 @@ final class ChatViewModel: ObservableObject {
             createdAt: Date(),
             readBy: [myUid]
         )
+        pendingMessages[msg.id] = msg
+        messages.append(msg)
+        messages.sort { $0.createdAt < $1.createdAt }
 
         do {
             try await db.sendMessage(msg, chatId: chat.id)
         } catch {
+            pendingMessages.removeValue(forKey: msg.id)
+            messages.removeAll { $0.id == msg.id }
             inputText = text
             errorMessage = friendlyMessage(for: error)
         }
@@ -108,6 +118,7 @@ final class ChatViewModel: ObservableObject {
     func sendImage(_ image: UIImage) async {
         isSending = true
         defer { isSending = false }
+        var pendingMessageID: String?
 
         do {
             let url = try await storage.uploadChatImage(image, chatId: chat.id)
@@ -118,8 +129,16 @@ final class ChatViewModel: ObservableObject {
                 createdAt: Date(),
                 readBy: [myUid]
             )
+            pendingMessageID = msg.id
+            pendingMessages[msg.id] = msg
+            messages.append(msg)
+            messages.sort { $0.createdAt < $1.createdAt }
             try await db.sendMessage(msg, chatId: chat.id)
         } catch {
+            if let pendingID = pendingMessageID {
+                pendingMessages.removeValue(forKey: pendingID)
+                messages.removeAll { $0.id == pendingID }
+            }
             errorMessage = friendlyMessage(for: error)
         }
     }

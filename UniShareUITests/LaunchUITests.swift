@@ -88,8 +88,9 @@ final class LaunchUITests: XCTestCase {
         if !delete.exists { app.swipeUp() }
         XCTAssertTrue(delete.waitForExistence(timeout: 5))
         delete.tap()
-        XCTAssertTrue(app.buttons["settings.confirmDelete"].waitForExistence(timeout: 5))
-        app.buttons["settings.confirmDelete"].tap()
+        let confirmDelete = app.buttons.matching(identifier: "settings.confirmDelete").firstMatch
+        XCTAssertTrue(confirmDelete.waitForExistence(timeout: 5))
+        confirmDelete.tap()
         XCTAssertTrue(app.textFields["auth.email"].waitForExistence(timeout: 15))
     }
 
@@ -129,9 +130,9 @@ final class LaunchUITests: XCTestCase {
         app.secureTextFields["auth.password"].typeText(password)
         app.buttons["auth.submit"].tap()
 
-        XCTAssertTrue(app.otherElements["feed.card.\(bob.userID)"].waitForExistence(timeout: 15))
-        XCTAssertTrue(app.buttons["feed.like"].isHittable)
-        app.buttons["feed.like"].tap()
+        let bobCard = app.otherElements["feed.card.\(bob.userID)"]
+        XCTAssertTrue(bobCard.waitForExistence(timeout: 15))
+        bobCard.swipeRight()
 
         let chatID = try await api.waitForChat(between: alice, and: bob.userID)
         app.buttons["tab.chats"].tap()
@@ -146,7 +147,24 @@ final class LaunchUITests: XCTestCase {
         input.typeText(message)
         XCTAssertTrue(app.buttons["chat.send"].isHittable)
         app.buttons["chat.send"].tap()
-        XCTAssertTrue(app.staticTexts[message].waitForExistence(timeout: 10))
+        let errorAlert = app.alerts.firstMatch
+        if errorAlert.waitForExistence(timeout: 3) {
+            let details = errorAlert.staticTexts.allElementsBoundByIndex
+                .map(\.label)
+                .filter { !$0.isEmpty }
+                .joined(separator: ": ")
+            XCTFail("Message send failed: \(details)")
+            return
+        }
+        let messageID = try await api.waitForMessage(
+            in: chatID,
+            session: alice,
+            text: message
+        )
+        XCTAssertTrue(
+            app.otherElements["chat.message.\(messageID)"].waitForExistence(timeout: 10),
+            "The persisted message was not rendered in the chat"
+        )
     }
 
     private func advanceOnboarding(_ app: XCUIApplication, to step: String) {
@@ -198,6 +216,14 @@ private struct E2EAPI: Sendable {
                 "games": [game],
                 "skills": ["Team play"],
                 "platform_games": [platform: [game]],
+                "game_metadata": [
+                    game.lowercased(): [
+                        "id": "ui-\(game.lowercased())",
+                        "name": game,
+                        "cover_url": "https://media.rawg.io/media/games/b4f/b4f8f4a7b746ed0e7809a01cc182e0c5.jpg",
+                        "rawg_id": 3328
+                    ]
+                ],
                 "has_skills_profile": true,
                 "onboarding_complete": true
             ]
@@ -230,6 +256,24 @@ private struct E2EAPI: Sendable {
             try await Task.sleep(nanoseconds: 250_000_000)
         }
         throw apiError("Mutual like did not create a chat", data: Data())
+    }
+
+    func waitForMessage(in chatID: String, session: Session, text: String) async throws -> String {
+        let encodedChatID = chatID.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? chatID
+        let encodedText = text.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? text
+        for _ in 0..<24 {
+            let data = try await request(
+                path: "/rest/v1/messages?select=id&chat_id=eq.\(encodedChatID)&text=eq.\(encodedText)",
+                method: "GET",
+                token: session.accessToken
+            )
+            let rows = try JSONSerialization.jsonObject(with: data) as? [[String: Any]] ?? []
+            if let messageID = rows.first?["id"] as? String {
+                return messageID
+            }
+            try await Task.sleep(nanoseconds: 250_000_000)
+        }
+        throw apiError("The sent message was not persisted", data: Data())
     }
 
     func deleteAccount(session: Session) async throws {

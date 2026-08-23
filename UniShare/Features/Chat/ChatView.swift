@@ -12,6 +12,7 @@ struct ChatView: View {
     @State private var showRatingSheet = false
     @State private var hasRated = false
     @State private var showBlockConfirmation = false
+    @FocusState private var isMessageInputFocused: Bool
 
     init(chat: Chat) {
         self.chat = chat
@@ -98,6 +99,8 @@ struct ChatView: View {
                     fromUid: vm.myUid, toUid: partnerUid, chatId: chat.id)) ?? false
             }
         }
+        .onAppear { TabBarState.shared.isTabBarHidden = true }
+        .onDisappear { TabBarState.shared.isTabBarHidden = false }
         .sheet(isPresented: $showReportSheet) {
             ReportSheet(
                 username: vm.partnerProfile?.username ?? "",
@@ -136,6 +139,7 @@ struct ChatView: View {
             Button("common.ok".localized, role: .cancel) {}
         } message: {
             Text(vm.errorMessage ?? "")
+                .accessibilityIdentifier("chat.error")
         }
         .confirmationDialog(
             "chat.block.confirmation".localized,
@@ -212,10 +216,13 @@ struct ChatView: View {
                 .foregroundColor(theme.effectiveTextColor)
                 .accentColor(theme.effectivePrimary)
                 .lineLimit(1...5)
+                .focused($isMessageInputFocused)
+                .frame(minHeight: 38)
                 .padding(.horizontal, 14)
-                .padding(.vertical, 10)
                 .background(theme.effectiveCardColor)
                 .cornerRadius(20)
+                .contentShape(RoundedRectangle(cornerRadius: 20))
+                .onTapGesture { isMessageInputFocused = true }
                 .accessibilityIdentifier("chat.input")
 
             Button {
@@ -497,5 +504,7 @@ struct MessageBubble: View {
 
             if !isFromMe { Spacer(minLength: 50) }
         }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("chat.message.\(message.id)")
     }
 }

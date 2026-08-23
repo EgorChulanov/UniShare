@@ -12,6 +12,7 @@ private struct UserRow: Codable {
     var wantedGames: [String]
     var platforms: [String]
     var platformGames: [String: [String]]
+    var gameMetadata: [String: GameTag]
     var skills: [String]
     var skillsDescription: String?
     var hasSkillsProfile: Bool
@@ -31,6 +32,7 @@ private struct UserRow: Codable {
         case wantedGames = "wanted_games"
         case platforms
         case platformGames = "platform_games"
+        case gameMetadata = "game_metadata"
         case skills
         case skillsDescription = "skills_description"
         case hasSkillsProfile = "has_skills_profile"
@@ -50,6 +52,7 @@ private struct UserRow: Codable {
         profile.wantedGames = wantedGames
         profile.platforms = platforms
         profile.platformGames = platformGames
+        profile.gameMetadata = gameMetadata
         profile.skills = skills
         profile.skillsDescription = skillsDescription
         profile.hasSkillsProfile = hasSkillsProfile
@@ -71,6 +74,7 @@ private struct UserRow: Codable {
             wantedGames: profile.wantedGames,
             platforms: profile.platforms,
             platformGames: profile.platformGames,
+            gameMetadata: profile.gameMetadata,
             skills: profile.skills,
             skillsDescription: profile.skillsDescription,
             hasSkillsProfile: profile.hasSkillsProfile,
@@ -318,6 +322,22 @@ private struct SendMessageParams: Encodable {
         case targetChatId = "target_chat_id"
         case messageText = "message_text"
         case messageImageUrl = "message_image_url"
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(messageId, forKey: .messageId)
+        try container.encode(targetChatId, forKey: .targetChatId)
+        if let messageText {
+            try container.encode(messageText, forKey: .messageText)
+        } else {
+            try container.encodeNil(forKey: .messageText)
+        }
+        if let messageImageUrl {
+            try container.encode(messageImageUrl, forKey: .messageImageUrl)
+        } else {
+            try container.encodeNil(forKey: .messageImageUrl)
+        }
     }
 }
 

@@ -132,7 +132,14 @@ on conflict (game_id) do update set
     updated_at = now();
 ```
 
-Для вручную управляемых записей используйте уникальные отрицательные `game_id`. RAWG key не хранится в Postgres и не показывается в DataGrip; он обновляется в Supabase Edge Function Secrets.
+Для вручную управляемых записей используйте уникальные отрицательные `game_id`.
+
+RAWG key хранится в зашифрованном Supabase Vault и меняется из
+`datagrip/50_game_catalog_admin.sql`. Запускайте только блок **CREATE OR ROTATE
+RAWG KEY**: DataGrip запросит параметр `RAWG_API_KEY`, после чего безопасный
+status-запрос должен показать `configured = true`. Само значение ключа никогда
+не выбирайте и не сохраняйте в SQL-файле. Мобильные роли `anon` и
+`authenticated` не имеют права выполнять server-only RPC чтения ключа.
 
 ## Безопасная работа
 

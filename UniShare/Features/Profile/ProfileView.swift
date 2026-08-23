@@ -205,6 +205,7 @@ struct ProfileView: View {
                     profilePlatformRow(
                         platform: platform,
                         games: profile.platformGames[platform.rawValue] ?? [],
+                        metadata: profile.gameMetadata,
                         isTrailing: idx % 2 == 1
                     )
                 }
@@ -220,7 +221,12 @@ struct ProfileView: View {
         )
     }
 
-    private func profilePlatformRow(platform: Platform, games: [String], isTrailing: Bool) -> some View {
+    private func profilePlatformRow(
+        platform: Platform,
+        games: [String],
+        metadata: [String: GameTag],
+        isTrailing: Bool
+    ) -> some View {
         VStack(alignment: isTrailing ? .trailing : .leading, spacing: 8) {
             Text(platform.rawValue)
                 .font(.system(size: 11, weight: .semibold))
@@ -236,7 +242,8 @@ struct ProfileView: View {
                             .foregroundColor(theme.effectiveSecondaryTextColor)
                     } else {
                         ForEach(games.prefix(5), id: \.self) { name in
-                            profileGameCircle(name: name, color: platform.color)
+                            let tag = metadata[GameNameValidator.normalized(name)] ?? GameTag(name: name)
+                            profileGameCircle(tag: tag, color: platform.color)
                         }
                     }
                 }
@@ -247,11 +254,17 @@ struct ProfileView: View {
         .padding(.vertical, 12)
     }
 
-    private func profileGameCircle(name: String, color: Color) -> some View {
+    private func profileGameCircle(tag: GameTag, color: Color) -> some View {
         VStack(spacing: 3) {
-            ProfileGameArtwork(name: name, fallbackColor: color)
+            GameCircleView(
+                name: tag.name,
+                color: color,
+                coverUrl: tag.coverUrl,
+                diameter: 44,
+                showsTitle: false
+            )
 
-            Text(name.components(separatedBy: " ").first ?? name)
+            Text(tag.name)
                 .font(.system(size: 8))
                 .foregroundColor(theme.effectiveSecondaryTextColor)
                 .lineLimit(1)
@@ -380,32 +393,6 @@ struct ProfileView: View {
                     .padding(.horizontal, 16)
                 }
             }
-        }
-    }
-}
-
-private struct ProfileGameArtwork: View {
-    let name: String
-    let fallbackColor: Color
-    @State private var coverURL: String?
-
-    var body: some View {
-        ZStack {
-            Circle().fill(fallbackColor.opacity(0.14))
-            if let coverURL {
-                AsyncImageView(url: coverURL)
-                    .frame(width: 44, height: 44)
-                    .clipShape(Circle())
-            } else {
-                Text(String(name.prefix(2)).uppercased())
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(fallbackColor)
-            }
-        }
-        .frame(width: 44, height: 44)
-        .overlay(Circle().stroke(fallbackColor.opacity(0.28), lineWidth: 1))
-        .task(id: name) {
-            coverURL = await AppEnvironment.shared.rawg.searchGames(name).first?.backgroundImage
         }
     }
 }

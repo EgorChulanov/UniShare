@@ -68,7 +68,7 @@ struct ContentView: View {
 
         do {
             let profile = try await loadProfile(uid: uid)
-            await applyOnboardingResult(profile)
+            applyOnboardingResult(profile)
         } catch {
             await MainActor.run {
                 onboardingError = error.localizedDescription

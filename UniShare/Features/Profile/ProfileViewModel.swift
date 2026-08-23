@@ -62,15 +62,17 @@ final class ProfileViewModel: ObservableObject {
         guard let p = profile else { return }
         editUsername = p.username
         editStatus = p.status ?? ""
-        editGames = p.games.map { GameTag(name: $0) }
-        editWantedGames = p.wantedGames.map { GameTag(name: $0) }
+        editGames = p.games.map { p.gameMetadata[GameNameValidator.normalized($0)] ?? GameTag(name: $0) }
+        editWantedGames = p.wantedGames.map { p.gameMetadata[GameNameValidator.normalized($0)] ?? GameTag(name: $0) }
         let platforms = Set(p.platforms.compactMap { Platform(rawValue: $0) })
         editPlatforms = platforms
         editGamesByPlatform = [:]
         for platform in platforms {
             let names = p.platformGames[platform.rawValue] ?? []
             if !names.isEmpty {
-                editGamesByPlatform[platform] = names.map { GameTag(name: $0) }
+                editGamesByPlatform[platform] = names.map {
+                    p.gameMetadata[GameNameValidator.normalized($0)] ?? GameTag(name: $0)
+                }
             }
         }
         editActiveGamePlatform = platforms.first
@@ -124,6 +126,10 @@ final class ProfileViewModel: ObservableObject {
             p.platformGames = newPlatformGames
             p.games = GameNameValidator.uniqueNames(allGames)
             p.wantedGames = GameNameValidator.uniqueNames(editWantedGames.map { $0.name })
+            p.gameMetadata = (editGamesByPlatform.values.flatMap { $0 } + editWantedGames)
+                .reduce(into: [String: GameTag]()) { metadata, tag in
+                    metadata[tag.storageKey] = tag
+                }
 
             let data: [String: AnyEncodable] = [
                 "username": AnyEncodable(p.username),
@@ -133,6 +139,7 @@ final class ProfileViewModel: ObservableObject {
                 "wanted_games": AnyEncodable(p.wantedGames),
                 "platforms": AnyEncodable(p.platforms),
                 "platform_games": AnyEncodable(p.platformGames),
+                "game_metadata": AnyEncodable(p.gameMetadata),
                 "skills": AnyEncodable(p.skills),
                 "subscriptions": AnyEncodable(p.subscriptions.map { subscriptionPayload($0) })
             ]

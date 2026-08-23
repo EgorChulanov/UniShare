@@ -151,6 +151,10 @@ profile() {
 request POST "$TOKEN_A" '/rest/v1/users' "$(profile "$UID_A" "Alice${RUN_ID}" '["Steam","Epic Games"]' '["Fortnite","Portal 2"]' '["Coaching"]')" >/dev/null
 request POST "$TOKEN_B" '/rest/v1/users' "$(profile "$UID_B" "Bob${RUN_ID}" '["PlayStation"]' '["Fortnite"]' '["Tournaments"]')" >/dev/null
 request POST "$TOKEN_C" '/rest/v1/users' "$(profile "$UID_C" "Carol${RUN_ID}" '["Nintendo"]' '["Mario Kart 8 Deluxe"]' '[]')" >/dev/null
+game_metadata='{"fortnite":{"id":"rawg-3328","name":"Fortnite","cover_url":"https://media.rawg.io/media/games/b4f/b4f8f4a7b746ed0e7809a01cc182e0c5.jpg","rawg_id":3328}}'
+request PATCH "$TOKEN_A" "/rest/v1/users?uid=eq.$UID_A" "$(jq -n --argjson metadata "$game_metadata" '{game_metadata:$metadata}')" >/dev/null
+persisted_metadata=$(request GET "$TOKEN_A" "/rest/v1/users?uid=eq.$UID_A&select=game_metadata" '')
+assert "$persisted_metadata" '.[0].game_metadata.fortnite.name == "Fortnite" and .[0].game_metadata.fortnite.rawg_id == 3328'
 echo "E2E stage: profiles created"
 
 legacy_subscription='[{"name":"Discord","icon_name":"bubble.left.fill","url":"https://example.test/invite","details":"family access","shared_slots":4}]'

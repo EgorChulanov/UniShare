@@ -19,9 +19,13 @@ struct TabBarView: View {
             }
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            UniShareTabBar(selection: $tabState.selectedTab, avatarURL: avatarURL)
-                .environmentObject(theme)
+            if !tabState.isTabBarHidden {
+                UniShareTabBar(selection: $tabState.selectedTab, avatarURL: avatarURL)
+                    .environmentObject(theme)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
         }
+        .animation(.spring(response: 0.32, dampingFraction: 0.86), value: tabState.isTabBarHidden)
         .task(id: env.auth.uid) { await refreshAvatar() }
         .onReceive(NotificationCenter.default.publisher(for: .uniShareProfileDidUpdate)) { _ in
             Task { await refreshAvatar() }
@@ -44,24 +48,34 @@ private struct UniShareTabBar: View {
     @EnvironmentObject private var theme: ThemeManager
 
     var body: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 6) {
             tabButton(.feed) { CardStackTabIcon(isSelected: selection == .feed) }
             tabButton(.chats) {
                 Image(systemName: selection == .chats ? "message.fill" : "message")
-                    .font(.system(size: 20, weight: .semibold))
+                    .font(.system(size: 21, weight: .semibold))
             }
             tabButton(.profile) {
-                AvatarView(url: avatarURL, size: 28, showBorder: selection == .profile)
+                AvatarView(url: avatarURL, size: 25, showBorder: selection == .profile)
                     .environmentObject(theme)
             }
         }
-        .padding(6)
-        .background(.ultraThinMaterial, in: Capsule())
-        .overlay(Capsule().stroke(.white.opacity(0.16), lineWidth: 0.75))
-        .shadow(color: .black.opacity(0.14), radius: 18, y: 8)
-        .padding(.horizontal, 54)
+        .padding(7)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 27, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 27, style: .continuous)
+                .stroke(
+                    LinearGradient(
+                        colors: [.white.opacity(0.30), .white.opacity(0.06)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    ),
+                    lineWidth: 0.8
+                )
+        }
+        .shadow(color: .black.opacity(0.22), radius: 22, y: 10)
+        .padding(.horizontal, 16)
         .padding(.top, 6)
-        .padding(.bottom, 7)
+        .padding(.bottom, 8)
     }
 
     private func tabButton<Icon: View>(_ tab: AppTab, @ViewBuilder icon: () -> Icon) -> some View {
@@ -69,11 +83,22 @@ private struct UniShareTabBar: View {
             withAnimation(.spring(response: 0.28, dampingFraction: 0.82)) { selection = tab }
             HapticsManager.shared.impact(.light)
         } label: {
-            icon()
-                .foregroundStyle(selection == tab ? theme.effectivePrimary : theme.effectiveSecondaryTextColor)
+            VStack(spacing: 3) {
+                icon()
+                    .foregroundStyle(selection == tab ? theme.effectivePrimary : theme.effectiveSecondaryTextColor)
+                    .frame(height: 27)
+
+                Text(accessibilityTitle(for: tab))
+                    .font(.system(size: 10, weight: selection == tab ? .bold : .semibold))
+                    .foregroundStyle(selection == tab ? theme.effectiveTextColor : theme.effectiveSecondaryTextColor)
+                    .lineLimit(1)
+            }
                 .frame(maxWidth: .infinity)
-                .frame(height: 42)
-                .background(selection == tab ? theme.effectivePrimary.opacity(0.12) : .clear, in: Capsule())
+                .frame(height: 50)
+                .background(
+                    selection == tab ? theme.effectivePrimary.opacity(0.16) : .clear,
+                    in: RoundedRectangle(cornerRadius: 20, style: .continuous)
+                )
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -105,13 +130,13 @@ private struct CardStackTabIcon: View {
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 3.5)
-                .fill(isSelected ? Color.primary.opacity(0.14) : Color.primary.opacity(0.22))
+                .fill(isSelected ? Color.primary.opacity(0.18) : Color.primary.opacity(0.10))
                 .overlay(RoundedRectangle(cornerRadius: 3.5).strokeBorder(lineWidth: 1.5))
                 .frame(width: 17, height: 21)
                 .rotationEffect(.degrees(-11))
                 .offset(x: -3)
             RoundedRectangle(cornerRadius: 3.5)
-                .fill(isSelected ? Color.accentColor : Color.primary.opacity(0.08))
+                .fill(isSelected ? Color.accentColor : Color.primary.opacity(0.32))
                 .overlay(RoundedRectangle(cornerRadius: 3.5).strokeBorder(lineWidth: 1.7))
                 .frame(width: 17, height: 21)
                 .rotationEffect(.degrees(8))

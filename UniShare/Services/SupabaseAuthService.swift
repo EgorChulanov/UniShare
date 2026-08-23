@@ -86,6 +86,11 @@ final class SupabaseAuthService: ObservableObject {
         )
         guard response.deleted else { throw AuthError.accountDeletionFailed }
         try? await client.auth.signOut()
+        await MainActor.run {
+            SupabaseManager.shared.database.setAuth(nil)
+            uid = nil
+            isAuthenticated = false
+        }
     }
 
     func handleOpenURL(_ url: URL) -> Bool {

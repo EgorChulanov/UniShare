@@ -163,6 +163,11 @@ final class OnboardingViewModel: ObservableObject {
             }
             profile.platformGames = platformGamesDict
             profile.games = GameNameValidator.uniqueNames(platformGamesDict.values.flatMap { $0 })
+            profile.gameMetadata = gamesByPlatform.values
+                .flatMap { $0 }
+                .reduce(into: [String: GameTag]()) { metadata, tag in
+                    metadata[tag.storageKey] = tag
+                }
 
             profile.skills = skills
             profile.subscriptions = selectedSubscriptions.compactMap { name in

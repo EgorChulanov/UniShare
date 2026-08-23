@@ -8,6 +8,8 @@ struct GameCirclesRow: View {
     let color: Color
     let isTrailing: Bool
     var coverUrls: [String: String] = [:]   // game name → RAWG cover URL
+    var diameter: CGFloat = 52
+    var showsTitles = false
 
     @EnvironmentObject var theme: ThemeManager
     @State private var scrollIndex = 0
@@ -28,7 +30,13 @@ struct GameCirclesRow: View {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 10) {
                             ForEach(Array(games.enumerated()), id: \.0) { idx, name in
-                                GameCircleView(name: name, color: color, coverUrl: coverUrls[name])
+                                GameCircleView(
+                                    name: name,
+                                    color: color,
+                                    coverUrl: coverUrls[name],
+                                    diameter: diameter,
+                                    showsTitle: showsTitles
+                                )
                                     .id(idx)
                             }
                         }
@@ -60,6 +68,8 @@ struct GameCircleView: View {
 
     // If a cover URL is provided (e.g. from RAWG) it renders as image; otherwise letter
     var coverUrl: String? = nil
+    var diameter: CGFloat = 44
+    var showsTitle = true
     @State private var coverImage: UIImage?
 
     var body: some View {
@@ -80,13 +90,15 @@ struct GameCircleView: View {
                         .foregroundColor(color)
                 }
             }
-            .frame(width: 44, height: 44)
+            .frame(width: diameter, height: diameter)
 
-            Text(name.components(separatedBy: " ").first ?? name)
-                .font(.system(size: 8))
-                .foregroundColor(theme.effectiveSecondaryTextColor)
-                .lineLimit(1)
-                .frame(width: 44)
+            if showsTitle {
+                Text(name)
+                    .font(.system(size: 9, weight: .medium))
+                    .foregroundColor(theme.effectiveSecondaryTextColor)
+                    .lineLimit(1)
+                    .frame(width: max(diameter, 54))
+            }
         }
         .task(id: coverUrl) {
             guard let url = coverUrl else { return }

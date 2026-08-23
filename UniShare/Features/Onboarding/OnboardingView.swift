@@ -47,6 +47,7 @@ struct OnboardingView: View {
             Text(vm.errorMessage ?? "")
                 .accessibilityIdentifier("onboarding.error")
         }
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("onboarding.step.\(stepIdentifier)")
     }
 

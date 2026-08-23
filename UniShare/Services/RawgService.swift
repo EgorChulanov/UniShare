@@ -23,11 +23,11 @@ struct RawgSearchResponse: Codable {
 
 // MARK: - Service
 
-final class RawgService {
+actor RawgService {
     private let client = SupabaseManager.shared.client
     private var searchCache: [String: [RawgGame]] = [:]
 
-    var isConfigured: Bool {
+    nonisolated var isConfigured: Bool {
         SupabaseManager.shared.isConfigured
     }
 
