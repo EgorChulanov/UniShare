@@ -118,7 +118,7 @@ insert into public.stories (
 ) values
     ('10000000-0000-4000-8000-000000000001', 'Безопасная команда', 'Как общаться без риска', 'Никогда не передавайте пароль, коды подтверждения или платёжные данные.', 'lock.shield.fill', '176B87', 'Открыть ленту', 'unishare://feed', 100, true, now(), now() + interval '30 days'),
     ('10000000-0000-4000-8000-000000000002', 'Игра недели', 'Split Fiction', 'Находите напарника для совместного прохождения и сохраняйте прогресс вместе.', 'sparkles', '31A8FF', 'Найти игрока', 'unishare://feed', 90, true, now(), now() + interval '30 days'),
-    ('10000000-0000-4000-8000-000000000003', 'AirShare', 'Познакомьтесь рядом', 'Откройте AirShare и встряхните iPhone рядом с другим игроком.', 'wave.3.right.circle.fill', '64D8CB', 'Попробовать', 'unishare://airshare', 80, true, now(), now() + interval '30 days')
+    ('10000000-0000-4000-8000-000000000003', 'AirShare', 'Познакомьтесь рядом', 'Нажмите видимую кнопку AirShare на главном экране и держите iPhone рядом с другим игроком.', 'wave.3.right.circle.fill', '64D8CB', 'Попробовать', 'unishare://airshare', 80, true, now(), now() + interval '30 days')
 on conflict (id) do update set
     title = excluded.title,
     subtitle = excluded.subtitle,

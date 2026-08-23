@@ -57,11 +57,22 @@ struct FeedView: View {
                     }
                 }
 
-                // ── Segment picker — flush below status bar ──
-                segmentPicker
-                    .padding(.horizontal, 20)
-                    .padding(.top, 5)
-                    .padding(.bottom, 10)
+                HStack(spacing: 10) {
+                    segmentPicker
+
+                    Button { TabBarState.shared.showAirShare = true } label: {
+                        Image(systemName: "antenna.radiowaves.left.and.right")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(theme.effectiveTextColor)
+                            .frame(width: 42, height: 42)
+                            .background(.ultraThinMaterial, in: Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("feed.airshare.nearby".localized)
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 6)
+                .padding(.bottom, 10)
 
                 // ── Card stack ──
                 ZStack {
@@ -84,26 +95,8 @@ struct FeedView: View {
                     }
                 }
                 .padding(.horizontal, 16)
+                .padding(.bottom, 24)
                 .frame(maxHeight: .infinity)
-
-                // ── Action buttons (Figma style) ──
-                if !currentCards.isEmpty {
-                    actionButtons
-                        .padding(.top, 12)
-                        .padding(.bottom, 8)
-                }
-
-                // ── AirShare link ──
-                Button { TabBarState.shared.showAirShare = true } label: {
-                    HStack(spacing: 5) {
-                        Image(systemName: "antenna.radiowaves.left.and.right")
-                            .font(.system(size: 11))
-                        Text("feed.airshare.nearby".localized)
-                            .font(.system(size: 13, weight: .medium))
-                    }
-                    .foregroundColor(theme.effectiveSecondaryTextColor)
-                    .padding(.bottom, 12)
-                }
             }
             .simultaneousGesture(
                 DragGesture(minimumDistance: 18).onChanged { value in
@@ -143,65 +136,4 @@ struct FeedView: View {
         )
     }
 
-    // MARK: - Action buttons
-
-    private var actionButtons: some View {
-        let topCard = currentCards.first
-        return HStack(spacing: 56) {
-            // Dislike
-            Button {
-                if let card = topCard {
-                    vm.swipeLeft(card: card, requestType: vm.selectedSegment.requestType)
-                }
-            } label: {
-                ZStack {
-                    Circle()
-                        .fill(Color.red.opacity(0.15))
-                        .frame(width: 64, height: 64)
-                        .overlay(Circle().stroke(Color.red.opacity(0.35), lineWidth: 1.5))
-                    Image(systemName: "xmark")
-                        .font(.system(size: 24, weight: .bold))
-                        .foregroundColor(.red)
-                }
-            }
-            .disabled(topCard == nil)
-            .accessibilityIdentifier("feed.dislike")
-
-            // Undo
-            if vm.canUndo {
-                Button {
-                    vm.undo(requestType: vm.selectedSegment.requestType)
-                } label: {
-                    ZStack {
-                        Circle()
-                            .fill(theme.effectiveCardColor)
-                            .frame(width: 44, height: 44)
-                        Image(systemName: "arrow.uturn.backward")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(theme.effectiveSecondaryTextColor)
-                    }
-                }
-                .accessibilityIdentifier("feed.undo")
-            }
-
-            // Like
-            Button {
-                if let card = topCard {
-                    Task { await vm.swipeRight(card: card, requestType: vm.selectedSegment.requestType) }
-                }
-            } label: {
-                ZStack {
-                    Circle()
-                        .fill(Color.green.opacity(0.15))
-                        .frame(width: 64, height: 64)
-                        .overlay(Circle().stroke(Color.green.opacity(0.35), lineWidth: 1.5))
-                    Image(systemName: "heart.fill")
-                        .font(.system(size: 24))
-                        .foregroundColor(.green)
-                }
-            }
-            .disabled(topCard == nil)
-            .accessibilityIdentifier("feed.like")
-        }
-    }
 }

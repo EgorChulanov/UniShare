@@ -12,6 +12,7 @@ final class TabBarState: ObservableObject {
 
     @Published var selectedTab: AppTab = .feed
     @Published var showAirShare = false
+    @Published var isTabBarHidden = false
 
     private init() {}
 

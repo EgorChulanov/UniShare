@@ -29,11 +29,15 @@ final class AppStoreScreenshotTests: XCTestCase {
         app.secureTextFields["auth.password"].typeText(password)
         app.buttons["auth.submit"].tap()
 
-        XCTAssertTrue(app.buttons["feed.like"].waitForExistence(timeout: 20))
         let loadedCard = app.descendants(matching: .any).matching(
-            NSPredicate(format: "identifier BEGINSWITH 'feed.card.' AND identifier != 'feed.card.info'")
+            NSPredicate(format: "identifier BEGINSWITH 'feed.card.'")
         ).firstMatch
         XCTAssertTrue(loadedCard.waitForExistence(timeout: 20))
+        let cardReady = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "hittable == true"),
+            object: loadedCard
+        )
+        XCTAssertEqual(XCTWaiter.wait(for: [cardReady], timeout: 12), .completed)
         capture("01-home", device: device)
 
         app.buttons["tab.chats"].tap()

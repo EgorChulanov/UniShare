@@ -63,6 +63,10 @@ struct GameTag: Identifiable, Codable, Hashable {
     static func == (lhs: GameTag, rhs: GameTag) -> Bool {
         lhs.id == rhs.id
     }
+
+    var storageKey: String {
+        GameNameValidator.normalized(name)
+    }
 }
 
 // MARK: - LocalUserSubscription
@@ -222,6 +226,7 @@ struct ProfileCard: Identifiable {
     var platform: Platform?
     var platforms: [Platform]
     var tags: [GameTag]
+    var wantedTags: [GameTag]
     var platformGames: [String: [String]]
     var platformGameTags: [String: [GameTag]]   // platform rawValue → GameTag (with coverUrl)
     var userId: String
@@ -237,6 +242,7 @@ struct ProfileCard: Identifiable {
         platform: Platform? = nil,
         platforms: [Platform] = [],
         tags: [GameTag] = [],
+        wantedTags: [GameTag] = [],
         platformGames: [String: [String]] = [:],
         platformGameTags: [String: [GameTag]] = [:],
         userId: String,
@@ -251,6 +257,7 @@ struct ProfileCard: Identifiable {
         self.platform = platform
         self.platforms = platforms
         self.tags = tags
+        self.wantedTags = wantedTags
         self.platformGames = platformGames
         self.platformGameTags = platformGameTags
         self.userId = userId
@@ -274,6 +281,7 @@ struct UserProfile: Codable, Identifiable {
     var wantedGames: [String]
     var platforms: [String]
     var platformGames: [String: [String]]   // platform rawValue → game names
+    var gameMetadata: [String: GameTag]
     var skills: [String]
     var subscriptions: [LocalUserSubscription]
     var onboardingComplete: Bool
@@ -290,6 +298,7 @@ struct UserProfile: Codable, Identifiable {
         self.wantedGames = []
         self.platforms = []
         self.platformGames = [:]
+        self.gameMetadata = [:]
         self.skills = []
         self.subscriptions = []
         self.onboardingComplete = false

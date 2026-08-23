@@ -83,7 +83,11 @@ final class FeedViewModel: ObservableObject {
     }
 
     private func buildCardWithCovers(from profile: UserProfile) async -> ProfileCard {
-        let allNames = Array(Set(profile.platformGames.values.flatMap { $0 } + profile.games)).prefix(12)
+        let allNames = Array(Set(
+            profile.platformGames.values.flatMap { $0 } + profile.games + profile.wantedGames
+        ))
+        .filter { profile.gameMetadata[GameNameValidator.normalized($0)]?.coverUrl == nil }
+        .prefix(12)
 
         let coverUrlMap: [String: String] = await withTaskGroup(of: (String, String?).self) { group in
             for name in allNames {
@@ -105,13 +109,17 @@ final class FeedViewModel: ObservableObject {
     }
 
     private func buildCard(from profile: UserProfile, coverUrlMap: [String: String]) -> ProfileCard {
-        let platformGameTags = profile.platformGames.mapValues { names in
-            names.map { name in GameTag(name: name, coverUrl: coverUrlMap[name]) }
+        func tag(for name: String) -> GameTag {
+            profile.gameMetadata[GameNameValidator.normalized(name)]
+                ?? GameTag(name: name, coverUrl: coverUrlMap[name])
         }
 
-        let tags = profile.games.prefix(3).map { name in
-            GameTag(name: name, coverUrl: coverUrlMap[name])
+        let platformGameTags = profile.platformGames.mapValues { names in
+            names.map(tag(for:))
         }
+
+        let tags = profile.games.prefix(8).map(tag(for:))
+        let wantedTags = profile.wantedGames.prefix(8).map(tag(for:))
 
         let platforms = profile.platforms.compactMap { Platform(rawValue: $0) }
         return ProfileCard(
@@ -120,6 +128,7 @@ final class FeedViewModel: ObservableObject {
             platform: platforms.first,
             platforms: platforms,
             tags: Array(tags),
+            wantedTags: Array(wantedTags),
             platformGames: profile.platformGames,
             platformGameTags: platformGameTags,
             userId: profile.uid,

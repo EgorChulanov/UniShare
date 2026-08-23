@@ -17,7 +17,6 @@ Deno.serve(async (request: Request) => {
   const supabaseURL = Deno.env.get("SUPABASE_URL");
   const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  const rawgKey = Deno.env.get("RAWG_API_KEY");
   if (!supabaseURL || !anonKey || !serviceRoleKey) {
     return errorResponse("Game catalog is not configured", 503);
   }
@@ -56,6 +55,14 @@ Deno.serve(async (request: Request) => {
     ? `game:${body.gameId}`
     : `search:${body.query!.trim().toLocaleLowerCase("en-US")}`;
   const admin = createClient(supabaseURL, serviceRoleKey, { auth: { persistSession: false } });
+  const { data: managedRawgKey, error: managedKeyError } = await admin
+    .rpc("get_game_catalog_api_key");
+  if (managedKeyError) {
+    console.warn("Managed RAWG key lookup failed; using the function secret fallback");
+  }
+  const rawgKey = typeof managedRawgKey === "string" && managedRawgKey.length > 0
+    ? managedRawgKey
+    : Deno.env.get("RAWG_API_KEY");
   const { data: cached } = await admin
     .from("game_catalog_cache")
     .select("payload")

@@ -144,6 +144,7 @@
 "common.network_error" = "Не удалось загрузить профиль. Проверьте подключение и повторите попытку.";
 "common.retry" = "Повторить";
 "feed.airshare.nearby" = "AirShare рядом";
+"feed.card.tap_details" = "Нажмите, чтобы открыть анкету";
 "chats.request.teammates" = "хочет сыграть вместе";
 "chat.review.title" = "Оценить тиммейта";
 "chat.review.subtitle" = "Расскажите, как прошла совместная игра";

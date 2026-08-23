@@ -42,7 +42,10 @@ SUPABASE_ANON_KEY = $(SUPABASE_PUBLISHABLE_KEY)
 Не заменяйте `/$()/` на `//`: в `.xcconfig` двойной слеш начинает комментарий,
 и Xcode передаст приложению только `https:`.
 
-Каталожный RAWG key хранится только как Supabase Edge Function secret. После `supabase link` используйте `supabase secrets set RAWG_API_KEY=...`; не добавляйте ключ в Xcode или `Info.plist`.
+Каталожный RAWG key хранится в зашифрованном Supabase Vault и меняется через
+`datagrip/50_game_catalog_admin.sql`. Edge Function secret остаётся только
+резервным источником на время миграции. Не добавляйте ключ в Xcode, `Info.plist`,
+`app_config` или Git.
 
 Схема устанавливается всеми файлами из `supabase/migrations/` по порядку, затем `supabase/seed.sql`. Для локальной базы это делает `make backend-reset`; для hosted-проекта используйте `supabase db push` после проверки `supabase link`.
 

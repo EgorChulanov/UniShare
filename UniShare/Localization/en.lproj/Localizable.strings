@@ -144,6 +144,7 @@
 "common.network_error" = "We couldn't load your profile. Check your connection and try again.";
 "common.retry" = "Try Again";
 "feed.airshare.nearby" = "AirShare nearby";
+"feed.card.tap_details" = "Tap to open the full profile";
 "chats.request.teammates" = "wants to play together";
 "chat.review.title" = "Rate your teammate";
 "chat.review.subtitle" = "Share how your session went";
