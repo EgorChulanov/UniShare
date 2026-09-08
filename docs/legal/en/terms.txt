@@ -1,0 +1,26 @@
+UNISHARE TERMS OF USE AND COMMUNITY RULES
+Effective: August 24, 2026
+
+1. SERVICE
+UniShare helps users discover people based on gaming platforms, games, subscriptions and skills, exchange requests and communicate in matched chats. UniShare is not affiliated with or endorsed by Apple, Sony, Nintendo, Microsoft, Valve, Epic Games, Ubisoft, Discord or other listed services.
+
+2. ELIGIBILITY AND AGREEMENT
+You must be at least 13, legally capable of agreeing to these Terms and have parental consent where required. By registering, you accept these Terms and the Privacy Policy.
+
+3. THIRD-PARTY ACCOUNTS
+You are responsible for complying with each platform's current terms, security rules, household or console-sharing limits and local law. UniShare does not verify account ownership, hold credentials, guarantee access, broker sales or act as a party to arrangements between users. Do not send passwords, two-factor, recovery or payment codes. Prefer official QR, device-linking or family-sharing methods where the platform permits them. Revoke access when an arrangement ends.
+
+4. PROHIBITED CONDUCT
+No sale of accounts, paid exchange, begging, fraud, phishing, impersonation, stolen accounts, circumvention of platform restrictions, changing another person's account details, spending another person's balance, damaging saves or achievements, spam, unsolicited advertising, harassment, threats, hate, political agitation, illegal content, malware, sexual content involving minors, adult content, disclosure of personal data or infringement of intellectual property.
+
+5. USER CONTENT AND MODERATION
+You retain rights to content you submit and grant UniShare a non-exclusive, worldwide, royalty-free licence limited to hosting, displaying, transmitting and moderating it to operate the service. You must own or have permission to use it. UniShare may remove content and warn, restrict, suspend or terminate accounts. Use in-app report and block tools; urgent safety or appeal requests may be sent to official@egorchulanov.ru.
+
+6. MATCHES, CHATS AND SAFETY
+A match or accepted request only opens communication; it is not a guarantee or endorsement. Verify the other user, keep security controls enabled and never transfer money or secrets. Users are responsible for their decisions and activity on third-party services.
+
+7. AVAILABILITY, LIABILITY AND CHANGES
+The service is provided as available. APIs, platform rules and features may change. To the maximum extent permitted by mandatory law, UniShare is not liable for third-party service outages, lost access, user misconduct or arrangements outside UniShare. Nothing excludes rights or liability that cannot legally be excluded. We may update these Terms and will announce material changes.
+
+8. TERMINATION AND CONTACT
+You may stop using UniShare and delete the account at any time. We may terminate access for violations or safety risk. Questions and appeals: official@egorchulanov.ru.

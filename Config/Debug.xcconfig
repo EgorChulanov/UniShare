@@ -1,0 +1,6 @@
+#include "UniShare.xcconfig"
+
+// Debug-specific overrides
+SWIFT_OPTIMIZATION_LEVEL = -Onone
+ENABLE_TESTABILITY = YES
+GCC_PREPROCESSOR_DEFINITIONS = DEBUG=1 $(inherited)

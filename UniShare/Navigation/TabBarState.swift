@@ -1,0 +1,43 @@
+import Foundation
+import SwiftUI
+
+enum AppTab: Int {
+    case feed = 0
+    case chats = 1
+    case profile = 2
+    case search = 3
+}
+
+final class TabBarState: ObservableObject {
+    static let shared = TabBarState()
+
+    @Published var selectedTab: AppTab = .feed
+    @Published var showAirShare = false
+
+    private init() {}
+
+    func switchTo(_ tab: AppTab) {
+        selectedTab = tab
+    }
+
+    func handleDeepLink(_ url: URL) {
+        guard url.scheme == AppConstants.DeepLink.scheme else { return }
+        switch url.host {
+        case "feed":
+            selectedTab = .feed
+        case "chats":
+            selectedTab = .chats
+        case "airshare":
+            selectedTab = .feed
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                self.showAirShare = true
+            }
+        case "profile":
+            selectedTab = .profile
+        case "search":
+            selectedTab = .search
+        default:
+            break
+        }
+    }
+}

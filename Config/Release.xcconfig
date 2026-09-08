@@ -1,0 +1,5 @@
+#include "UniShare.xcconfig"
+#include? "ReleaseIdentity.xcconfig"
+
+SWIFT_OPTIMIZATION_LEVEL = -O
+SWIFT_COMPILATION_MODE = wholemodule

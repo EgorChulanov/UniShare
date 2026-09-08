@@ -3,126 +3,899 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 110;
+	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		05D8B26C9D2D7F835EEF6D24 /* Manrope-ExtraBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = D0C46F0C491B88C39FCAC468 /* Manrope-ExtraBold.ttf */; };
+		0AFF78B4270B5FFF788EF43E /* GreetingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56C458E322353CE532A9C18D /* GreetingView.swift */; };
+		0B4FFFD05431B90164222C29 /* ArchivoBlack-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = FDA10FDBFF1ED5A96459C40A /* ArchivoBlack-Regular.ttf */; };
+		0B975AA132B298CE4B976635 /* OFL-PlusJakartaSans.txt in Resources */ = {isa = PBXBuildFile; fileRef = B50B6F067EF2B3E61D494487 /* OFL-PlusJakartaSans.txt */; };
+		0E939980F46F9455A65A28FD /* ManropeFontSwizzle.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD9BAA26C43669838472F0ED /* ManropeFontSwizzle.swift */; };
+		0F0F956E934D0B242CE779AB /* Manrope-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 1601A48446CA075AE973B5DB /* Manrope-Medium.ttf */; };
+		12FE1B02BAD6CE465330A979 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE61B1AAF7B349E25EF662D6 /* ContentView.swift */; };
+		1577E30DB234EDD1FDCC52A4 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 4BD781C847F9DE8F6C847C81 /* PrivacyInfo.xcprivacy */; };
+		21F6821D43EFDE92E69D73A4 /* FeedDismissalStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6E0F5457C63BBAD07355866 /* FeedDismissalStoreTests.swift */; };
+		229B6452DF81AF090DE950E1 /* Manrope-SemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = D3B3673C31331D3516D6C7C5 /* Manrope-SemiBold.ttf */; };
+		23EEFDD77B4DE82CC184BD6B /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBE321E15C1BAB664DE47169 /* OnboardingView.swift */; };
+		29515AF47DD7D1B081E371FA /* LaunchUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C79A01BECECE4BAF9299A77B /* LaunchUITests.swift */; };
+		29EC50FA795817A7B5BC3418 /* GlassCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55CE3C4DBAD6F0CDE7311C88 /* GlassCard.swift */; };
+		2A2488302BEF94C8A722060A /* OnboardingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13015E98A3F7EC5C835E1433 /* OnboardingViewModel.swift */; };
+		2A67FF7618BB5C618F3D76CF /* FeedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D64775F2AC47573F2FBDF5D /* FeedView.swift */; };
+		2BA5DD17A801445DB724D2FC /* String+Localized.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F56A4E933F622EEC214C322 /* String+Localized.swift */; };
+		2BD4D817492B0DF8546C2C39 /* ChatsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07E87749DB3C51B77D5AB884 /* ChatsViewModel.swift */; };
+		2C4062E50914654DED7620DE /* PushNotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A957F8CA2844876E196AA24 /* PushNotificationService.swift */; };
+		2C7D182D7F1AE1EDFCD31CC1 /* SupabaseMappingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC0C251DD99358C44CC546E6 /* SupabaseMappingTests.swift */; };
+		2EC2779E4F120DA1055711E0 /* StoryModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A9C223DB7187991B0256B5F /* StoryModels.swift */; };
+		2F84CF22B599F4BD1DACAA94 /* ThemeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06DDFA7CAC0B97DA7ACFA335 /* ThemeManager.swift */; };
+		31603E81F8FAE7B4901F4070 /* EditProfileSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C5D2B1F7882B1B3F7A51FAB /* EditProfileSheet.swift */; };
+		3373135ACE0D25C24FA51788 /* FeedViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = E601ACC4A7B9160617743DA6 /* FeedViewModel.swift */; };
+		35865EAF203DEA3A63E0ECCD /* AirShareManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EF52EFD9EF1800A6589F9D6 /* AirShareManager.swift */; };
+		377AB8ABD4067454D73AB94C /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = A2768447CD92642572296B2E /* Localizable.strings */; };
+		4337C22C139305D30EA6AD6F /* WidgetDataService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F4A241C8232E4F6B1693C6F /* WidgetDataService.swift */; };
+		461EE14C90B1F2970A5DCA3B /* PlusJakartaSans-SemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = AD7D35A354D381B0DD11FF13 /* PlusJakartaSans-SemiBold.ttf */; };
+		498E33EFDF2041AA31CAFEEE /* GrainOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = E287BDB7903086E2D9798D4F /* GrainOverlay.swift */; };
+		49EBA6ED596D8E7E338F4264 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 9C86CD53EED5AB51E615F802 /* InfoPlist.strings */; };
+		50CD993515A8D3275285E099 /* GameIconCacheService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B75B021424D392D5F60773E /* GameIconCacheService.swift */; };
+		5199D61BE1209CC8993CD773 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 6DAB6A75892E7B4C5F0503EB /* Assets.xcassets */; };
+		5AB51ACB5AB9C8ACFB1074F1 /* SkillCardsOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3FD839D8350AC238E25E460 /* SkillCardsOverlay.swift */; };
+		5F81E90DA7EB0E1460BA426D /* AvatarPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13B89A22DAEEC6694556BBBB /* AvatarPickerView.swift */; };
+		5FCA9056ACA6DCFCBDFB81F0 /* AnimatedGradientBorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 643947A95A3FC1189ECCD0FB /* AnimatedGradientBorder.swift */; };
+		60379C038DEB7B5764819C5F /* LiquidSegmentedPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E795523EFB9F63A0800E99A /* LiquidSegmentedPicker.swift */; };
+		630794C135EF1D45DE6A3A73 /* AuthViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B4046D609646B47E219668A /* AuthViewModel.swift */; };
+		6655E5AC8D86F2F5B72EB014 /* RawgService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0832D0BB34BFB2B8BE41CD8D /* RawgService.swift */; };
+		66D638687F014646686F632A /* AvatarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 838100FA6EEF9270D74C13B4 /* AvatarView.swift */; };
+		6F8EFEA1378DFF152499271D /* FeedDismissalStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEFACF0378947505EF6123F0 /* FeedDismissalStore.swift */; };
+		7084F8D329F8860017AF5CE0 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = B7A3B687F6E18A869764B314 /* Supabase */; };
+		710357D2F1E1AC55804A1715 /* BrandBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = F120E1092B8984D6AC65FB02 /* BrandBackground.swift */; };
+		7379154F1549FDFB6B46DD28 /* TabBarState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B33548BFCB14F15C586A0E8 /* TabBarState.swift */; };
+		74E6F500B5A0F571F2665696 /* PasswordPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7656A8D3B56B1C1D65607E55 /* PasswordPolicyTests.swift */; };
+		7588B4F725F713188A33522E /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EF6983C3E06F853669F8C1D /* AppDelegate.swift */; };
+		76C81E19D0F338355A9524CF /* LocalizationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B07E5A9071173EACD46D10D4 /* LocalizationManager.swift */; };
+		7BB644DCFB1A83FBB531F7A4 /* Manrope-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 42ECD3549C92C113EB8C815A /* Manrope-Regular.ttf */; };
+		7D1432DE538BFBBF2D4559C7 /* SkillsProfileSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4CC3349958E7FC983F3CDC1 /* SkillsProfileSetupView.swift */; };
+		7DC7D69BD6110001D39FBF33 /* PasswordPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED56791A8D9DE8DB26E8A8B2 /* PasswordPolicy.swift */; };
+		7E0A42E0D1624D63D5AF6BE7 /* SupabaseStorageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33CC279BD2CF53C02DE06E4D /* SupabaseStorageService.swift */; };
+		7F5CE2D9BB769E12405BFB3C /* ChatModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB58FDE71C2074719997D132 /* ChatModels.swift */; };
+		8686F7EDA3A8A2893E2F23C4 /* UniShareWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 68C3E02B3445EC518E97175F /* UniShareWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		87D5C947D3CCFBD1B4E0888F /* OFL-ArchivoBlack.txt in Resources */ = {isa = PBXBuildFile; fileRef = F2BDB639465C11D171F00F15 /* OFL-ArchivoBlack.txt */; };
+		8CAB70C785E173DD54D1759C /* AvatarCacheService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68429DE70FCF1E44B57EDCD3 /* AvatarCacheService.swift */; };
+		934513DC95D827CA49E2A73F /* UserDataCacheService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D680C4A7F05859E06CA84E7 /* UserDataCacheService.swift */; };
+		9773AFCC57AC50916B8C57A4 /* GameCirclesRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A7D631CC11E418F1952AA1C /* GameCirclesRow.swift */; };
+		97AC278C995D03D433B4EEE8 /* GameCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4ADDEC0CFB0C79FA79F485C0 /* GameCatalog.swift */; };
+		990DF37EA3949DD41BD59C61 /* OFL-Manrope.txt in Resources */ = {isa = PBXBuildFile; fileRef = 34108DD47EFB77364B558984 /* OFL-Manrope.txt */; };
+		A41CF030CB3D7B30F2A0D5E5 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 740D2A75593AF4C07C06A91D /* ProfileView.swift */; };
+		A87D0F0D727C0DF220A88F34 /* GameSearchPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE88E0B337FAF700FE17DFC7 /* GameSearchPickerView.swift */; };
+		AC612CA1000CE22D52E1C502 /* ChatsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C93695AE2A713ACC7DCA422 /* ChatsView.swift */; };
+		AE7DCF0CEBF2994C9FD1C502 /* RatingSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A647C27DF0370ACFB599C58 /* RatingSheet.swift */; };
+		B082489BEAF6ED0DED58F52C /* ChatViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = E88ECB70DCBE5A88263C475E /* ChatViewModel.swift */; };
+		B2A0BEF57FDCCFE637D2D4E4 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 9E23ECC0D09A69B3C2034AFD /* PrivacyInfo.xcprivacy */; };
+		BB58546A02572D28BC803E48 /* PlatformBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF0D53DF3AE5C19E901AFD8A /* PlatformBadge.swift */; };
+		BB6F4D04EA78A588B11CB90B /* TabBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6276AB27057AC51526743A24 /* TabBarView.swift */; };
+		BBD7AC692D4673F91B8CD430 /* FeedCardsOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = D982803253E87E65177BD7C5 /* FeedCardsOverlay.swift */; };
+		C0C89E1607AA1EB4D1F886AE /* ProfileModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A7D6E384A0B73B9118AD389 /* ProfileModels.swift */; };
+		C85A78DD0F1986A75B3CF4D3 /* AirShareView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C6AD5E773B1303EEB711BE7 /* AirShareView.swift */; };
+		CA89B97F5583C58DF85A2270 /* PlusJakartaSans-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 10754EA88D7B24086813F6A2 /* PlusJakartaSans-Bold.ttf */; };
+		CAC753DDC6B02401A91CA129 /* HapticsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79CDB4EFB634556111B2E781 /* HapticsManager.swift */; };
+		CB07AB6FA0AD4227DB384E51 /* ThemeModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9FF81C79E59D7C0D46A3D07 /* ThemeModels.swift */; };
+		CD138438DDB2023F3BBBD87D /* GameTagView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0B3DB9B7A9F19107C2CED13 /* GameTagView.swift */; };
+		D521B17D3A4F3C6C44822396 /* ProfileViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0DDA2619A487BA43EFC374 /* ProfileViewModel.swift */; };
+		D6EBD5FA206E042420E502C5 /* PlusJakartaSans-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 743041E6F2FE73036F81267D /* PlusJakartaSans-Medium.ttf */; };
+		D94F7368E07EC895CF73D0A0 /* UniShare.icon in Resources */ = {isa = PBXBuildFile; fileRef = 629EB445901BBEAA3B6CBABA /* UniShare.icon */; };
+		DF24E93D0899F8D025D63BFD /* SupabaseService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B4217325DF980835BA1272A /* SupabaseService.swift */; };
+		E8541AAA7511CFC61BFCF834 /* AppConstants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76FD58893B1EF89294978A41 /* AppConstants.swift */; };
+		E95A0E602A593A19391E839F /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F6A1884D8C35E54CAC167DE /* ChatView.swift */; };
+		E98A9AA6A5C6FBD2BABE94B1 /* UniShareWidgetControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC409FD4B1446E049DC52852 /* UniShareWidgetControl.swift */; };
+		EA6904B0C8E0188E12CB2EAC /* ReviewModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B0FDDD02C75FB21AF15D14F /* ReviewModels.swift */; };
+		EE582045E20B9EC9A51EA868 /* View+Haptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53A2D953C4434EAF341B4CFF /* View+Haptics.swift */; };
+		F07A52B6475CFA1EA88B6644 /* UniShareMainWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4669E7190B61FC79BF70A136 /* UniShareMainWidget.swift */; };
+		F17EDBB204D62EC247D4A4C0 /* ProfileSearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46A0E385F8ED3E232060FC95 /* ProfileSearchView.swift */; };
+		F2B6A853A91D26398D00135A /* SupabaseAuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01D79B9C72DA4EE05CEF1553 /* SupabaseAuthService.swift */; };
+		F2FD96B503DC88E66A738383 /* SupabaseManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29DCB24B552BF93DB1F767F6 /* SupabaseManager.swift */; };
+		F3A4C163B681788A6F4B377B /* PlusJakartaSans-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 1E3D443D03D67775E0C43D38 /* PlusJakartaSans-Regular.ttf */; };
+		F4A21029FB2961500061DACC /* UniShareApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A720367FAC447564400FECBF /* UniShareApp.swift */; };
+		F5952E73F2B890576AE1AC0C /* Color+Hex.swift in Sources */ = {isa = PBXBuildFile; fileRef = C723C8A77275E57E52CD02BD /* Color+Hex.swift */; };
+		FA5B596B8E3AF037B8856BA1 /* CommunityStoriesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52B9DA621C9FA9BF57A9AD80 /* CommunityStoriesView.swift */; };
+		FBC9BDD323273FE9260CB99A /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 467066D6366A9F6FE6460AFC /* LoginView.swift */; };
+		FC8DA20BD950AB9E81A0A353 /* AppEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF621BA40F000047770DEF80 /* AppEnvironment.swift */; };
+		FE3AB05867EA15E8763F6D95 /* Manrope-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 39C119648AF10C8BCE59EC0E /* Manrope-Bold.ttf */; };
+		FF12F9E2545DCA5103227B06 /* SettingsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9A06F493DD473D4E971C828 /* SettingsSheet.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		2669958387D27B100451EE01 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E8544F3010BEDC559EF52BC5 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = EDDF01291490F2D208E862FA;
+			remoteInfo = UniShareWidget;
+		};
+		29CCF333BE3DDEC86837FF7F /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E8544F3010BEDC559EF52BC5 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A5C25F16472D50FFEDD5DB35;
+			remoteInfo = UniShare;
+		};
+		A02A35B12CBC4ECCC84926DD /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E8544F3010BEDC559EF52BC5 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A5C25F16472D50FFEDD5DB35;
+			remoteInfo = UniShare;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		F6E0A6E99C4D7899DBCE5FFF /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				8686F7EDA3A8A2893E2F23C4 /* UniShareWidget.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
-		14DB27FF300677740078DD7D /* UniShare.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = UniShare.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		01D79B9C72DA4EE05CEF1553 /* SupabaseAuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseAuthService.swift; sourceTree = "<group>"; };
+		06DDFA7CAC0B97DA7ACFA335 /* ThemeManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeManager.swift; sourceTree = "<group>"; };
+		07E87749DB3C51B77D5AB884 /* ChatsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatsViewModel.swift; sourceTree = "<group>"; };
+		0832D0BB34BFB2B8BE41CD8D /* RawgService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RawgService.swift; sourceTree = "<group>"; };
+		0F56A4E933F622EEC214C322 /* String+Localized.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "String+Localized.swift"; sourceTree = "<group>"; };
+		10754EA88D7B24086813F6A2 /* PlusJakartaSans-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "PlusJakartaSans-Bold.ttf"; sourceTree = "<group>"; };
+		13015E98A3F7EC5C835E1433 /* OnboardingViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingViewModel.swift; sourceTree = "<group>"; };
+		13B89A22DAEEC6694556BBBB /* AvatarPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AvatarPickerView.swift; sourceTree = "<group>"; };
+		151ECC1B42198962C4098144 /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Release.xcconfig; sourceTree = "<group>"; };
+		1601A48446CA075AE973B5DB /* Manrope-Medium.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Manrope-Medium.ttf"; sourceTree = "<group>"; };
+		1A957F8CA2844876E196AA24 /* PushNotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushNotificationService.swift; sourceTree = "<group>"; };
+		1B0FDDD02C75FB21AF15D14F /* ReviewModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewModels.swift; sourceTree = "<group>"; };
+		1E3D443D03D67775E0C43D38 /* PlusJakartaSans-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "PlusJakartaSans-Regular.ttf"; sourceTree = "<group>"; };
+		1F4A241C8232E4F6B1693C6F /* WidgetDataService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetDataService.swift; sourceTree = "<group>"; };
+		268A8EA980C82809F1581782 /* be */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = be; path = be.lproj/Localizable.strings; sourceTree = "<group>"; };
+		29DCB24B552BF93DB1F767F6 /* SupabaseManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseManager.swift; sourceTree = "<group>"; };
+		2C2B3F7BDF64B5AC412B2974 /* uk */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = uk; path = uk.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		33CC279BD2CF53C02DE06E4D /* SupabaseStorageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseStorageService.swift; sourceTree = "<group>"; };
+		34108DD47EFB77364B558984 /* OFL-Manrope.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "OFL-Manrope.txt"; sourceTree = "<group>"; };
+		39C119648AF10C8BCE59EC0E /* Manrope-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Manrope-Bold.ttf"; sourceTree = "<group>"; };
+		3A647C27DF0370ACFB599C58 /* RatingSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RatingSheet.swift; sourceTree = "<group>"; };
+		3C5D2B1F7882B1B3F7A51FAB /* EditProfileSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditProfileSheet.swift; sourceTree = "<group>"; };
+		3CA3A163E802BE5187B59B7B /* uk */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = uk; path = uk.lproj/Localizable.strings; sourceTree = "<group>"; };
+		3EF6983C3E06F853669F8C1D /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		3FFF8F1CFD0C4B662D43A9F4 /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
+		407436695217DA02C8F2E815 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		42ECD3549C92C113EB8C815A /* Manrope-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Manrope-Regular.ttf"; sourceTree = "<group>"; };
+		4669E7190B61FC79BF70A136 /* UniShareMainWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UniShareMainWidget.swift; sourceTree = "<group>"; };
+		467066D6366A9F6FE6460AFC /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
+		46A0E385F8ED3E232060FC95 /* ProfileSearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileSearchView.swift; sourceTree = "<group>"; };
+		4A7D631CC11E418F1952AA1C /* GameCirclesRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameCirclesRow.swift; sourceTree = "<group>"; };
+		4ADDEC0CFB0C79FA79F485C0 /* GameCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameCatalog.swift; sourceTree = "<group>"; };
+		4BD781C847F9DE8F6C847C81 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		4C6AD5E773B1303EEB711BE7 /* AirShareView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AirShareView.swift; sourceTree = "<group>"; };
+		4D680C4A7F05859E06CA84E7 /* UserDataCacheService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserDataCacheService.swift; sourceTree = "<group>"; };
+		4E795523EFB9F63A0800E99A /* LiquidSegmentedPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiquidSegmentedPicker.swift; sourceTree = "<group>"; };
+		52B9DA621C9FA9BF57A9AD80 /* CommunityStoriesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommunityStoriesView.swift; sourceTree = "<group>"; };
+		53A2D953C4434EAF341B4CFF /* View+Haptics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "View+Haptics.swift"; sourceTree = "<group>"; };
+		53C929B6B49566A94F0D9D12 /* ru */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ru; path = ru.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		55CE3C4DBAD6F0CDE7311C88 /* GlassCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassCard.swift; sourceTree = "<group>"; };
+		56C458E322353CE532A9C18D /* GreetingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GreetingView.swift; sourceTree = "<group>"; };
+		5828F74CD973FE004DAD0761 /* UniShare.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = UniShare.entitlements; sourceTree = "<group>"; };
+		5B33548BFCB14F15C586A0E8 /* TabBarState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabBarState.swift; sourceTree = "<group>"; };
+		5B75B021424D392D5F60773E /* GameIconCacheService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameIconCacheService.swift; sourceTree = "<group>"; };
+		6276AB27057AC51526743A24 /* TabBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabBarView.swift; sourceTree = "<group>"; };
+		6285BDA518E4E533A75DB6D5 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		629EB445901BBEAA3B6CBABA /* UniShare.icon */ = {isa = PBXFileReference; lastKnownFileType = wrapper.icon; path = UniShare.icon; sourceTree = "<group>"; };
+		643947A95A3FC1189ECCD0FB /* AnimatedGradientBorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnimatedGradientBorder.swift; sourceTree = "<group>"; };
+		68429DE70FCF1E44B57EDCD3 /* AvatarCacheService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AvatarCacheService.swift; sourceTree = "<group>"; };
+		68C3E02B3445EC518E97175F /* UniShareWidget.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = UniShareWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		6A7D6E384A0B73B9118AD389 /* ProfileModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileModels.swift; sourceTree = "<group>"; };
+		6B4046D609646B47E219668A /* AuthViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthViewModel.swift; sourceTree = "<group>"; };
+		6B4217325DF980835BA1272A /* SupabaseService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseService.swift; sourceTree = "<group>"; };
+		6C28E683FE0081A1BBF1E795 /* UniShareUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = UniShareUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		6C93695AE2A713ACC7DCA422 /* ChatsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatsView.swift; sourceTree = "<group>"; };
+		6DAB6A75892E7B4C5F0503EB /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		740D2A75593AF4C07C06A91D /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
+		743041E6F2FE73036F81267D /* PlusJakartaSans-Medium.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "PlusJakartaSans-Medium.ttf"; sourceTree = "<group>"; };
+		7656A8D3B56B1C1D65607E55 /* PasswordPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasswordPolicyTests.swift; sourceTree = "<group>"; };
+		76FD58893B1EF89294978A41 /* AppConstants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConstants.swift; sourceTree = "<group>"; };
+		79CDB4EFB634556111B2E781 /* HapticsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HapticsManager.swift; sourceTree = "<group>"; };
+		7B0DDA2619A487BA43EFC374 /* ProfileViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileViewModel.swift; sourceTree = "<group>"; };
+		7EF52EFD9EF1800A6589F9D6 /* AirShareManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AirShareManager.swift; sourceTree = "<group>"; };
+		838100FA6EEF9270D74C13B4 /* AvatarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AvatarView.swift; sourceTree = "<group>"; };
+		8A9C223DB7187991B0256B5F /* StoryModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoryModels.swift; sourceTree = "<group>"; };
+		9D64775F2AC47573F2FBDF5D /* FeedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedView.swift; sourceTree = "<group>"; };
+		9E23ECC0D09A69B3C2034AFD /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		9F6A1884D8C35E54CAC167DE /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
+		A6F84EDF7B7E3AFE927383C4 /* be */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = be; path = be.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		A720367FAC447564400FECBF /* UniShareApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UniShareApp.swift; sourceTree = "<group>"; };
+		AC0C251DD99358C44CC546E6 /* SupabaseMappingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseMappingTests.swift; sourceTree = "<group>"; };
+		AD7D35A354D381B0DD11FF13 /* PlusJakartaSans-SemiBold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "PlusJakartaSans-SemiBold.ttf"; sourceTree = "<group>"; };
+		AF621BA40F000047770DEF80 /* AppEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEnvironment.swift; sourceTree = "<group>"; };
+		B07E5A9071173EACD46D10D4 /* LocalizationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalizationManager.swift; sourceTree = "<group>"; };
+		B49D55B25321FD3BC9435BE6 /* UniShare.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = UniShare.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B50B6F067EF2B3E61D494487 /* OFL-PlusJakartaSans.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "OFL-PlusJakartaSans.txt"; sourceTree = "<group>"; };
+		B9A06F493DD473D4E971C828 /* SettingsSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsSheet.swift; sourceTree = "<group>"; };
+		BE88E0B337FAF700FE17DFC7 /* GameSearchPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameSearchPickerView.swift; sourceTree = "<group>"; };
+		BF0D53DF3AE5C19E901AFD8A /* PlatformBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlatformBadge.swift; sourceTree = "<group>"; };
+		C0B3DB9B7A9F19107C2CED13 /* GameTagView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameTagView.swift; sourceTree = "<group>"; };
+		C3FD839D8350AC238E25E460 /* SkillCardsOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkillCardsOverlay.swift; sourceTree = "<group>"; };
+		C4CC3349958E7FC983F3CDC1 /* SkillsProfileSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkillsProfileSetupView.swift; sourceTree = "<group>"; };
+		C723C8A77275E57E52CD02BD /* Color+Hex.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Color+Hex.swift"; sourceTree = "<group>"; };
+		C79A01BECECE4BAF9299A77B /* LaunchUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchUITests.swift; sourceTree = "<group>"; };
+		CBAA78DDBA629FBB33B6A848 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		CD24CC94C78AD9D156269ACA /* UniShareTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = UniShareTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		CD9BAA26C43669838472F0ED /* ManropeFontSwizzle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManropeFontSwizzle.swift; sourceTree = "<group>"; };
+		D0C46F0C491B88C39FCAC468 /* Manrope-ExtraBold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Manrope-ExtraBold.ttf"; sourceTree = "<group>"; };
+		D3B3673C31331D3516D6C7C5 /* Manrope-SemiBold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Manrope-SemiBold.ttf"; sourceTree = "<group>"; };
+		D8A5114A422666A581E08214 /* UniShareWidget.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = UniShareWidget.entitlements; sourceTree = "<group>"; };
+		D982803253E87E65177BD7C5 /* FeedCardsOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedCardsOverlay.swift; sourceTree = "<group>"; };
+		E287BDB7903086E2D9798D4F /* GrainOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GrainOverlay.swift; sourceTree = "<group>"; };
+		E601ACC4A7B9160617743DA6 /* FeedViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedViewModel.swift; sourceTree = "<group>"; };
+		E6E0F5457C63BBAD07355866 /* FeedDismissalStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedDismissalStoreTests.swift; sourceTree = "<group>"; };
+		E88ECB70DCBE5A88263C475E /* ChatViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatViewModel.swift; sourceTree = "<group>"; };
+		E9FF81C79E59D7C0D46A3D07 /* ThemeModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeModels.swift; sourceTree = "<group>"; };
+		EB58FDE71C2074719997D132 /* ChatModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatModels.swift; sourceTree = "<group>"; };
+		EB8803000BC7EA4F2E88A5E3 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
+		EBE321E15C1BAB664DE47169 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+		ED56791A8D9DE8DB26E8A8B2 /* PasswordPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasswordPolicy.swift; sourceTree = "<group>"; };
+		F120E1092B8984D6AC65FB02 /* BrandBackground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrandBackground.swift; sourceTree = "<group>"; };
+		F2BDB639465C11D171F00F15 /* OFL-ArchivoBlack.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "OFL-ArchivoBlack.txt"; sourceTree = "<group>"; };
+		F7A861CB7B53558FBC502B8C /* ru */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ru; path = ru.lproj/Localizable.strings; sourceTree = "<group>"; };
+		FC409FD4B1446E049DC52852 /* UniShareWidgetControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UniShareWidgetControl.swift; sourceTree = "<group>"; };
+		FDA10FDBFF1ED5A96459C40A /* ArchivoBlack-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "ArchivoBlack-Regular.ttf"; sourceTree = "<group>"; };
+		FE61B1AAF7B349E25EF662D6 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		FEFACF0378947505EF6123F0 /* FeedDismissalStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedDismissalStore.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
-/* Begin PBXFileSystemSynchronizedRootGroup section */
-		14DB2801300677740078DD7D /* UniShare */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = UniShare;
-			sourceTree = "<group>";
-		};
-/* End PBXFileSystemSynchronizedRootGroup section */
-
 /* Begin PBXFrameworksBuildPhase section */
-		14DB27FC300677740078DD7D /* Frameworks */ = {
+		CE8F496D9FB090B3BA9D3B35 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
 			files = (
+				7084F8D329F8860017AF5CE0 /* Supabase in Frameworks */,
 			);
+			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		14DB27F6300677740078DD7D = {
+		0306C70BB9DC5537CE242A0D /* Extensions */ = {
 			isa = PBXGroup;
 			children = (
-				14DB2801300677740078DD7D /* UniShare */,
-				14DB2800300677740078DD7D /* Products */,
+				C723C8A77275E57E52CD02BD /* Color+Hex.swift */,
+				0F56A4E933F622EEC214C322 /* String+Localized.swift */,
+				53A2D953C4434EAF341B4CFF /* View+Haptics.swift */,
+			);
+			path = Extensions;
+			sourceTree = "<group>";
+		};
+		03697FF19F7374476F295A3A /* UniShareTests */ = {
+			isa = PBXGroup;
+			children = (
+				E6E0F5457C63BBAD07355866 /* FeedDismissalStoreTests.swift */,
+				7656A8D3B56B1C1D65607E55 /* PasswordPolicyTests.swift */,
+				AC0C251DD99358C44CC546E6 /* SupabaseMappingTests.swift */,
+			);
+			path = UniShareTests;
+			sourceTree = "<group>";
+		};
+		04DB9A7B28827540033A241E /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				4ADDEC0CFB0C79FA79F485C0 /* GameCatalog.swift */,
+				1A957F8CA2844876E196AA24 /* PushNotificationService.swift */,
+				0832D0BB34BFB2B8BE41CD8D /* RawgService.swift */,
+				01D79B9C72DA4EE05CEF1553 /* SupabaseAuthService.swift */,
+				29DCB24B552BF93DB1F767F6 /* SupabaseManager.swift */,
+				6B4217325DF980835BA1272A /* SupabaseService.swift */,
+				33CC279BD2CF53C02DE06E4D /* SupabaseStorageService.swift */,
+				1F4A241C8232E4F6B1693C6F /* WidgetDataService.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		05668296486C265BCC745F31 /* AirShare */ = {
+			isa = PBXGroup;
+			children = (
+				7EF52EFD9EF1800A6589F9D6 /* AirShareManager.swift */,
+				4C6AD5E773B1303EEB711BE7 /* AirShareView.swift */,
+			);
+			path = AirShare;
+			sourceTree = "<group>";
+		};
+		176F9867CB2685B0A59CAB45 = {
+			isa = PBXGroup;
+			children = (
+				5C8F02D11388DFA0EDB4AF01 /* Config */,
+				36E86EE3F993960E30523578 /* UniShare */,
+				03697FF19F7374476F295A3A /* UniShareTests */,
+				9DE115ED1B51B19C22791B9A /* UniShareUITests */,
+				8603A9EB691B28202BFF0D56 /* UniShareWidget */,
+				582E47EF273EC648293122D3 /* Products */,
 			);
 			sourceTree = "<group>";
 		};
-		14DB2800300677740078DD7D /* Products */ = {
+		18FD6130B7078ACC4EE0EEFB /* Search */ = {
 			isa = PBXGroup;
 			children = (
-				14DB27FF300677740078DD7D /* UniShare.app */,
+				46A0E385F8ED3E232060FC95 /* ProfileSearchView.swift */,
+			);
+			path = Search;
+			sourceTree = "<group>";
+		};
+		1A8BE8FA8E5324DCEE4DDF1B /* AI */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = AI;
+			sourceTree = "<group>";
+		};
+		23E1DC77E7157E2E72620E7B /* Navigation */ = {
+			isa = PBXGroup;
+			children = (
+				5B33548BFCB14F15C586A0E8 /* TabBarState.swift */,
+				6276AB27057AC51526743A24 /* TabBarView.swift */,
+			);
+			path = Navigation;
+			sourceTree = "<group>";
+		};
+		3663CDB13BEE8B63F5C766E4 /* Onboarding */ = {
+			isa = PBXGroup;
+			children = (
+				13B89A22DAEEC6694556BBBB /* AvatarPickerView.swift */,
+				BE88E0B337FAF700FE17DFC7 /* GameSearchPickerView.swift */,
+				EBE321E15C1BAB664DE47169 /* OnboardingView.swift */,
+				13015E98A3F7EC5C835E1433 /* OnboardingViewModel.swift */,
+			);
+			path = Onboarding;
+			sourceTree = "<group>";
+		};
+		36E86EE3F993960E30523578 /* UniShare */ = {
+			isa = PBXGroup;
+			children = (
+				FE61B1AAF7B349E25EF662D6 /* ContentView.swift */,
+				407436695217DA02C8F2E815 /* Info.plist */,
+				9E23ECC0D09A69B3C2034AFD /* PrivacyInfo.xcprivacy */,
+				5828F74CD973FE004DAD0761 /* UniShare.entitlements */,
+				A720367FAC447564400FECBF /* UniShareApp.swift */,
+				4D79FD63F59C44B6AA9D07D5 /* Cache */,
+				A8EB0F3D5B3893D488A91347 /* Components */,
+				A54C167BDE398161E767FD07 /* Core */,
+				0306C70BB9DC5537CE242A0D /* Extensions */,
+				DEEC6D5D51BD244487A64A69 /* Features */,
+				3F97BF89926F842801C9C6F5 /* Localization */,
+				37B2A007083B769BA0C5E869 /* Models */,
+				23E1DC77E7157E2E72620E7B /* Navigation */,
+				D40E05E681EA8069AF9DD07B /* Resources */,
+				04DB9A7B28827540033A241E /* Services */,
+			);
+			path = UniShare;
+			sourceTree = "<group>";
+		};
+		37B2A007083B769BA0C5E869 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				EB58FDE71C2074719997D132 /* ChatModels.swift */,
+				6A7D6E384A0B73B9118AD389 /* ProfileModels.swift */,
+				1B0FDDD02C75FB21AF15D14F /* ReviewModels.swift */,
+				8A9C223DB7187991B0256B5F /* StoryModels.swift */,
+				E9FF81C79E59D7C0D46A3D07 /* ThemeModels.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		3F97BF89926F842801C9C6F5 /* Localization */ = {
+			isa = PBXGroup;
+			children = (
+				9C86CD53EED5AB51E615F802 /* InfoPlist.strings */,
+				A2768447CD92642572296B2E /* Localizable.strings */,
+			);
+			path = Localization;
+			sourceTree = "<group>";
+		};
+		4D79FD63F59C44B6AA9D07D5 /* Cache */ = {
+			isa = PBXGroup;
+			children = (
+				68429DE70FCF1E44B57EDCD3 /* AvatarCacheService.swift */,
+				5B75B021424D392D5F60773E /* GameIconCacheService.swift */,
+				4D680C4A7F05859E06CA84E7 /* UserDataCacheService.swift */,
+			);
+			path = Cache;
+			sourceTree = "<group>";
+		};
+		52F9103A876E069DD887966B /* Profile */ = {
+			isa = PBXGroup;
+			children = (
+				3C5D2B1F7882B1B3F7A51FAB /* EditProfileSheet.swift */,
+				740D2A75593AF4C07C06A91D /* ProfileView.swift */,
+				7B0DDA2619A487BA43EFC374 /* ProfileViewModel.swift */,
+				B9A06F493DD473D4E971C828 /* SettingsSheet.swift */,
+				C4CC3349958E7FC983F3CDC1 /* SkillsProfileSetupView.swift */,
+			);
+			path = Profile;
+			sourceTree = "<group>";
+		};
+		582E47EF273EC648293122D3 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				B49D55B25321FD3BC9435BE6 /* UniShare.app */,
+				CD24CC94C78AD9D156269ACA /* UniShareTests.xctest */,
+				6C28E683FE0081A1BBF1E795 /* UniShareUITests.xctest */,
+				68C3E02B3445EC518E97175F /* UniShareWidget.appex */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		5B4055263D9416D0D419D2EF /* Greeting */ = {
+			isa = PBXGroup;
+			children = (
+				56C458E322353CE532A9C18D /* GreetingView.swift */,
+			);
+			path = Greeting;
+			sourceTree = "<group>";
+		};
+		5C8F02D11388DFA0EDB4AF01 /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				3FFF8F1CFD0C4B662D43A9F4 /* Debug.xcconfig */,
+				151ECC1B42198962C4098144 /* Release.xcconfig */,
+			);
+			path = Config;
+			sourceTree = "<group>";
+		};
+		8603A9EB691B28202BFF0D56 /* UniShareWidget */ = {
+			isa = PBXGroup;
+			children = (
+				CBAA78DDBA629FBB33B6A848 /* Info.plist */,
+				4BD781C847F9DE8F6C847C81 /* PrivacyInfo.xcprivacy */,
+				4669E7190B61FC79BF70A136 /* UniShareMainWidget.swift */,
+				D8A5114A422666A581E08214 /* UniShareWidget.entitlements */,
+				FC409FD4B1446E049DC52852 /* UniShareWidgetControl.swift */,
+			);
+			path = UniShareWidget;
+			sourceTree = "<group>";
+		};
+		8F03D78680012B71C3B73168 /* Chat */ = {
+			isa = PBXGroup;
+			children = (
+				6C93695AE2A713ACC7DCA422 /* ChatsView.swift */,
+				07E87749DB3C51B77D5AB884 /* ChatsViewModel.swift */,
+				9F6A1884D8C35E54CAC167DE /* ChatView.swift */,
+				E88ECB70DCBE5A88263C475E /* ChatViewModel.swift */,
+				52B9DA621C9FA9BF57A9AD80 /* CommunityStoriesView.swift */,
+				3A647C27DF0370ACFB599C58 /* RatingSheet.swift */,
+			);
+			path = Chat;
+			sourceTree = "<group>";
+		};
+		9DE115ED1B51B19C22791B9A /* UniShareUITests */ = {
+			isa = PBXGroup;
+			children = (
+				C79A01BECECE4BAF9299A77B /* LaunchUITests.swift */,
+			);
+			path = UniShareUITests;
+			sourceTree = "<group>";
+		};
+		A54C167BDE398161E767FD07 /* Core */ = {
+			isa = PBXGroup;
+			children = (
+				76FD58893B1EF89294978A41 /* AppConstants.swift */,
+				3EF6983C3E06F853669F8C1D /* AppDelegate.swift */,
+				AF621BA40F000047770DEF80 /* AppEnvironment.swift */,
+				79CDB4EFB634556111B2E781 /* HapticsManager.swift */,
+				B07E5A9071173EACD46D10D4 /* LocalizationManager.swift */,
+				CD9BAA26C43669838472F0ED /* ManropeFontSwizzle.swift */,
+				ED56791A8D9DE8DB26E8A8B2 /* PasswordPolicy.swift */,
+				06DDFA7CAC0B97DA7ACFA335 /* ThemeManager.swift */,
+			);
+			path = Core;
+			sourceTree = "<group>";
+		};
+		A8EB0F3D5B3893D488A91347 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				643947A95A3FC1189ECCD0FB /* AnimatedGradientBorder.swift */,
+				838100FA6EEF9270D74C13B4 /* AvatarView.swift */,
+				F120E1092B8984D6AC65FB02 /* BrandBackground.swift */,
+				4A7D631CC11E418F1952AA1C /* GameCirclesRow.swift */,
+				C0B3DB9B7A9F19107C2CED13 /* GameTagView.swift */,
+				55CE3C4DBAD6F0CDE7311C88 /* GlassCard.swift */,
+				E287BDB7903086E2D9798D4F /* GrainOverlay.swift */,
+				4E795523EFB9F63A0800E99A /* LiquidSegmentedPicker.swift */,
+				BF0D53DF3AE5C19E901AFD8A /* PlatformBadge.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		C2D75A30F3875760C9AF705C /* Feed */ = {
+			isa = PBXGroup;
+			children = (
+				D982803253E87E65177BD7C5 /* FeedCardsOverlay.swift */,
+				FEFACF0378947505EF6123F0 /* FeedDismissalStore.swift */,
+				9D64775F2AC47573F2FBDF5D /* FeedView.swift */,
+				E601ACC4A7B9160617743DA6 /* FeedViewModel.swift */,
+				C3FD839D8350AC238E25E460 /* SkillCardsOverlay.swift */,
+			);
+			path = Feed;
+			sourceTree = "<group>";
+		};
+		D002719717A855BD8DA31B09 /* Fonts */ = {
+			isa = PBXGroup;
+			children = (
+				FDA10FDBFF1ED5A96459C40A /* ArchivoBlack-Regular.ttf */,
+				39C119648AF10C8BCE59EC0E /* Manrope-Bold.ttf */,
+				D0C46F0C491B88C39FCAC468 /* Manrope-ExtraBold.ttf */,
+				1601A48446CA075AE973B5DB /* Manrope-Medium.ttf */,
+				42ECD3549C92C113EB8C815A /* Manrope-Regular.ttf */,
+				D3B3673C31331D3516D6C7C5 /* Manrope-SemiBold.ttf */,
+				F2BDB639465C11D171F00F15 /* OFL-ArchivoBlack.txt */,
+				34108DD47EFB77364B558984 /* OFL-Manrope.txt */,
+				B50B6F067EF2B3E61D494487 /* OFL-PlusJakartaSans.txt */,
+				10754EA88D7B24086813F6A2 /* PlusJakartaSans-Bold.ttf */,
+				743041E6F2FE73036F81267D /* PlusJakartaSans-Medium.ttf */,
+				1E3D443D03D67775E0C43D38 /* PlusJakartaSans-Regular.ttf */,
+				AD7D35A354D381B0DD11FF13 /* PlusJakartaSans-SemiBold.ttf */,
+			);
+			path = Fonts;
+			sourceTree = "<group>";
+		};
+		D40E05E681EA8069AF9DD07B /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				6DAB6A75892E7B4C5F0503EB /* Assets.xcassets */,
+				629EB445901BBEAA3B6CBABA /* UniShare.icon */,
+				D002719717A855BD8DA31B09 /* Fonts */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		DEEC6D5D51BD244487A64A69 /* Features */ = {
+			isa = PBXGroup;
+			children = (
+				1A8BE8FA8E5324DCEE4DDF1B /* AI */,
+				05668296486C265BCC745F31 /* AirShare */,
+				FA7862705E2D324686CE0920 /* Auth */,
+				8F03D78680012B71C3B73168 /* Chat */,
+				C2D75A30F3875760C9AF705C /* Feed */,
+				5B4055263D9416D0D419D2EF /* Greeting */,
+				3663CDB13BEE8B63F5C766E4 /* Onboarding */,
+				52F9103A876E069DD887966B /* Profile */,
+				18FD6130B7078ACC4EE0EEFB /* Search */,
+			);
+			path = Features;
+			sourceTree = "<group>";
+		};
+		FA7862705E2D324686CE0920 /* Auth */ = {
+			isa = PBXGroup;
+			children = (
+				6B4046D609646B47E219668A /* AuthViewModel.swift */,
+				467066D6366A9F6FE6460AFC /* LoginView.swift */,
+			);
+			path = Auth;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		14DB27FE300677740078DD7D /* UniShare */ = {
+		7738F68B9AE260BDED630893 /* UniShareUITests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 14DB280A300677760078DD7D /* Build configuration list for PBXNativeTarget "UniShare" */;
+			buildConfigurationList = 482E4EC5901212ABA1DF9086 /* Build configuration list for PBXNativeTarget "UniShareUITests" */;
 			buildPhases = (
-				14DB27FB300677740078DD7D /* Sources */,
-				14DB27FC300677740078DD7D /* Frameworks */,
-				14DB27FD300677740078DD7D /* Resources */,
+				0843CD86DB29A7F026021B6E /* Sources */,
 			);
 			buildRules = (
 			);
-			fileSystemSynchronizedGroups = (
-				14DB2801300677740078DD7D /* UniShare */,
+			dependencies = (
+				4BB4685243A6F703CCC211C9 /* PBXTargetDependency */,
+			);
+			name = UniShareUITests;
+			packageProductDependencies = (
+			);
+			productName = UniShareUITests;
+			productReference = 6C28E683FE0081A1BBF1E795 /* UniShareUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+		A0C3CD77C715704A2F2EB743 /* UniShareTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 55F68D58B409307783776A71 /* Build configuration list for PBXNativeTarget "UniShareTests" */;
+			buildPhases = (
+				72CB0D532C2E471986707465 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				802DB5D8880C8B78C92B13C6 /* PBXTargetDependency */,
+			);
+			name = UniShareTests;
+			packageProductDependencies = (
+			);
+			productName = UniShareTests;
+			productReference = CD24CC94C78AD9D156269ACA /* UniShareTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		A5C25F16472D50FFEDD5DB35 /* UniShare */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D2A52DF171F9DCA2DFB476E2 /* Build configuration list for PBXNativeTarget "UniShare" */;
+			buildPhases = (
+				35DEEE33BA9DA5B0CA8CA567 /* Sources */,
+				728C4D81F8BADA3E0920DC18 /* Resources */,
+				CE8F496D9FB090B3BA9D3B35 /* Frameworks */,
+				F6E0A6E99C4D7899DBCE5FFF /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				E85A7C5C815D88902899496A /* PBXTargetDependency */,
 			);
 			name = UniShare;
+			packageProductDependencies = (
+				B7A3B687F6E18A869764B314 /* Supabase */,
+			);
 			productName = UniShare;
-			productReference = 14DB27FF300677740078DD7D /* UniShare.app */;
+			productReference = B49D55B25321FD3BC9435BE6 /* UniShare.app */;
 			productType = "com.apple.product-type.application";
+		};
+		EDDF01291490F2D208E862FA /* UniShareWidget */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D72EE09A9AD98FCA120F9802 /* Build configuration list for PBXNativeTarget "UniShareWidget" */;
+			buildPhases = (
+				321AE0DA5D701019BEAA5D61 /* Sources */,
+				64BCE2E1816EDEF4E3E8FD4D /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = UniShareWidget;
+			packageProductDependencies = (
+			);
+			productName = UniShareWidget;
+			productReference = 68C3E02B3445EC518E97175F /* UniShareWidget.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
-		14DB27F7300677740078DD7D /* Project object */ = {
+		E8544F3010BEDC559EF52BC5 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 2700;
-				LastUpgradeCheck = 2700;
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1500;
 				TargetAttributes = {
-					14DB27FE300677740078DD7D = {
-						CreatedOnToolsVersion = 27.0;
+					7738F68B9AE260BDED630893 = {
+						TestTargetID = A5C25F16472D50FFEDD5DB35;
+					};
+					A5C25F16472D50FFEDD5DB35 = {
+						DevelopmentTeam = FLSHXRH925;
+					};
+					EDDF01291490F2D208E862FA = {
+						DevelopmentTeam = FLSHXRH925;
 					};
 				};
 			};
-			buildConfigurationList = 14DB27FA300677740078DD7D /* Build configuration list for PBXProject "UniShare" */;
+			buildConfigurationList = 1BB239CDDBC5B31A3B765385 /* Build configuration list for PBXProject "UniShare" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
-				en,
 				Base,
+				be,
+				en,
+				ru,
+				uk,
 			);
-			mainGroup = 14DB27F6300677740078DD7D;
+			mainGroup = 176F9867CB2685B0A59CAB45;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				78338F28D706B988F921972F /* XCRemoteSwiftPackageReference "supabase-swift" */,
+			);
 			preferredProjectObjectVersion = 77;
-			productRefGroup = 14DB2800300677740078DD7D /* Products */;
+			productRefGroup = 582E47EF273EC648293122D3 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				14DB27FE300677740078DD7D /* UniShare */,
+				A5C25F16472D50FFEDD5DB35 /* UniShare */,
+				A0C3CD77C715704A2F2EB743 /* UniShareTests */,
+				7738F68B9AE260BDED630893 /* UniShareUITests */,
+				EDDF01291490F2D208E862FA /* UniShareWidget */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		14DB27FD300677740078DD7D /* Resources */ = {
+		64BCE2E1816EDEF4E3E8FD4D /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
 			files = (
+				1577E30DB234EDD1FDCC52A4 /* PrivacyInfo.xcprivacy in Resources */,
 			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		728C4D81F8BADA3E0920DC18 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0B4FFFD05431B90164222C29 /* ArchivoBlack-Regular.ttf in Resources */,
+				5199D61BE1209CC8993CD773 /* Assets.xcassets in Resources */,
+				49EBA6ED596D8E7E338F4264 /* InfoPlist.strings in Resources */,
+				377AB8ABD4067454D73AB94C /* Localizable.strings in Resources */,
+				FE3AB05867EA15E8763F6D95 /* Manrope-Bold.ttf in Resources */,
+				05D8B26C9D2D7F835EEF6D24 /* Manrope-ExtraBold.ttf in Resources */,
+				0F0F956E934D0B242CE779AB /* Manrope-Medium.ttf in Resources */,
+				7BB644DCFB1A83FBB531F7A4 /* Manrope-Regular.ttf in Resources */,
+				229B6452DF81AF090DE950E1 /* Manrope-SemiBold.ttf in Resources */,
+				87D5C947D3CCFBD1B4E0888F /* OFL-ArchivoBlack.txt in Resources */,
+				990DF37EA3949DD41BD59C61 /* OFL-Manrope.txt in Resources */,
+				0B975AA132B298CE4B976635 /* OFL-PlusJakartaSans.txt in Resources */,
+				CA89B97F5583C58DF85A2270 /* PlusJakartaSans-Bold.ttf in Resources */,
+				D6EBD5FA206E042420E502C5 /* PlusJakartaSans-Medium.ttf in Resources */,
+				F3A4C163B681788A6F4B377B /* PlusJakartaSans-Regular.ttf in Resources */,
+				461EE14C90B1F2970A5DCA3B /* PlusJakartaSans-SemiBold.ttf in Resources */,
+				B2A0BEF57FDCCFE637D2D4E4 /* PrivacyInfo.xcprivacy in Resources */,
+				D94F7368E07EC895CF73D0A0 /* UniShare.icon in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		14DB27FB300677740078DD7D /* Sources */ = {
+		0843CD86DB29A7F026021B6E /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
 			files = (
+				29515AF47DD7D1B081E371FA /* LaunchUITests.swift in Sources */,
 			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		321AE0DA5D701019BEAA5D61 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F07A52B6475CFA1EA88B6644 /* UniShareMainWidget.swift in Sources */,
+				E98A9AA6A5C6FBD2BABE94B1 /* UniShareWidgetControl.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		35DEEE33BA9DA5B0CA8CA567 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				35865EAF203DEA3A63E0ECCD /* AirShareManager.swift in Sources */,
+				C85A78DD0F1986A75B3CF4D3 /* AirShareView.swift in Sources */,
+				5FCA9056ACA6DCFCBDFB81F0 /* AnimatedGradientBorder.swift in Sources */,
+				E8541AAA7511CFC61BFCF834 /* AppConstants.swift in Sources */,
+				7588B4F725F713188A33522E /* AppDelegate.swift in Sources */,
+				FC8DA20BD950AB9E81A0A353 /* AppEnvironment.swift in Sources */,
+				630794C135EF1D45DE6A3A73 /* AuthViewModel.swift in Sources */,
+				8CAB70C785E173DD54D1759C /* AvatarCacheService.swift in Sources */,
+				5F81E90DA7EB0E1460BA426D /* AvatarPickerView.swift in Sources */,
+				66D638687F014646686F632A /* AvatarView.swift in Sources */,
+				710357D2F1E1AC55804A1715 /* BrandBackground.swift in Sources */,
+				7F5CE2D9BB769E12405BFB3C /* ChatModels.swift in Sources */,
+				E95A0E602A593A19391E839F /* ChatView.swift in Sources */,
+				B082489BEAF6ED0DED58F52C /* ChatViewModel.swift in Sources */,
+				AC612CA1000CE22D52E1C502 /* ChatsView.swift in Sources */,
+				2BD4D817492B0DF8546C2C39 /* ChatsViewModel.swift in Sources */,
+				F5952E73F2B890576AE1AC0C /* Color+Hex.swift in Sources */,
+				FA5B596B8E3AF037B8856BA1 /* CommunityStoriesView.swift in Sources */,
+				12FE1B02BAD6CE465330A979 /* ContentView.swift in Sources */,
+				31603E81F8FAE7B4901F4070 /* EditProfileSheet.swift in Sources */,
+				BBD7AC692D4673F91B8CD430 /* FeedCardsOverlay.swift in Sources */,
+				6F8EFEA1378DFF152499271D /* FeedDismissalStore.swift in Sources */,
+				2A67FF7618BB5C618F3D76CF /* FeedView.swift in Sources */,
+				3373135ACE0D25C24FA51788 /* FeedViewModel.swift in Sources */,
+				97AC278C995D03D433B4EEE8 /* GameCatalog.swift in Sources */,
+				9773AFCC57AC50916B8C57A4 /* GameCirclesRow.swift in Sources */,
+				50CD993515A8D3275285E099 /* GameIconCacheService.swift in Sources */,
+				A87D0F0D727C0DF220A88F34 /* GameSearchPickerView.swift in Sources */,
+				CD138438DDB2023F3BBBD87D /* GameTagView.swift in Sources */,
+				29EC50FA795817A7B5BC3418 /* GlassCard.swift in Sources */,
+				498E33EFDF2041AA31CAFEEE /* GrainOverlay.swift in Sources */,
+				0AFF78B4270B5FFF788EF43E /* GreetingView.swift in Sources */,
+				CAC753DDC6B02401A91CA129 /* HapticsManager.swift in Sources */,
+				60379C038DEB7B5764819C5F /* LiquidSegmentedPicker.swift in Sources */,
+				76C81E19D0F338355A9524CF /* LocalizationManager.swift in Sources */,
+				FBC9BDD323273FE9260CB99A /* LoginView.swift in Sources */,
+				0E939980F46F9455A65A28FD /* ManropeFontSwizzle.swift in Sources */,
+				23EEFDD77B4DE82CC184BD6B /* OnboardingView.swift in Sources */,
+				2A2488302BEF94C8A722060A /* OnboardingViewModel.swift in Sources */,
+				7DC7D69BD6110001D39FBF33 /* PasswordPolicy.swift in Sources */,
+				BB58546A02572D28BC803E48 /* PlatformBadge.swift in Sources */,
+				C0C89E1607AA1EB4D1F886AE /* ProfileModels.swift in Sources */,
+				F17EDBB204D62EC247D4A4C0 /* ProfileSearchView.swift in Sources */,
+				A41CF030CB3D7B30F2A0D5E5 /* ProfileView.swift in Sources */,
+				D521B17D3A4F3C6C44822396 /* ProfileViewModel.swift in Sources */,
+				2C4062E50914654DED7620DE /* PushNotificationService.swift in Sources */,
+				AE7DCF0CEBF2994C9FD1C502 /* RatingSheet.swift in Sources */,
+				6655E5AC8D86F2F5B72EB014 /* RawgService.swift in Sources */,
+				EA6904B0C8E0188E12CB2EAC /* ReviewModels.swift in Sources */,
+				FF12F9E2545DCA5103227B06 /* SettingsSheet.swift in Sources */,
+				5AB51ACB5AB9C8ACFB1074F1 /* SkillCardsOverlay.swift in Sources */,
+				7D1432DE538BFBBF2D4559C7 /* SkillsProfileSetupView.swift in Sources */,
+				2EC2779E4F120DA1055711E0 /* StoryModels.swift in Sources */,
+				2BA5DD17A801445DB724D2FC /* String+Localized.swift in Sources */,
+				F2B6A853A91D26398D00135A /* SupabaseAuthService.swift in Sources */,
+				F2FD96B503DC88E66A738383 /* SupabaseManager.swift in Sources */,
+				DF24E93D0899F8D025D63BFD /* SupabaseService.swift in Sources */,
+				7E0A42E0D1624D63D5AF6BE7 /* SupabaseStorageService.swift in Sources */,
+				7379154F1549FDFB6B46DD28 /* TabBarState.swift in Sources */,
+				BB6F4D04EA78A588B11CB90B /* TabBarView.swift in Sources */,
+				2F84CF22B599F4BD1DACAA94 /* ThemeManager.swift in Sources */,
+				CB07AB6FA0AD4227DB384E51 /* ThemeModels.swift in Sources */,
+				F4A21029FB2961500061DACC /* UniShareApp.swift in Sources */,
+				934513DC95D827CA49E2A73F /* UserDataCacheService.swift in Sources */,
+				EE582045E20B9EC9A51EA868 /* View+Haptics.swift in Sources */,
+				4337C22C139305D30EA6AD6F /* WidgetDataService.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		72CB0D532C2E471986707465 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				21F6821D43EFDE92E69D73A4 /* FeedDismissalStoreTests.swift in Sources */,
+				74E6F500B5A0F571F2665696 /* PasswordPolicyTests.swift in Sources */,
+				2C7D182D7F1AE1EDFCD31CC1 /* SupabaseMappingTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		4BB4685243A6F703CCC211C9 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A5C25F16472D50FFEDD5DB35 /* UniShare */;
+			targetProxy = A02A35B12CBC4ECCC84926DD /* PBXContainerItemProxy */;
+		};
+		802DB5D8880C8B78C92B13C6 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A5C25F16472D50FFEDD5DB35 /* UniShare */;
+			targetProxy = 29CCF333BE3DDEC86837FF7F /* PBXContainerItemProxy */;
+		};
+		E85A7C5C815D88902899496A /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = EDDF01291490F2D208E862FA /* UniShareWidget */;
+			targetProxy = 2669958387D27B100451EE01 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin PBXVariantGroup section */
+		9C86CD53EED5AB51E615F802 /* InfoPlist.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				A6F84EDF7B7E3AFE927383C4 /* be */,
+				6285BDA518E4E533A75DB6D5 /* en */,
+				53C929B6B49566A94F0D9D12 /* ru */,
+				2C2B3F7BDF64B5AC412B2974 /* uk */,
+			);
+			name = InfoPlist.strings;
+			sourceTree = "<group>";
+		};
+		A2768447CD92642572296B2E /* Localizable.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				268A8EA980C82809F1581782 /* be */,
+				EB8803000BC7EA4F2E88A5E3 /* en */,
+				F7A861CB7B53558FBC502B8C /* ru */,
+				3CA3A163E802BE5187B59B7B /* uk */,
+			);
+			name = Localizable.strings;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
+
 /* Begin XCBuildConfiguration section */
-		14DB2808300677760078DD7D /* Debug configuration for PBXProject "UniShare" */ = {
+		127A80C5B196958E7F9ABDA9 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 3FFF8F1CFD0C4B662D43A9F4 /* Debug.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CLANG_ENABLE_OBJC_WEAK = YES;
@@ -150,43 +923,92 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
-				DEVELOPMENT_TEAM = FLSHXRH925;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				ENABLE_TESTABILITY = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
-				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_OPTIMIZATION_LEVEL = 0;
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"DEBUG=1",
-					"$(inherited)",
-				);
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
 				GCC_WARN_UNDECLARED_SELECTOR = YES;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
-				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
-				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
-				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 			};
 			name = Debug;
 		};
-		14DB2809300677760078DD7D /* Release configuration for PBXProject "UniShare" */ = {
+		1306604BF7E974F10B0257B1 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.egorchulanov.unishare.Tests;
+				PRODUCT_NAME = UniShareTests;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.9;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/UniShare.app/UniShare";
+			};
+			name = Release;
+		};
+		1EFB336804BAB19FF99EF9D1 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.egorchulanov.unishare.UITests;
+				PRODUCT_NAME = UniShareUITests;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.9;
+				TEST_TARGET_NAME = UniShare;
+			};
+			name = Release;
+		};
+		63D85CECB428BEA60CA10023 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.egorchulanov.unishare.Tests;
+				PRODUCT_NAME = UniShareTests;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.9;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/UniShare.app/UniShare";
+			};
+			name = Debug;
+		};
+		6C6BDAD8AA77AC2823AA9A57 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 151ECC1B42198962C4098144 /* Release.xcconfig */;
+			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CLANG_ENABLE_OBJC_WEAK = YES;
@@ -214,11 +1036,9 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEVELOPMENT_TEAM = FLSHXRH925;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
-				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
@@ -226,76 +1046,117 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
-				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
-				SWIFT_COMPILATION_MODE = wholemodule;
-				VALIDATE_PRODUCT = YES;
 			};
 			name = Release;
 		};
-		14DB280B300677760078DD7D /* Debug configuration for PBXNativeTarget "UniShare" */ = {
+		7A7394D3B68B36A7B7C85DFD /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				ASSETCATALOG_COMPILER_APPICON_NAME = UniShare;
+				CODE_SIGN_ENTITLEMENTS = UniShare/UniShare.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Distribution";
+				CODE_SIGN_STYLE = Manual;
 				DEVELOPMENT_TEAM = FLSHXRH925;
-				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
-				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_FILE = UniShare/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.yehorchulanov.UniShare;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(UNISHARE_APP_BUNDLE_ID)";
+				PRODUCT_NAME = UniShare;
+				PROVISIONING_PROFILE_SPECIFIER = "$(UNISHARE_APP_PROFILE)";
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.9;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		9D6098169523DF2368F3E8B5 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.egorchulanov.unishare.UITests;
+				PRODUCT_NAME = UniShareUITests;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.9;
+				TEST_TARGET_NAME = UniShare;
+			};
+			name = Debug;
+		};
+		CC137262C050A8E277822A26 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = UniShare;
+				CODE_SIGN_ENTITLEMENTS = UniShare/UniShare.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = FLSHXRH925;
+				INFOPLIST_FILE = UniShare/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "$(UNISHARE_APP_BUNDLE_ID)";
+				PRODUCT_NAME = UniShare;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.9;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
 		};
-		14DB280C300677760078DD7D /* Release configuration for PBXNativeTarget "UniShare" */ = {
+		DD72672A5CF3F9113A851424 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = UniShareWidget/UniShareWidget.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = FLSHXRH925;
-				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
-				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				EXTENSION_ATTRIBUTES = WidgetKitExtension;
+				INFOPLIST_FILE = UniShareWidget/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.yehorchulanov.UniShare;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(UNISHARE_WIDGET_BUNDLE_ID)";
+				PRODUCT_NAME = UniShareWidget;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.9;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		E5703654DB0A79ECFC25876B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = UniShareWidget/UniShareWidget.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Distribution";
+				CODE_SIGN_STYLE = Manual;
+				DEVELOPMENT_TEAM = FLSHXRH925;
+				EXTENSION_ATTRIBUTES = WidgetKitExtension;
+				INFOPLIST_FILE = UniShareWidget/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "$(UNISHARE_WIDGET_BUNDLE_ID)";
+				PRODUCT_NAME = UniShareWidget;
+				PROVISIONING_PROFILE_SPECIFIER = "$(UNISHARE_WIDGET_PROFILE)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.9;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
@@ -303,24 +1164,71 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		14DB27FA300677740078DD7D /* Build configuration list for PBXProject "UniShare" */ = {
+		1BB239CDDBC5B31A3B765385 /* Build configuration list for PBXProject "UniShare" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				14DB2808300677760078DD7D /* Debug configuration for PBXProject "UniShare" */,
-				14DB2809300677760078DD7D /* Release configuration for PBXProject "UniShare" */,
+				127A80C5B196958E7F9ABDA9 /* Debug */,
+				6C6BDAD8AA77AC2823AA9A57 /* Release */,
 			);
-			defaultConfigurationName = Release;
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
 		};
-		14DB280A300677760078DD7D /* Build configuration list for PBXNativeTarget "UniShare" */ = {
+		482E4EC5901212ABA1DF9086 /* Build configuration list for PBXNativeTarget "UniShareUITests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				14DB280B300677760078DD7D /* Debug configuration for PBXNativeTarget "UniShare" */,
-				14DB280C300677760078DD7D /* Release configuration for PBXNativeTarget "UniShare" */,
+				9D6098169523DF2368F3E8B5 /* Debug */,
+				1EFB336804BAB19FF99EF9D1 /* Release */,
 			);
-			defaultConfigurationName = Release;
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		55F68D58B409307783776A71 /* Build configuration list for PBXNativeTarget "UniShareTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				63D85CECB428BEA60CA10023 /* Debug */,
+				1306604BF7E974F10B0257B1 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		D2A52DF171F9DCA2DFB476E2 /* Build configuration list for PBXNativeTarget "UniShare" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CC137262C050A8E277822A26 /* Debug */,
+				7A7394D3B68B36A7B7C85DFD /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		D72EE09A9AD98FCA120F9802 /* Build configuration list for PBXNativeTarget "UniShareWidget" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DD72672A5CF3F9113A851424 /* Debug */,
+				E5703654DB0A79ECFC25876B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		78338F28D706B988F921972F /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/supabase/supabase-swift";
+			requirement = {
+				kind = exactVersion;
+				version = 2.51.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		B7A3B687F6E18A869764B314 /* Supabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 78338F28D706B988F921972F /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Supabase;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
-	rootObject = 14DB27F7300677740078DD7D /* Project object */;
-	validationLevel = 1;
+	rootObject = E8544F3010BEDC559EF52BC5 /* Project object */;
 }

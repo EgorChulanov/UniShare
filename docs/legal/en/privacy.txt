@@ -1,0 +1,29 @@
+UNISHARE PRIVACY POLICY
+Effective: August 24, 2026
+
+1. CONTROLLER AND CONTACT
+UniShare is operated by Egor Chulanov. Privacy, access, correction, objection and deletion requests: official@egorchulanov.ru.
+
+2. DATA WE PROCESS
+We process: email address, authentication identifier and Sign in with Apple data you choose to provide; profile name, avatar, status, platforms, owned and wanted games, skills and subscription information; likes, dislikes, matches and story views; chats, images, reports, blocks and reviews; notification tokens; online status, timestamps and limited technical logs. AirShare uses Bluetooth and local networking only after you explicitly start nearby sharing. We do not request precise location, contacts, motion data or payment-card details.
+
+3. PURPOSES AND LEGAL BASES
+We use data to create and secure accounts, display profiles, rank recommendations, create matches and chats, deliver notifications, operate AirShare, prevent fraud, moderate user-generated content, investigate reports and comply with law. Processing is based on performance of the service agreement, your consent where required, our legitimate interest in service security and safety, and legal obligations. We do not sell personal data, run third-party advertising or track users across apps.
+
+4. PUBLIC AND USER-GENERATED CONTENT
+Profile fields and avatars are visible to authenticated users. Messages and chat images are visible only to chat participants. Do not upload passwords, one-time or recovery codes, payment data, identity documents, unlawful content or content you do not have the right to use.
+
+5. PROCESSORS AND TRANSFERS
+Supabase provides authentication, database, storage, realtime and server functions. Apple provides platform authentication, notifications and system permissions. RAWG receives game-title searches from a server proxy and does not receive your UniShare profile or API credentials. DiceBear serves preset avatar images. These providers may process data outside your country, including the United States and European Economic Area, under their contractual and legal safeguards. They must protect data consistently with this policy and applicable law.
+
+6. RETENTION AND DELETION
+Account, profile, messages, uploads and interaction data are retained while the account is active. Dislike decisions stop affecting the feed after 30 days. Deleting the account in Profile > Settings deletes the authentication account and associated profile, chats, messages, uploads, reviews, reports and application records. Processor backups may remain for a limited disaster-recovery period. Data may be retained only where required by law or necessary to establish, exercise or defend legal claims.
+
+7. YOUR CHOICES AND RIGHTS
+You can edit profile data, deny optional Photos, Bluetooth, Local Network and Notifications permissions in iOS Settings, block users, report content and permanently delete the account in the app. Depending on applicable law, you may request access, correction, deletion, restriction, portability, withdrawal of consent or object to processing. You may complain to your competent data-protection authority.
+
+8. CHILDREN
+UniShare is not intended for children under 13. Where local law requires parental consent at a higher age, the user must obtain it before creating an account.
+
+9. SECURITY AND CHANGES
+We use access controls, row-level security, encrypted transport and restricted storage policies, but no service can guarantee absolute security. Material policy changes will be announced in the app and the effective date will be updated.
