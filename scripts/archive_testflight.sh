@@ -23,8 +23,8 @@ case "$RELEASE_WIDGET_BUNDLE_ID" in
     *) echo "Widget bundle ID must be ${RELEASE_BUNDLE_ID}.Widget" >&2; exit 1 ;;
 esac
 case "$RELEASE_APP_GROUP_ID" in
-    group."$RELEASE_BUNDLE_ID") ;;
-    *) echo "App Group must be group.${RELEASE_BUNDLE_ID}" >&2; exit 1 ;;
+    group.*) ;;
+    *) echo "App Group must use the group.* identifier format" >&2; exit 1 ;;
 esac
 case "$RELEASE_VERSION" in *[!0-9.]|.*|*.) echo "Invalid release version" >&2; exit 1;; esac
 case "$RELEASE_BUILD_NUMBER" in ''|*[!0-9]*) echo "Invalid build number" >&2; exit 1;; esac
