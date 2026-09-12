@@ -18,25 +18,18 @@ UniShare — нативное приложение на SwiftUI, в которо
 
 ## Визуальный обзор
 
-### iPhone
+Ниже — рекламные mockup-карточки, подготовленные для страницы UniShare в App Store. Они показывают продукт как целостный визуальный проект, а не отдельные необработанные кадры из приложения.
 
 <div align="center">
-  <img src="AppStoreScreenshots/en-US/iPhone-6.3/01-feed-profile.png" width="22%" alt="UniShare feed" />
-  <img src="AppStoreScreenshots/en-US/iPhone-6.3/02-search.png" width="22%" alt="UniShare search" />
-  <img src="AppStoreScreenshots/en-US/iPhone-6.3/03-airshare.png" width="22%" alt="UniShare AirShare" />
-  <img src="AppStoreScreenshots/en-US/iPhone-6.3/04-skills-card.png" width="22%" alt="UniShare skills profile" />
+  <img src="docs/assets/store-mockups/iphone-1.jpg" width="31%" alt="UniShare App Store mockup 1" />
+  <img src="docs/assets/store-mockups/iphone-2.jpg" width="31%" alt="UniShare App Store mockup 2" />
+  <img src="docs/assets/store-mockups/iphone-3.jpg" width="31%" alt="UniShare App Store mockup 3" />
+  <img src="docs/assets/store-mockups/iphone-4.jpg" width="31%" alt="UniShare App Store mockup 4" />
+  <img src="docs/assets/store-mockups/iphone-5.jpg" width="31%" alt="UniShare App Store mockup 5" />
+  <img src="docs/assets/store-mockups/iphone-6.jpg" width="31%" alt="UniShare App Store mockup 6" />
 </div>
 
-### iPad
-
-<div align="center">
-  <img src="AppStoreScreenshots/en-US/iPad-13/01-profile-card.png" width="22%" alt="UniShare iPad profile card" />
-  <img src="AppStoreScreenshots/en-US/iPad-13/02-search.png" width="22%" alt="UniShare iPad search" />
-  <img src="AppStoreScreenshots/en-US/iPad-13/03-airshare.png" width="22%" alt="UniShare iPad AirShare" />
-  <img src="AppStoreScreenshots/en-US/iPad-13/04-stories.png" width="22%" alt="UniShare iPad stories" />
-</div>
-
-Все store-материалы находятся в [AppStoreScreenshots/](AppStoreScreenshots/). Там сохранены отдельные наборы для iPhone 6.3/6.7 и iPad 13-inch.
+Исходные наборы для загрузки в App Store Connect находятся в [AppStoreScreenshots/](AppStoreScreenshots/): отдельные размеры для iPhone 6.3/6.7 и iPad 13-inch.
 
 ## Основные возможности
 
