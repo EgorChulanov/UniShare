@@ -1,31 +1,33 @@
-# DataGrip: управление UniShare
+# DataGrip Operations for UniShare
 
-DataGrip подключается напрямую к Postgres только как административный инструмент. Эти реквизиты нельзя добавлять в iOS-приложение или отправлять в чат.
+DataGrip connects directly to Postgres as an administrative tool. Never place these credentials in the iOS app or share them in messages.
 
-## Подключение
+## Connection
 
-1. В Supabase откройте `Connect -> Session pooler`.
-2. В DataGrip создайте `PostgreSQL Data Source`.
-3. Укажите host, port, database, user и password из Supabase.
-4. На вкладке SSL выберите `Require` и выполните `Test Connection`.
-5. В SQL Console проверьте `select current_database(), current_user;`.
+1. Open `Connect -> Session pooler` in Supabase.
+2. Create a PostgreSQL data source in DataGrip.
+3. Copy the host, port, database, user, and password from Supabase.
+4. Set SSL mode to `Require` and run `Test Connection`.
+5. In the SQL Console, verify `select current_database(), current_user;`.
+
+Use the local data source for development whenever possible. Reserve the production connection for deliberate read-only inspection and reviewed administrative operations.
 
 ## Stories
 
-Создать квадратную story, которая появится сразу:
+Create a square story that becomes visible immediately:
 
 ```sql
 insert into public.stories (
     title, subtitle, body, image_url, symbol, accent_hex,
     cta_title, cta_url, priority, is_active, published_at, expires_at
 ) values (
-    'Летний турнир',
-    'Новые подборки недели',
-    'Расскажите пользователям о событии или правилах.',
+    'Summer Tournament',
+    'New picks this week',
+    'Tell the community about an event, update, or safety rule.',
     null,
     'gamecontroller.fill',
     '0057FF',
-    'Открыть главное',
+    'Open Feed',
     'unishare://feed',
     100,
     true,
@@ -35,9 +37,9 @@ insert into public.stories (
 returning id;
 ```
 
-Для изображения загрузите квадратный JPG/PNG/WebP в bucket `story-media`, скопируйте Public URL и запишите его в `image_url`. Желательный размер: 1200 x 1200.
+For artwork, upload a square JPG, PNG, or WebP file to the public `story-media` bucket, copy its public URL, and place it in `image_url`. The recommended size is 1200 x 1200.
 
-Запланировать публикацию можно через будущий `published_at`. Скрытие не удаляет статистику:
+Schedule publication with a future `published_at`. Archiving keeps analytics intact:
 
 ```sql
 update public.stories
@@ -45,7 +47,7 @@ set is_active = false
 where id = 'STORY_UUID';
 ```
 
-Просмотры и охват:
+Story reach:
 
 ```sql
 select
@@ -60,9 +62,9 @@ group by s.id
 order by s.published_at desc;
 ```
 
-## Модерация
+## Moderation
 
-Очередь жалоб:
+Open report queue:
 
 ```sql
 select
@@ -80,7 +82,7 @@ where r.state in ('open', 'reviewing')
 order by r.created_at;
 ```
 
-Взять жалобу в работу и заблокировать аккаунт выполняйте в транзакции:
+Take a report and ban an account in one transaction:
 
 ```sql
 begin;
@@ -96,7 +98,7 @@ where uid = 'USER_UUID';
 commit;
 ```
 
-Разблокировка:
+Restore access:
 
 ```sql
 update public.users
@@ -104,22 +106,22 @@ set account_state = 'active'
 where uid = 'USER_UUID';
 ```
 
-Не удаляйте пользователей вручную из `public.users`: удаление аккаунта нужно проводить через Supabase Authentication, чтобы каскады очистили связанные данные согласованно.
+Do not delete users manually from `public.users`. Account deletion must run through Supabase Authentication so database and Storage cleanup remain consistent.
 
-## Каталог игр
+## Game Catalog
 
-Добавить или исправить игру без изменения iOS-клиента:
+Add or correct a game without shipping a new iOS build:
 
 ```sql
 insert into public.game_catalog_overrides (
     game_id, name, background_image, rating, released, search_terms, enabled
 ) values (
     -1001,
-    'Название игры',
+    'Game Title',
     'https://example.com/cover.jpg',
     4.5,
     '2026-01-01',
-    array['название', 'game alias'],
+    array['game title', 'game alias'],
     true
 )
 on conflict (game_id) do update set
@@ -132,19 +134,14 @@ on conflict (game_id) do update set
     updated_at = now();
 ```
 
-Для вручную управляемых записей используйте уникальные отрицательные `game_id`.
+Use unique negative `game_id` values for manually maintained entries.
 
-RAWG key хранится в зашифрованном Supabase Vault и меняется из
-`datagrip/50_game_catalog_admin.sql`. Запускайте только блок **CREATE OR ROTATE
-RAWG KEY**: DataGrip запросит параметр `RAWG_API_KEY`, после чего безопасный
-status-запрос должен показать `configured = true`. Само значение ключа никогда
-не выбирайте и не сохраняйте в SQL-файле. Мобильные роли `anon` и
-`authenticated` не имеют права выполнять server-only RPC чтения ключа.
+The RAWG key is encrypted in Supabase Vault and rotated from `datagrip/50_game_catalog_admin.sql`. Run only the **CREATE OR ROTATE RAWG KEY** block. DataGrip prompts for `RAWG_API_KEY`, then the safe status query should report `configured = true`. Never select the secret value or save it in an SQL file. Mobile `anon` and `authenticated` roles cannot execute the server-only RPC that reads it.
 
-## Безопасная работа
+## Safe Administration
 
-- Перед `update` или `delete` выполните тот же фильтр как `select` и проверьте строки.
-- Используйте `begin; ... rollback;` для проверки потенциально опасного запроса.
-- Не отключайте RLS и не выдавайте `anon`/`authenticated` прямые административные права.
-- Не используйте database password, `service_role` или secret key в мобильном клиенте.
-- Делайте резервную копию перед массовыми изменениями.
+- Run the same filter as a `select` before any `update` or `delete`.
+- Use `begin; ... rollback;` to validate potentially destructive queries.
+- Never disable RLS or grant direct administrative rights to `anon` or `authenticated`.
+- Never put database passwords, `service_role`, or secret keys in the mobile client.
+- Back up production data before bulk operations.

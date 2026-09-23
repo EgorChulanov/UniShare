@@ -1,12 +1,12 @@
 # App Store Connect values
 
-Дата сверки с App Review Guidelines: 10 августа 2026 года.
+Last reviewed against the App Review Guidelines on 10 August 2026.
 
 ## Product positioning
 
-- App Store Connect Apple ID: `6800433788`
-- Name: `UniShare: Gaming Circle`
-- SKU: `UNISHARE-IOS-2026`
+- App Store Connect Apple ID: `6809169146`
+- Name: `UniShare: Games Sharing`
+- Bundle ID: `com.egorchulanov.unishare.gamesharing`
 - Primary category: `Social Networking`
 - English subtitle: `Find your gaming circle`
 - Russian subtitle: `Твоё игровое сообщество`
@@ -18,7 +18,7 @@
 - In-app purchases: None
 - Non-exempt encryption: No. The app uses Apple system cryptography and TLS only.
 
-The app is a teammate-discovery, mutual-matching, private-chat and nearby-profile service. Describe all implemented functions and their access paths. It does not sell, transfer, lend or exchange gaming accounts, credentials, licenses or payment access.
+The app helps users discover compatible gaming profiles and libraries across major platforms, match through mutual interest, and discuss possible exchanges in private chat. It does not collect credentials, process payments, broker transactions, or transfer an account on a user's behalf.
 
 ## App Privacy answers
 
@@ -49,7 +49,7 @@ Accept the rating calculated by App Store Connect; do not manually lower it.
 
 ## Review notes
 
-UniShare is a social discovery app for finding gaming teammates. It does not support selling, transferring, lending or exchanging gaming accounts, credentials, licenses or payment access. Server-side content rules reject requests for passwords, recovery codes, OTPs, payment details and account-sale messages.
+UniShare is a social discovery app for finding compatible gaming profiles and discussing account or library exchanges. It does not request or store passwords, recovery codes, OTPs, payment details, or other credentials, and it never executes transfers or transactions. Server-side content rules reject credential and payment-detail requests.
 
 Review flow:
 
