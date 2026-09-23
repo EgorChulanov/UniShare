@@ -27,23 +27,25 @@ Required protected GitHub environment variables:
 - `RELEASE_VERSION`
 - `RELEASE_BUILD_NUMBER`
 
-## Current verification state
+## Historical verification snapshot (11 August 2026)
 
 - Hosted Supabase is healthy and synchronized through `20260811160239_move_citext_extension.sql` as of 11 August 2026.
 - Production migrations, RLS hardening and four Edge Functions (`delete-account`, `game-search`, `send-push`, `legal`) are deployed.
 - Local PostgreSQL security smoke and the current three-user API E2E pass. A previous full hosted run passed, and the account-deletion/chat-cleanup guarantee passed directly on hosted Postgres inside a rolled-back transaction.
 - Xcode 27 Beta compiles the application, embedded widget, 13 unit tests and both deterministic UI E2E scenarios in one `build-for-testing`. Eleven pre-existing unit tests previously passed runtime; runtime execution of the current bundle still requires a stable simulator or physical device.
 - Apple Developer contains explicit IDs `com.egorchulanov.unishare` and `com.egorchulanov.unishare.Widget`, both associated with `group.com.egorchulanov.unishare`. Local signing uses `UniShare App Store 2026` and `UniShare Widget App Store 2026`. GitHub Actions uses the isolated certificate `49MDWJ329B` with profiles `UniShare App Store CI 2026` and `UniShare Widget App Store CI 2026`.
-- App Store Connect app `6800433788` is registered as `UniShare: Gaming Circle`, SKU `UNISHARE-IOS-2026`.
-- The signed App Store export from `/tmp/UniShare-Signed-AppStore-20260811-212945.xcarchive` passed local deep signature and entitlement verification. Apple server validation rejected only the missing widget display name and unsupported Xcode 27 beta SDK. The display name is fixed in source; the next upload must be built with stable Xcode 26.6 or newer supported release.
+- App Store Connect app `6809169146` is registered as `UniShare: Games Sharing` with bundle ID `com.egorchulanov.unishare.gamesharing`.
+- The signed App Store export from `/tmp/UniShare-Signed-AppStore-20260811-212945.xcarchive` passed local deep signature and entitlement verification. Apple server validation rejected that historical export for a missing widget display name and an unsupported Xcode 27 beta SDK. The display name was fixed in source; later submissions must use an Apple-supported stable Xcode release.
 - UI XCTest is not yet a valid runtime pass: on 11 August both the normal runner and an isolated `test-without-building` run reached the booted iOS 27 beta simulator but produced no `XCTRunner` process or test event. The deterministic suite covers registration, onboarding, game selection, profile deletion, a seeded second user, mutual match, chat creation and message delivery; repeat it on a stable Xcode/runtime or a connected physical device before external TestFlight.
-- App Store server-side acceptance, runtime UI XCTest and release screenshots remain pending until the stable Xcode toolchain is installed.
+- These August verification results do not establish the status of the current submitted build. Confirm the current build, screenshots, and runtime test evidence separately in App Store Connect and CI.
 
-## Guideline 5.6 review history
+## Review history
 
 The earlier App Store Connect record `6753741153`, version `1.0.1 (2)`, is marked `Guideline 5.6 - Developer Code of Conduct - Review Suspended`. Apple states that replies and resubmissions for that record will not be reviewed.
 
-App Store Connect app `6800433788` was rejected on 19 August 2026 under the same guideline because Apple identified features that appeared intentionally hidden. Do not create another App Store Connect record or change identity to work around either decision. Continue only through transparent correspondence or an appeal on the current submission, with the remediation documented in `docs/APP_REVIEW_5_6_REMEDIATION.md`.
+The historical records `6753741153`, `6800433788`, and `6753729871` were removed from the active app list. They remain only in Apple's system-managed Removed Apps archive. The active record is `6809169146` and must remain the sole destination for future builds and updates.
+
+Build `1.0.0 (2026090801)` was resubmitted on 22 September 2026 after addressing Guideline 2.1 information requests and Guideline 4.3(a) duplicate-record concerns. App Store Connect showed `Waiting for Review` after the resubmission. This status is not an approval and must be checked again before release claims are made.
 
 ## Review configuration
 
@@ -52,7 +54,7 @@ App Store Connect app `6800433788` was rejected on 19 August 2026 under the same
 - Privacy policy: `https://kwonpzkzthprilrhncik.supabase.co/functions/v1/legal/privacy`
 - Support URL: `https://kwonpzkzthprilrhncik.supabase.co/functions/v1/legal/support`
 - Encryption declaration: only Apple platform cryptography and HTTPS are used; `ITSAppUsesNonExemptEncryption` is `false`.
-- Review notes must explain every feature and access path, including AirShare Bluetooth use, teammate discovery, Skills, stories, mutual matching, chats, image messages, ratings, reporting/blocking, content filtering and account deletion. State clearly that UniShare has no hidden gestures, review-specific behavior, sales, transfers or credential sharing.
+- Review notes must explain every feature and access path, including AirShare Bluetooth use, profile discovery, Skills, stories, mutual matching, chats, image messages, ratings, reporting/blocking, content filtering, and account deletion. State clearly that UniShare has no hidden gestures, review-specific behavior, payment flow, credential collection, or automated transfer process.
 - Enable Push Notifications for the App ID before the first signed archive; APNs tokens are registered only for authenticated profiles and removed on logout/deletion.
 - Provide a dedicated least-privilege review account with a completed profile and a second seeded profile. Never place a production administrator credential in Review Notes.
 
@@ -65,7 +67,7 @@ Because the target supports iPhone and iPad, capture both current required displ
 
 Do not upload mockups that show unavailable functionality. Screenshots must come from the archived build or the same release configuration.
 
-`make backend-demo` создаёт детерминированный локальный набор анкет, матчей, сообщений и stories для screenshot-сессии. На текущем Mac iOS 27 beta CoreSimulator загружается, но зависает на `simctl launch`/Accessibility services; снимки необходимо повторить на stable runtime или подключённом устройстве, а не заменять макетами.
+`make backend-demo` creates a deterministic local dataset of profiles, matches, messages, and stories for screenshot sessions. On the current Mac, the iOS 27 beta CoreSimulator boots but stalls in `simctl launch` and Accessibility services. Capture the screenshots again on a stable runtime or connected device instead of replacing them with mockups.
 
 ## Russia distribution decision
 

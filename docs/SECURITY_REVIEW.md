@@ -1,63 +1,66 @@
-# Security review
+# Security Review
 
-Дата проверки: 11 августа 2026 года.
+Reviewed on 11 August 2026.
 
-Нельзя гарантировать, что приложение невозможно взломать. Текущая цель: минимальные права клиента, серверная проверка критичных действий и воспроизводимые тесты злоупотреблений.
+No application can be guaranteed to be impossible to compromise. UniShare instead targets least-privilege client access, server-side validation of critical actions, and reproducible abuse tests.
 
-## Исправлено
+## Implemented Controls
 
-- Удалены AI-клиент, OpenAI key из конфигурации и таблица `ai_requests`.
-- `create_or_get_chat` закрыт для `authenticated`; чат создаётся только внутри серверного мэтча или принятия реального входящего лайка.
-- `accept_like_request` проверяет получателя заявки, блокировки и удаляет обе заявки атомарно.
-- Клиентский `request_id` больше не управляет primary key лайка.
-- Trigger сообщений принудительно задаёт `sender_id`, `created_at` и начальный `read_by` из `auth.uid()`.
-- При обновлении сообщения разрешено только добавить текущего пользователя в `read_by`; текст, изображение и автор неизменяемы.
-- Отправка сообщения, preview чата и unread counter выполняются одной транзакцией `send_chat_message`; прямые `insert/update` права клиента отозваны.
-- Отметка прочтения выполняется серверной `mark_chat_read`, поэтому клиент не может обнулить чужой счётчик.
-- AirShare передаёт временный UID, а профиль загружается из Supabase перед лайком; полный профиль больше не считается доверенным payload.
-- Изображения уменьшаются перед отправкой, а chat media остаются в приватном Storage bucket.
-- RAWG key удалён из iOS binary и используется только как Supabase Edge Function secret; ответы кэшируются сервером.
-- Свайпы сохраняются сервером и не сбрасываются после перезапуска приложения.
-- Управляемые из DataGrip content rules блокируют запросы паролей, recovery/OTP, платёжных данных и угрозы до записи UGC.
-- Настройки содержат полное удаление Auth account, записей приложения и Storage objects через защищённую Edge Function.
-- APNs token регистрируется только после завершения онбординга через security-definer RPC, изолирован RLS и удаляется перед logout/delete.
-- Legacy URL, условия совместного доступа и количество семейных мест удаляются из subscription metadata серверным trigger при каждой записи.
-- Предложения продажи или передачи игровых аккаунтов блокируются серверными content rules; интерфейс позиционирует продукт только как поиск тиммейтов.
-- Anonymous/PUBLIC execution отозван у всех пользовательских и `SECURITY DEFINER` функций; наружу явно открыты только проверяющие `auth.uid()` RPC для `authenticated`.
-- Серверные rate limits ограничивают сообщения, лайки, жалобы и отзывы на уровне Postgres trigger, независимо от клиента.
-- Все внешние ключи Edge Functions зафиксированы на конкретных версиях зависимостей; APNs sender не использует fallback на старый bundle ID.
-- Новые пароли проходят единый клиентский и локальный server-side policy: минимум 10 символов, верхний/нижний регистр, цифра и специальный знак. Вход существующих пользователей сохраняет совместимость.
-- Удаление профиля до удаления Auth identity удаляет все чаты с этим UID; это закрывает осиротевшие строки, которые нельзя защитить обычным foreign key внутри массива `participants`.
+- Removed the AI client, OpenAI key configuration, and `ai_requests` table.
+- Revoked direct `create_or_get_chat` access from `authenticated`; chats are created only by a server-side mutual match or acceptance of a real incoming like.
+- `accept_like_request` verifies the recipient, enforces blocks, and removes both requests atomically.
+- Client-provided `request_id` no longer controls the like primary key.
+- Message triggers enforce `sender_id`, `created_at`, and initial `read_by` from `auth.uid()`.
+- Message updates may only add the current user to `read_by`; content, image, and sender remain immutable.
+- `send_chat_message` writes the message, chat preview, and unread counter in one transaction; direct client insert/update rights are revoked.
+- `mark_chat_read` updates read state server-side so clients cannot clear another user's counter.
+- AirShare transmits a temporary UID and reloads the profile from Supabase before a like; the peer payload is never trusted as the profile source.
+- Images are resized before upload and chat media stays in a private Storage bucket.
+- The RAWG key is absent from the iOS binary and is available only to a Supabase Edge Function; results are cached server-side.
+- Swipe history persists on the server and survives app restarts.
+- DataGrip-managed content rules reject password, recovery-code, OTP, payment-detail, and threat content before UGC is stored.
+- Account deletion removes the Auth identity, application rows, and Storage objects through a protected Edge Function.
+- APNs tokens are registered only after onboarding through a security-definer RPC, isolated by RLS, and removed on logout and account deletion.
+- Legacy URLs, shared-access terms, and family-seat counts are stripped from subscription metadata on every write.
+- Account-sale and credential-transfer offers are rejected by server-side content rules.
+- Anonymous and PUBLIC execution is revoked from user-facing and `SECURITY DEFINER` functions. Only authenticated RPCs that verify `auth.uid()` are exposed.
+- Postgres triggers apply independent rate limits to messages, likes, reports, and reviews.
+- Edge Function dependencies are version-pinned and APNs sending never falls back to an obsolete bundle identifier.
+- Password policy requires at least 10 characters, uppercase, lowercase, a number, and a special character for new credentials while preserving existing-user sign-in compatibility.
+- Profile deletion removes chats that contain the deleted UID before deleting the Auth identity, preventing orphaned participant arrays.
 
-## Проверка
+## Verification
 
-`make test-backend` поднимает временный PostgreSQL и проверяет:
+`make test-backend` starts an isolated PostgreSQL instance and verifies:
 
-- запрет прямого создания чата;
-- запрет принятия чужого лайка;
-- серверный идентификатор лайка;
-- защиту автора сообщения;
-- защиту текста и read receipts.
-- атомарное обновление unread counter через RPC.
-- фильтрацию запрещённого сообщения до записи в базу.
-- серверную ленту, сохранение дизлайка и ограниченный по времени undo.
-- изоляцию APNs tokens между пользователями и безопасную регистрацию/отвязку токена.
-- rate limit: 31-е сообщение за минуту отклоняется сервером.
+- direct chat creation is denied;
+- another user's like cannot be accepted;
+- like identifiers are server-generated;
+- message sender and content are protected;
+- read receipts cannot be forged;
+- unread counters update atomically through RPC;
+- prohibited message content is rejected before storage;
+- feed delivery, persistent dislikes, and time-limited undo work;
+- APNs tokens remain isolated and can be safely registered and detached;
+- the 31st message within one minute is rejected by the server.
 
-`make test-e2e` проверяет тот же сценарий через настоящий Supabase API для трёх пользователей: регистрацию, анкеты, серверную ленту, mutual match, чат/read receipts, жалобу и блокировку, avatar Storage, каталог игр, удаление аккаунта и удаление общего чата после удаления одного участника. 11 августа 2026 года полный сценарий повторно прошёл локально; предыдущий полный запуск прошёл и на hosted-проекте `kwonpzkzthprilrhncik`. Hosted-гарантия очистки чата отдельно проверена транзакцией с `ROLLBACK`; временных hosted-аккаунтов и объектов после проверок нет.
+`make test-e2e` runs the equivalent flow through the real Supabase API for three users: registration, profiles, server feed, mutual match, chat and read receipts, report and block, avatar Storage, game catalog, account deletion, and shared-chat cleanup after a participant is deleted.
 
-Приложение и widget проходят свежий `build-for-testing` и unsigned Release archive на Xcode 27 Beta. В bundle компилируются 13 unit-тестов, включая password policy, и два детерминированных UI-сценария. Архив от 11 августа использует новые release bundle IDs, содержит оба privacy manifest и проходит без предупреждений. Одиннадцать предшествующих unit-тестов ранее прошли runtime. Последний повтор unit/UI runtime не засчитан: и обычный запуск, и изолированный `test-without-building` дошли до загруженного iOS 27 beta Simulator, но `XCTRunner` и test events не появились. Это инфраструктурное ограничение не заменяет обязательный повтор на stable Xcode или физическом устройстве.
+The full local scenario passed on 11 August 2026. A previous complete run also passed against the hosted project. Hosted chat-cleanup behavior was verified in a transaction that ended with `ROLLBACK`, and no temporary hosted users or objects remained.
 
-Supabase Database Advisors после миграций `20260810114356_database_advisor_remediation.sql` и `20260811160239_move_citext_extension.sql` не показывают отсутствующих FK-индексов, RLS init-plan проблем или расширений в `public`. Оставшиеся предупреждения относятся к намеренно доступным через RLS таблицам/RPC, deny-all внутренним таблицам и настройке Auth leaked-password protection.
+The app and widget completed `build-for-testing` and an unsigned Release archive with Xcode 27 Beta. The bundle contains 13 unit tests, including password-policy coverage, and two deterministic UI scenarios. Eleven earlier unit tests completed at runtime. The latest unit/UI runtime attempt is not counted as a pass because the iOS 27 beta Simulator launched without producing an `XCTRunner` process or test events. Repeat runtime validation with stable Xcode or physical devices before release.
 
-## До публикации
+Supabase Database Advisors report no missing foreign-key indexes, RLS init-plan issues, or extensions in `public` after the current remediation migrations. Remaining notices relate to intentionally RLS-exposed tables and RPCs, deny-all internal tables, and Auth leaked-password protection configuration.
 
-- Hosted-проект синхронизирован до `supabase/migrations/20260811160239_move_citext_extension.sql`; при следующем изменении применять только новые миграции.
-- Подключить production SMTP, включить email confirmation и CAPTCHA в Supabase Dashboard. Leaked-password protection доступна только на Pro Plan; до перехода на Pro действует усиленная локальная/клиентская password policy. Write rate limits уже обеспечиваются Postgres, Auth rate limits дополнительно настраиваются в Dashboard.
-- Настроить резервные копии, журналы Auth/Postgres и оповещения о всплесках жалоб.
-- Проверить, не попадали ли database password, `service_role`, RAWG/OpenAI secrets или старый `Secrets.xcconfig` в историю Git; скомпрометированные ключи нужно отозвать.
-- Провести отдельный pentest перед публичным релизом.
+## Remaining Release Work
 
-## Продуктовая граница
+- Keep the hosted project synchronized through the latest migration and apply only new migrations afterward.
+- Configure production SMTP, email confirmation, and CAPTCHA in Supabase Dashboard.
+- Enable leaked-password protection after moving to Supabase Pro.
+- Configure backups, Auth/Postgres logs, and alerting for moderation spikes.
+- Audit Git history for leaked database passwords, `service_role`, RAWG/OpenAI keys, or an old `Secrets.xcconfig`; rotate anything that may have been exposed.
+- Complete an independent penetration test before public release.
 
-Steam, Nintendo и PlayStation ограничивают передачу учётных записей и цифровых лицензий. Поэтому production-модель UniShare ограничена поиском тиммейтов, игровыми профилями и общением. Продажа, передача, совместное использование реквизитов и посредничество в сделках не поддерживаются. Отдельно до выбора России в App Store требуется юридическое решение по локализации персональных данных пользователей РФ.
+## Product Boundary
+
+Steam, Nintendo, and PlayStation restrict account and digital-license transfers. UniShare therefore provides profile discovery, compatibility matching, and communication. It does not handle credentials, payments, account ownership, or transfer execution. Availability in Russia also requires a separate legal review of personal-data localization obligations before distribution is enabled there.

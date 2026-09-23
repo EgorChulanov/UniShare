@@ -1,93 +1,99 @@
-# Рабочий prompt для Codex: UniShare
+# Working prompt for Codex: UniShare
 
-```text
-Ты работаешь над проектом:
-/Users/egorchulanov/Desktop/UniShare
+You are working on:
+`/Users/egorchulanov/Desktop/UniShare`
 
-Репозиторий-источник:
-https://github.com/EgorChulanov/UniShare
+Source repository:
+`https://github.com/EgorChulanov/UniShare`
 
-Цель текущей задачи:
-[ВПИШИ КОНКРЕТНУЮ ФУНКЦИЮ И ОЖИДАЕМЫЙ РЕЗУЛЬТАТ]
+Current objective:
+`[DESCRIBE THE FEATURE AND EXPECTED RESULT]`
 
-UniShare — нативное iOS/iPadOS SwiftUI-приложение с реальным backend Supabase для поиска пользователей, взаимных лайков, чатов, игровых профилей, stories и moderation. Это не UI-макет. Не заменяй Supabase локальными массивами, sample data или фальшивым успешным состоянием.
+UniShare is a real iOS and iPadOS SwiftUI application backed by Supabase. It supports profile discovery, mutual likes, chats, gaming profiles, stories, and moderation. It is not a UI mockup. Do not replace Supabase with local arrays, sample data, or fake success states.
 
-Перед изменениями:
-1. Прочитай AGENTS.md, README.md, docs/SUPABASE_SETUP.md, project.yml и релевантные Swift/SQL-файлы.
-2. Проверь git status. Не удаляй и не откатывай пользовательские изменения.
-3. Сравни спорное поведение с моим GitHub-репозиторием, но не копируй секреты и устаревший Firebase-код.
-4. Воспроизведи проблему и зафиксируй точную причину.
-5. Составь короткий план и затем работай автономно до проверяемого результата.
+## Before changing code
 
-Архитектурные требования:
-- SwiftUI, iOS 16.1+, Swift 5.9.
-- Supabase Auth, Postgres, RLS, RPC, Realtime и Storage.
-- Xcode-проект генерируется из project.yml через XcodeGen. После добавления файла выполни make generate.
-- View отвечает за UI, ViewModel за состояние, Service за I/O, Codable model за контракт данных.
-- Большие экраны дели на небольшие компоненты по ответственности.
-- Используй Manrope для основного текста, Archivo Black только для выразительных заголовков, Plus Jakarta Sans для акцентных блоков.
-- Все видимые строки добавляй в ru/en/uk/be Localizable.strings.
-- Светлая и тёмная темы должны иметь читаемый контраст.
+1. Read `AGENTS.md`, `README.md`, `docs/SUPABASE_SETUP.md`, `project.yml`, and the relevant Swift and SQL files.
+2. Check `git status`. Never remove or revert user changes.
+3. Compare disputed behavior with the GitHub repository, but never copy secrets or obsolete Firebase code.
+4. Reproduce the problem and identify the exact cause.
+5. Write a short plan, then work autonomously until the result is verifiable.
 
-Backend:
-- Любая функция должна читать и сохранять реальные данные Supabase.
-- Изменение нескольких связанных таблиц выполняй атомарно через Postgres RPC/trigger.
-- Для каждой новой таблицы добавь RLS, grants, indexes и migration.
-- Publishable key допустим в клиенте только вместе с корректным RLS.
-- Никогда не помещай в iOS database password, service_role, sb_secret, connection string или admin credentials.
-- DataGrip используется только как административный PostgreSQL-клиент.
-- Stories создаются администратором в public.stories, просмотры — в public.story_views.
-- Жалобы сохраняются в public.reports, блокировки — в public.blocks.
-- Не показывай успех, пока серверная операция реально не завершилась.
+## Architecture
 
-Auth и профиль:
-- Проверь регистрацию, подтверждение email, callback unishare://auth-callback, вход, выход и восстановление сессии.
-- Анкета создаётся после Auth только один раз через upsert в onboarding.
-- Проверь уникальность username, платформы, игры, навыки, subscriptions и avatar upload.
-- Не теряй subscriptions при повторном чтении/редактировании JSON.
+- Use Supabase Auth, Postgres, RLS, RPC, Realtime, and Storage.
+- Generate the Xcode project from `project.yml` through XcodeGen. Run `make generate` after adding files.
+- Views own presentation, ViewModels own state, Services own I/O, and Codable models define data contracts.
+- Split large screens into focused components.
+- Use Manrope for body text, Archivo Black only for expressive headings, and Plus Jakarta Sans for accent areas.
+- Add every visible string to the English, Russian, Ukrainian, and Belarusian `Localizable.strings` files.
+- Preserve readable contrast in light and dark themes.
 
-Критический E2E:
-1. Чистый запуск и регистрация пользователя A.
-2. Email callback и onboarding пользователя A.
-3. Регистрация и onboarding пользователя B.
-4. A видит реальную анкету B и ставит лайк.
-5. B видит A и ставит встречный лайк.
-6. RPC создаёт ровно один chat.
-7. A отправляет текст и фото, B их получает и видит unread/read state.
-8. Жалоба создаёт запись reports; блокировка закрывает дальнейшее взаимодействие.
-9. Stories загружаются из базы и просмотр фиксируется в story_views.
-10. Редактирование профиля сохраняется после перезапуска приложения.
+## Backend requirements
 
-UI/E2E:
-- Проверь iPhone и iPad Simulator, маленький и большой экран.
-- Проверь светлую/тёмную тему, Dynamic Type, клавиатуру, safe areas и длинные строки.
-- Проверь вкладки: Главное, Чаты, Профиль.
-- Stories должны быть компактными прямоугольными карточками в стиле банковских приложений, не кругами Instagram.
-- Проверь deep links unishare://feed, chats, profile, airshare и auth-callback.
-- Сделай скриншоты ключевых экранов и визуально проверь контраст, обрезание и наложения.
+- Every feature must read and persist real Supabase data.
+- Use a Postgres RPC or trigger for atomic multi-table changes.
+- Every new table needs RLS, grants, indexes, and a migration.
+- A publishable key may exist in the client only when RLS is correct.
+- Never put database passwords, `service_role`, `sb_secret`, connection strings, or administrator credentials in the iOS app.
+- DataGrip is an administrative PostgreSQL client only.
+- Administrators create stories in `public.stories`; views belong in `public.story_views`.
+- Reports belong in `public.reports`; blocks belong in `public.blocks`.
+- Never show success before the server operation completes.
 
-Безопасность продукта:
-- Не сохраняй и не передавай пароли игровых аккаунтов через UniShare.
-- Перед реализацией механики передачи аккаунта проверь актуальные правила соответствующей игровой платформы и App Store. Если продажа/передача аккаунтов запрещена, реализуй безопасный сценарий поиска игроков, совместного доступа в официально поддерживаемых пределах или обмена разрешёнными цифровыми правами.
-- Для moderation предусмотрены account_state, reports, blocks и административный workflow.
+## Authentication and profile
 
-Проверка:
-- Собери Simulator и generic iOS device без подписи.
-- Запусти plutil для всех Localizable.strings.
-- Выполни supabase db reset и проверь seed, если Docker доступен.
-- Добавь regression tests для найденных ошибок и unit tests бизнес-логики.
-- Выполни git diff --check и просмотри итоговый diff.
-- Не скрывай ошибки через try?, пустой catch, force unwrap или фальшивое success state.
-- Не утверждай, что тест выполнен, если команда не запускалась.
+- Verify registration, email confirmation, `unishare://auth-callback`, sign-in, sign-out, and session restoration.
+- Create the application profile exactly once after Auth through the onboarding upsert.
+- Verify username uniqueness, platforms, games, skills, subscriptions, and avatar upload.
+- Preserve subscriptions through every JSON read and edit cycle.
 
-Не коммить, не push и не создавай PR без моего прямого разрешения.
+## Critical E2E flow
 
-В финале кратко укажи:
-- реализованные пользовательские сценарии;
-- найденные причины ошибок;
-- успешные сборки и тесты;
-- выполненные E2E-сценарии;
-- что не проверено и почему;
-- основные изменённые файлы;
-- точные оставшиеся действия с моей стороны.
-```
+1. Clean launch and user A registration.
+2. Email callback and onboarding for user A.
+3. Registration and onboarding for user B.
+4. A sees B's real profile and likes it.
+5. B sees A and returns the like.
+6. The RPC creates exactly one chat.
+7. A sends text and an image; B receives both and sees correct unread/read state.
+8. A report creates a row in `reports`; a block prevents further interaction.
+9. Stories load from the database and a view is recorded in `story_views`.
+10. Profile edits survive an app restart.
+
+## UI quality
+
+- Check iPhone and iPad, small and large screens.
+- Check light and dark themes, Dynamic Type, keyboard handling, safe areas, and long strings.
+- Verify the Home, Chats, and Profile tabs.
+- Stories should use compact rectangular cards inspired by banking apps, not circular Instagram avatars.
+- Verify `unishare://feed`, `chats`, `profile`, `airshare`, and `auth-callback` deep links.
+- Capture key screens and visually inspect contrast, clipping, and overlays.
+
+## Product safety
+
+- Never store or transmit gaming-account passwords through UniShare.
+- Before implementing account transfer mechanics, verify the current rules of each gaming platform and the App Store. If transfer is prohibited, use safe teammate discovery, officially supported sharing, or exchange of rights that the platform explicitly permits.
+- Moderation must include `account_state`, reports, blocks, and an administrator workflow.
+
+## Verification
+
+- Build for Simulator and a generic unsigned iOS device.
+- Run `plutil` for every `Localizable.strings` file.
+- Run `supabase db reset` and validate the seed when Docker is available.
+- Add regression tests for fixed defects and unit tests for business logic.
+- Run `git diff --check` and inspect the final diff.
+- Do not hide failures with `try?`, empty catches, force unwraps, or fake success states.
+- Never claim a test ran unless the command actually completed.
+
+Do not commit, push, or open a pull request unless the user explicitly asks.
+
+In the final report, list:
+
+- implemented user flows;
+- root causes fixed;
+- successful builds and tests;
+- completed E2E scenarios;
+- anything not verified and why;
+- primary changed files;
+- exact remaining user actions.

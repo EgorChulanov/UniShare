@@ -78,16 +78,16 @@ upsert_profile() {
         --arg uid "$uid" --arg username "$username" --arg status "$status" --arg platform "$platform" \
         --argjson games "$games" --argjson wanted "$wanted" --argjson skills "$skills" \
         '{uid:$uid,username:$username,status:$status,platforms:[$platform],games:$games,wanted_games:$wanted,
-          platform_games:{($platform):$games},skills:$skills,skills_description:"Ищу спокойную командную игру без токсичности",
+          platform_games:{($platform):$games},skills:$skills,skills_description:"Looking for relaxed cooperative play without toxicity",
           has_skills_profile:true,onboarding_complete:true,is_online:true,last_seen:(now|todateiso8601)}')
     request POST "$token" '/rest/v1/users?on_conflict=uid' "$body" >/dev/null
 }
 
-upsert_profile "$REVIEWER_ID" "$REVIEWER_TOKEN" "EgorReview" "Открыт для кооператива вечером" "PC" \
+upsert_profile "$REVIEWER_ID" "$REVIEWER_TOKEN" "EgorReview" "Available for co-op in the evening" "PC" \
     '["Fortnite","Portal 2","Helldivers 2"]' '["Split Fiction","Baldur’s Gate 3"]' '["Team play","Strategy"]'
-upsert_profile "$LUNA_ID" "$LUNA_TOKEN" "LunaNova" "Ranked без давления" "PlayStation" \
+upsert_profile "$LUNA_ID" "$LUNA_TOKEN" "LunaNova" "Competitive play without pressure" "PlayStation" \
     '["Fortnite","Overwatch 2","It Takes Two"]' '["Split Fiction"]' '["Support","Coaching"]'
-upsert_profile "$ALEX_ID" "$ALEX_TOKEN" "AlexOrbit" "Кооператив и хорошие истории" "Xbox" \
+upsert_profile "$ALEX_ID" "$ALEX_TOKEN" "AlexOrbit" "Co-op and story-driven games" "Xbox" \
     '["Minecraft","Sea of Thieves","Forza Horizon 5"]' '["Grounded 2"]' '["Builder","Navigator"]'
 upsert_profile "$MARINA_ID" "$MARINA_TOKEN" "MarinaPixel" "Nintendo weekends" "Nintendo" \
     '["Mario Kart 8 Deluxe","Animal Crossing: New Horizons"]' '["Super Mario Party Jamboree"]' '["Racing","Creative"]'
@@ -105,20 +105,20 @@ CHAT_LUNA=$(match_users "$REVIEWER_TOKEN" "$LUNA_ID" "$LUNA_TOKEN" "$REVIEWER_ID
 CHAT_ALEX=$(match_users "$REVIEWER_TOKEN" "$ALEX_ID" "$ALEX_TOKEN" "$REVIEWER_ID")
 
 request POST "$LUNA_TOKEN" '/rest/v1/rpc/send_chat_message' \
-    "$(jq -n --arg chat "$CHAT_LUNA" '{message_id:"demo-luna-hello",target_chat_id:$chat,message_text:"Привет! Сыграем сегодня в 20:00?",message_image_url:null}')" >/dev/null
+    "$(jq -n --arg chat "$CHAT_LUNA" '{message_id:"demo-luna-hello",target_chat_id:$chat,message_text:"Hi! Want to play tonight at 8 PM?",message_image_url:null}')" >/dev/null
 request POST "$REVIEWER_TOKEN" '/rest/v1/rpc/send_chat_message' \
-    "$(jq -n --arg chat "$CHAT_LUNA" '{message_id:"demo-reviewer-reply",target_chat_id:$chat,message_text:"Да, добавил тебя в команду",message_image_url:null}')" >/dev/null
+    "$(jq -n --arg chat "$CHAT_LUNA" '{message_id:"demo-reviewer-reply",target_chat_id:$chat,message_text:"Sure, I added you to the team",message_image_url:null}')" >/dev/null
 request POST "$ALEX_TOKEN" '/rest/v1/rpc/send_chat_message' \
-    "$(jq -n --arg chat "$CHAT_ALEX" '{message_id:"demo-alex-hello",target_chat_id:$chat,message_text:"Готов к Sea of Thieves на выходных",message_image_url:null}')" >/dev/null
+    "$(jq -n --arg chat "$CHAT_ALEX" '{message_id:"demo-alex-hello",target_chat_id:$chat,message_text:"Ready for Sea of Thieves this weekend",message_image_url:null}')" >/dev/null
 
 psql "$DB_URL" -v ON_ERROR_STOP=1 >/dev/null <<'SQL'
 insert into public.stories (
     id, title, subtitle, body, symbol, accent_hex, cta_title, cta_url,
     priority, is_active, published_at, expires_at
 ) values
-    ('10000000-0000-4000-8000-000000000001', 'Безопасная команда', 'Как общаться без риска', 'Никогда не передавайте пароль, коды подтверждения или платёжные данные.', 'lock.shield.fill', '176B87', 'Открыть ленту', 'unishare://feed', 100, true, now(), now() + interval '30 days'),
-    ('10000000-0000-4000-8000-000000000002', 'Игра недели', 'Split Fiction', 'Находите напарника для совместного прохождения и сохраняйте прогресс вместе.', 'sparkles', '31A8FF', 'Найти игрока', 'unishare://feed', 90, true, now(), now() + interval '30 days'),
-    ('10000000-0000-4000-8000-000000000003', 'AirShare', 'Познакомьтесь рядом', 'Нажмите видимую кнопку AirShare на главном экране и держите iPhone рядом с другим игроком.', 'wave.3.right.circle.fill', '64D8CB', 'Попробовать', 'unishare://airshare', 80, true, now(), now() + interval '30 days')
+    ('10000000-0000-4000-8000-000000000001', 'Play Safely', 'Keep every conversation secure', 'Never share passwords, verification codes, recovery codes, or payment details.', 'lock.shield.fill', '176B87', 'Open Feed', 'unishare://feed', 100, true, now(), now() + interval '30 days'),
+    ('10000000-0000-4000-8000-000000000002', 'Game of the Week', 'Split Fiction', 'Find a compatible player for a cooperative adventure and progress together.', 'sparkles', '31A8FF', 'Find a Player', 'unishare://feed', 90, true, now(), now() + interval '30 days'),
+    ('10000000-0000-4000-8000-000000000003', 'AirShare', 'Discover players nearby', 'Open AirShare from the main screen and keep your iPhone near another player.', 'wave.3.right.circle.fill', '64D8CB', 'Try AirShare', 'unishare://airshare', 80, true, now(), now() + interval '30 days')
 on conflict (id) do update set
     title = excluded.title,
     subtitle = excluded.subtitle,

@@ -720,9 +720,9 @@ insert into public.stories (
 values
     (
         '10000000-0000-4000-8000-000000000001',
-        'Безопасная игра',
-        'Защищайте аккаунт при поиске тиммейтов',
-        'Не отправляйте пароли, коды безопасности и платёжные данные. UniShare предназначен для поиска игроков и не поддерживает продажу или передачу аккаунтов.',
+        'Play Safely',
+        'Protect your account while meeting other players',
+        'Never send passwords, recovery codes, verification codes, or payment details. UniShare supports discovery and communication, not credential or account transfers.',
         'shield.checkered',
         'E94560',
         null,
@@ -733,12 +733,12 @@ values
     ),
     (
         '10000000-0000-4000-8000-000000000002',
-        'Как работает мэтч',
-        'Лайк превращается в чат только при взаимном интересе',
-        'Листайте анкеты на главном экране. Если второй пользователь также выберет вашу анкету, UniShare автоматически создаст защищённый чат для обсуждения деталей.',
+        'How Matching Works',
+        'A like becomes a chat only after mutual interest',
+        'Browse profiles in the feed. When both people like each other, UniShare creates a private chat for the conversation.',
         'heart.fill',
         'F28C52',
-        'Открыть главное',
+        'Open Feed',
         'unishare://feed',
         90,
         true,
@@ -746,12 +746,12 @@ values
     ),
     (
         '10000000-0000-4000-8000-000000000003',
-        'Заполните профиль',
-        'Игры и платформы улучшают рекомендации',
-        'Добавьте платформы, любимые игры и навыки. Чем точнее анкета, тем релевантнее профили в ленте.',
+        'Complete Your Profile',
+        'Games and platforms improve recommendations',
+        'Add your platforms, favorite games, and skills. A more complete profile produces more relevant recommendations.',
         'person.crop.rectangle.stack.fill',
         '2F7CF6',
-        'Редактировать профиль',
+        'Edit Profile',
         'unishare://profile',
         80,
         true,
@@ -1248,13 +1248,13 @@ insert into public.content_rules (category, pattern) values
 on conflict (pattern) do update set is_active = true;
 
 update public.stories
-set title = 'Безопасная игра',
-    subtitle = 'Защищайте аккаунт при поиске тиммейтов',
-    body = 'Не отправляйте пароли, коды безопасности и платёжные данные. UniShare предназначен для поиска игроков и не поддерживает продажу или передачу аккаунтов.'
+set title = 'Play Safely',
+    subtitle = 'Protect your account while meeting other players',
+    body = 'Never send passwords, recovery codes, verification codes, or payment details. UniShare supports discovery and communication, not credential or account transfers.'
 where id = '10000000-0000-4000-8000-000000000001';
 
 update public.stories
-set body = 'Добавьте платформы, любимые игры и навыки. Чем точнее анкета, тем релевантнее профили в ленте.'
+set body = 'Add your platforms, favorite games, and skills. A more complete profile produces more relevant recommendations.'
 where id = '10000000-0000-4000-8000-000000000003';
 
 -- END PRODUCTION READINESS MIGRATIONS

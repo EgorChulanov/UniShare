@@ -21,16 +21,16 @@ Package.resolved
 Pods/
 Podfile.lock
 
-# ─── SECRETS — НИКОГДА НЕ КОММИТИТЬ ─────────────────────────────────────────
-# Secrets.xcconfig содержит API ключи — не коммить файл с реальными ключами!
+# SECRETS - NEVER COMMIT REAL VALUES
+# Secrets.xcconfig contains API keys. Keep the real file local.
 Config/Secrets.xcconfig
 Config/ReleaseIdentity.xcconfig
 
-# Firebase — скачать из Firebase консоли и положить локально
+# Firebase configuration must be downloaded locally from the Firebase console
 GoogleService-Info.plist
 **/GoogleService-Info.plist
 
-# Любые файлы с ключами
+# Any files containing credentials
 *.p8
 *.p12
 *.mobileprovision
