@@ -1,6 +1,7 @@
 // Telegram bot: entry point to the Mini App, deep links, commands and
 // notifications about matches and messages.
 import { Bot, InlineKeyboard, webhookCallback, type Context } from "grammy";
+import type { UserFromGetMe } from "grammy/types";
 import { decodeDeepLink, encodeDeepLink, webLink, type DeepLink, type ProfileCard } from "@unishare/shared";
 import { config } from "../config";
 import { query, queryOne } from "../db";
@@ -150,8 +151,32 @@ function mainKeyboard(t: (typeof COPY)["ru"], link?: DeepLink): InlineKeyboard {
 
 export function createTelegramBot(): Bot | null {
   if (!config.telegram.botToken || config.telegram.mode === "off") return null;
+  const botId = Number(config.telegram.botToken.split(":")[0]);
   bot = new Bot(config.telegram.botToken, {
-    client: { apiRoot: config.telegram.apiRoot ?? undefined, timeoutSeconds: 30 },
+    // Known bot identity: webhooks are served without a getMe round-trip, which
+    // would hang when api.telegram.org is unreachable from the server.
+    botInfo:
+      config.telegram.botUsername && Number.isSafeInteger(botId)
+        ? {
+            id: botId,
+            is_bot: true,
+            first_name: "UniShare",
+            username: config.telegram.botUsername,
+            can_join_groups: true,
+            can_read_all_group_messages: false,
+            supports_inline_queries: false,
+            can_connect_to_business: false,
+            has_main_web_app: false,
+          } as UserFromGetMe
+        : undefined,
+    client: {
+      apiRoot: config.telegram.apiRoot ?? undefined,
+      timeoutSeconds: 30,
+      // Answer webhook updates in the HTTP response itself, so replies to
+      // /start and commands work even when the server cannot open outbound
+      // connections to api.telegram.org (common for hosting inside Russia).
+      canUseWebhookReply: (method) => config.telegram.mode === "webhook" && method === "sendMessage",
+    },
   });
 
   bot.command("start", async (ctx) => {

@@ -94,6 +94,14 @@ sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/EgorChulanov/UniSha
 
 **Обновление:** повторите ту же команду, или настройте автодеплой из GitHub Actions (секреты `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY`, см. `.github/workflows/cloud.yml`).
 
+### Если сервер не видит api.telegram.org
+
+Из некоторых российских дата-центров, в том числе Yandex Cloud, исходящие запросы к `api.telegram.org` не проходят. Проверить это можно по `https://домен/health`: там `telegram.configured: false` и ошибка сети.
+
+UniShare продолжит работать и так: Mini App открывается, а бот отвечает на команды прямо в ответе webhook. Не будут работать уведомления, где бот пишет первым.
+
+Чтобы включить их, разверните бесплатный ретранслятор на Cloudflare по инструкции [`cloud/deploy/telegram-relay/README.md`](../cloud/deploy/telegram-relay/README.md) и пропишите `TELEGRAM_API_ROOT` в `.env`.
+
 ### Когда пользователей станет больше
 - **База:** Yandex **Managed Service for PostgreSQL**. Укажите `DATABASE_URL=postgres://…:6432/unishare` и `DATABASE_SSL=true`, а сервис `postgres` из compose можно убрать.
 - **Файлы:** **Object Storage**. Укажите `STORAGE_DRIVER=s3`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_PUBLIC_URL`.
