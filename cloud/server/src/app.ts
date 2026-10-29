@@ -28,9 +28,9 @@ function webDistDir(): string | null {
 
 export async function buildApp(): Promise<FastifyInstance> {
   const app = Fastify({
-    logger: { level: config.isProduction ? "info" : "warn" },
+    // Request lines are noise in production; errors are still logged.
+    logger: { level: "warn" },
     trustProxy: true,
-    disableRequestLogging: true,
     bodyLimit: 1024 * 1024,
   });
 
