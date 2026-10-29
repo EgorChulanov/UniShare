@@ -9,6 +9,7 @@ import { query } from "./db";
 import { HttpError } from "./lib/errors";
 import { verifyMediaSignature } from "./lib/media";
 import { storage } from "./lib/storage";
+import { probeHost } from "./lib/netprobe";
 import { authRoutes } from "./routes/auth";
 import { meRoutes } from "./routes/me";
 import { feedRoutes } from "./routes/feed";
@@ -77,13 +78,15 @@ export async function buildApp(): Promise<FastifyInstance> {
     });
   }
 
-  app.get("/health", async () => {
+  app.get<{ Querystring: { probe?: string } }>("/health", async (request) => {
     await query("select 1");
     return {
       ok: true,
       telegram: config.telegram.botToken
         ? { mode: config.telegram.mode, configured: telegramStatus.configured, error: telegramStatus.error, checkedAt: telegramStatus.checkedAt }
         : null,
+      // /health?probe=1 checks outbound reachability of the Bot API (DNS, IPv4/IPv6, TLS).
+      probe: request.query.probe === "1" ? await probeHost(new URL(config.telegram.apiRoot ?? "https://api.telegram.org").hostname) : undefined,
     };
   });
 
