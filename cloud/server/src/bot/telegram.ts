@@ -4,6 +4,7 @@ import { Bot, InlineKeyboard, webhookCallback, type Context } from "grammy";
 import type { UserFromGetMe } from "grammy/types";
 import { decodeDeepLink, encodeDeepLink, webLink, type DeepLink, type ProfileCard } from "@unishare/shared";
 import { config } from "../config";
+import { selectTelegramRoute, telegramAgent, telegramRoute } from "./telegram-route";
 import { query, queryOne } from "../db";
 
 type Lang = "ru" | "en" | "uk" | "be";
@@ -176,6 +177,8 @@ export function createTelegramBot(): Bot | null {
       // /start and commands work even when the server cannot open outbound
       // connections to api.telegram.org (common for hosting inside Russia).
       canUseWebhookReply: (method) => config.telegram.mode === "webhook" && method === "sendMessage",
+      // node-fetch agent that can pin a reachable Telegram address (see telegram-route.ts).
+      baseFetchConfig: { agent: telegramAgent } as Record<string, unknown>,
     },
   });
 
@@ -301,10 +304,11 @@ function escapeHtml(value: string): string {
 
 /** Registers commands, descriptions, menu button and webhook for the bot. */
 /** Last outcome of configureTelegramBot, exposed through /health for operators. */
-export const telegramStatus: { configured: boolean; error: string | null; checkedAt: string | null } = {
+export const telegramStatus: { configured: boolean; error: string | null; checkedAt: string | null; route: string } = {
   configured: false,
   error: null,
   checkedAt: null,
+  route: "dns",
 };
 
 export async function configureTelegramBot(log: (message: string) => void = console.log): Promise<void> {
@@ -318,11 +322,13 @@ export async function configureTelegramBot(log: (message: string) => void = cons
     throw error;
   } finally {
     telegramStatus.checkedAt = new Date().toISOString();
+    telegramStatus.route = telegramRoute();
   }
 }
 
 async function applyTelegramSetup(log: (message: string) => void): Promise<void> {
   if (!bot) throw new Error("TELEGRAM_BOT_TOKEN is not configured");
+  await selectTelegramRoute(log);
   const api = bot.api;
   const me = await api.getMe();
   log(`bot: @${me.username}`);

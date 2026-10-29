@@ -83,7 +83,13 @@ export async function buildApp(): Promise<FastifyInstance> {
     return {
       ok: true,
       telegram: config.telegram.botToken
-        ? { mode: config.telegram.mode, configured: telegramStatus.configured, error: telegramStatus.error, checkedAt: telegramStatus.checkedAt }
+        ? {
+            mode: config.telegram.mode,
+            configured: telegramStatus.configured,
+            route: telegramStatus.route,
+            error: telegramStatus.error,
+            checkedAt: telegramStatus.checkedAt,
+          }
         : null,
       // /health?probe=1 checks outbound reachability of the Bot API (DNS, IPv4/IPv6, TLS).
       probe: request.query.probe === "1" ? await probeHost(new URL(config.telegram.apiRoot ?? "https://api.telegram.org").hostname) : undefined,
