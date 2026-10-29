@@ -86,6 +86,8 @@ sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/EgorChulanov/UniSha
 > sudo BRANCH=claude/cool-mendel-n5ufub bash -c "$(curl -fsSL https://raw.githubusercontent.com/EgorChulanov/UniShare/claude/cool-mendel-n5ufub/cloud/deploy/setup-vps.sh)"
 > ```
 
+**Вариант без SSH (cloud-init).** При создании ВМ откройте **Метаданные → User data** и вставьте содержимое [`cloud/deploy/cloud-init.yaml`](../cloud/deploy/cloud-init.yaml), заполнив в нём домен и токены. UniShare установится сам при первом запуске машины. Ход установки: `sudo tail -f /var/log/unishare-setup.log`.
+
 5. **Проверка:**
    - откройте `https://ваш-домен`, там появится страница входа;
    - откройте бота, нажмите **Start** и кнопку меню **UniShare**.

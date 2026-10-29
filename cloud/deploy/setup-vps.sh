@@ -12,8 +12,12 @@ BRANCH="${BRANCH:-main}"
 INSTALL_DIR="${INSTALL_DIR:-/opt/unishare}"
 
 say() { printf '\n\033[1;34m▶ %s\033[0m\n' "$*"; }
+# Non-interactive mode (cloud-init, CI): every answer comes from the
+# environment, e.g. UNISHARE_DOMAIN, UNISHARE_TELEGRAM_BOT_TOKEN, UNISHARE_VK_APP_ID.
 ask() {
-  local prompt="$1" default="${2:-}" value
+  local prompt="$1" default="${2:-}" var="${3:-}" value=""
+  if [ -n "$var" ] && [ -n "${!var:-}" ]; then printf '%s' "${!var}"; return; fi
+  if [ "${NONINTERACTIVE:-0}" = "1" ] || [ ! -r /dev/tty ]; then printf '%s' "$default"; return; fi
   if [ -n "$default" ]; then read -r -p "$prompt [$default]: " value </dev/tty; else read -r -p "$prompt: " value </dev/tty; fi
   printf '%s' "${value:-$default}"
 }
@@ -39,13 +43,13 @@ if [ ! -f .env ]; then
   say "Configuration"
   public_ip="$(curl -fsS https://ifconfig.me 2>/dev/null || hostname -I | awk '{print $1}')"
   echo "You need a domain (A record → $public_ip) for HTTPS. Without one you can use ${public_ip//./-}.sslip.io"
-  domain="$(ask "Domain" "${public_ip//./-}.sslip.io")"
-  bot_token="$(ask "Telegram bot token from @BotFather (leave empty to skip)")"
-  bot_username="$(ask "Telegram bot username" "UniversalShareBot")"
-  vk_app_id="$(ask "VK Mini App ID (leave empty to skip)")"
+  domain="$(ask "Domain" "${public_ip//./-}.sslip.io" UNISHARE_DOMAIN)"
+  bot_token="$(ask "Telegram bot token from @BotFather (leave empty to skip)" "" UNISHARE_TELEGRAM_BOT_TOKEN)"
+  bot_username="$(ask "Telegram bot username" "UniversalShareBot" UNISHARE_TELEGRAM_BOT_USERNAME)"
+  vk_app_id="$(ask "VK Mini App ID (leave empty to skip)" "" UNISHARE_VK_APP_ID)"
   vk_secret=""
-  if [ -n "$vk_app_id" ]; then vk_secret="$(ask "VK app secure key (Защищённый ключ)")"; fi
-  rawg_key="$(ask "RAWG API key for game covers (optional)")"
+  if [ -n "$vk_app_id" ]; then vk_secret="$(ask "VK app secure key (Защищённый ключ)" "" UNISHARE_VK_APP_SECRET)"; fi
+  rawg_key="$(ask "RAWG API key for game covers (optional)" "" UNISHARE_RAWG_API_KEY)"
 
   cat > .env <<EOF
 PUBLIC_URL=https://$domain
