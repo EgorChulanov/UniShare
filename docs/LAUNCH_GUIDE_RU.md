@@ -98,9 +98,11 @@ sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/EgorChulanov/UniSha
 
 Из некоторых российских дата-центров, в том числе Yandex Cloud, исходящие запросы к `api.telegram.org` не проходят. Проверить это можно по `https://домен/health`: там `telegram.configured: false` и ошибка сети.
 
-UniShare продолжит работать и так: Mini App открывается, а бот отвечает на команды прямо в ответе webhook. Не будут работать уведомления, где бот пишет первым.
+Сервер решает это сам. При старте он проверяет адреса `api.telegram.org` из DNS. Если они не отвечают, он перебирает запасные адреса Telegram, например `149.154.167.220`, и закрепляет первый рабочий. Сертификат `api.telegram.org` при этом по-прежнему проверяется. Выбранный путь виден в `/health` в поле `telegram.route`. Адрес можно задать вручную через `TELEGRAM_API_IP`, а список запасных адресов через `TELEGRAM_API_FALLBACK_IPS`.
 
-Чтобы включить их, разверните бесплатный ретранслятор на Cloudflare по инструкции [`cloud/deploy/telegram-relay/README.md`](../cloud/deploy/telegram-relay/README.md) и пропишите `TELEGRAM_API_ROOT` в `.env`.
+Если не отвечает ни один адрес, UniShare продолжит работать: Mini App открывается, а бот отвечает на команды прямо в ответе webhook. Не будут работать только уведомления, где бот пишет первым.
+
+В этом случае разверните бесплатный ретранслятор на Cloudflare по инструкции [`cloud/deploy/telegram-relay/README.md`](../cloud/deploy/telegram-relay/README.md) и пропишите `TELEGRAM_API_ROOT` в `.env`.
 
 ### Когда пользователей станет больше
 - **База:** Yandex **Managed Service for PostgreSQL**. Укажите `DATABASE_URL=postgres://…:6432/unishare` и `DATABASE_SSL=true`, а сервис `postgres` из compose можно убрать.
