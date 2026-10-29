@@ -17,6 +17,9 @@ help:
 	@echo "  make test-e2e       Run the three-user local Supabase E2E scenario"
 	@echo "  make test-ui-e2e    Register, onboard and delete a real local user in Simulator"
 	@echo "  make clean       Remove derived data and generated project"
+	@echo "  make cloud-dev     Run the Telegram/VK/web app locally (cloud/)"
+	@echo "  make cloud-test    Typecheck and test the cloud server"
+	@echo "  make cloud-up      Start the production stack with Docker"
 
 bootstrap:
 	@echo "→ Checking for Homebrew..."
@@ -81,3 +84,21 @@ secrets:
 clean:
 	@rm -rf UniShare.xcodeproj UniShare.xcworkspace DerivedData
 	@echo "✓ Cleaned"
+
+# ── Cloud: Telegram Mini App, VK Mini App, web/PWA (see cloud/README.md) ─────
+.PHONY: cloud-install cloud-dev cloud-test cloud-build cloud-up
+
+cloud-install:
+	@cd cloud && npm ci
+
+cloud-dev:
+	@cd cloud && npm run dev
+
+cloud-test:
+	@cd cloud && npm run typecheck && ./scripts/test.sh
+
+cloud-build:
+	@cd cloud && npm run build
+
+cloud-up:
+	@cd cloud/deploy && docker compose --env-file ../.env up -d --build

@@ -1,0 +1,31 @@
+{
+  "name": "@unishare/server",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch --env-file-if-exists=../.env src/index.ts",
+    "build": "node build.mjs",
+    "start": "node dist/index.js",
+    "migrate": "tsx --env-file-if-exists=../.env src/migrate.ts",
+    "bot:setup": "tsx --env-file-if-exists=../.env src/scripts/bot-setup.ts",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "tsx --test test/*.test.ts"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1160.0",
+    "@fastify/static": "^10.1.8",
+    "fastify": "^5.12.7",
+    "grammy": "^1.46.0",
+    "pg": "^8.23.1",
+    "ws": "^8.22.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.0",
+    "@types/pg": "^8.23.1",
+    "@types/ws": "^8.18.2",
+    "esbuild": "^0.28.2",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3"
+  }
+}

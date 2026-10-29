@@ -1,18 +1,35 @@
 <div align="center">
   <img src="docs/assets/unishare-logo.png" width="112" alt="UniShare logo" />
   <h1>UniShare: Games Sharing</h1>
-  <p>A SwiftUI social platform for discovering gaming account and library exchanges across PlayStation, Xbox, Nintendo, Steam, Epic Games, and more.</p>
+  <p>A cross-platform social app for finding teammates and swapping game libraries across PlayStation, Xbox, Nintendo, Steam, Epic Games, and more: in Telegram, VK, the browser, and on iOS.</p>
 
   <p>
     <a href="https://github.com/EgorChulanov/UniShare/actions"><img src="https://img.shields.io/github/actions/workflow/status/EgorChulanov/UniShare/ci.yml?label=CI&logo=github" alt="CI status" /></a>
-    <a href="https://github.com/EgorChulanov/UniShare"><img src="https://img.shields.io/badge/platform-iOS%20%7C%20iPadOS-111111?logo=apple" alt="Platforms" /></a>
+    <a href="https://t.me/UniversalShareBot"><img src="https://img.shields.io/badge/Telegram-Mini%20App-2AABEE?logo=telegram&logoColor=white" alt="Telegram Mini App" /></a>
+    <a href="cloud/README.md"><img src="https://img.shields.io/badge/VK-Mini%20App-0077FF?logo=vk&logoColor=white" alt="VK Mini App" /></a>
+    <a href="cloud/README.md"><img src="https://img.shields.io/badge/Web-PWA-5b4bdb" alt="Web PWA" /></a>
+    <a href="https://github.com/EgorChulanov/UniShare"><img src="https://img.shields.io/badge/iOS-SwiftUI-111111?logo=apple" alt="iOS" /></a>
     <a href="https://github.com/EgorChulanov/UniShare"><img src="https://img.shields.io/badge/status-active-5b4bdb" alt="Project status" /></a>
   </p>
 </div>
 
 ## About
 
-UniShare is a native SwiftUI app for people who want to discover compatible gaming accounts and game libraries on **PlayStation, Xbox, Nintendo, Steam, Epic Games**, and other platforms. Users create a profile with games they own and games they want, receive compatibility-ranked recommendations, swipe through profiles, match through mutual interest, and continue the conversation in a private chat.
+UniShare helps people discover teammates and compatible game libraries on **PlayStation, Xbox, Nintendo, Steam, Epic Games**, and other platforms:
+- create a profile with the games you own and the games you want;
+- swipe through compatibility-ranked profiles;
+- match through mutual interest and continue in a private chat.
+
+One account, one database and one adaptive interface serve every surface:
+
+| Surface | Where |
+| --- | --- |
+| **Telegram Mini App** | [@UniversalShareBot](https://t.me/UniversalShareBot): opens like a native app; matches and messages are announced by the bot |
+| **VK Mini App** | VK Mini Apps catalog (searchable inside VK) |
+| **Web / PWA** | Any browser; installable to the home screen on iPhone, iPad and Android |
+| **iOS (SwiftUI)** | The native app in [`UniShare/`](UniShare) |
+
+Users sign in with the platform they open UniShare from. Telegram and VK can be linked to the same profile, and partners can opt in to share a direct Telegram or VK contact after a match.
 
 > UniShare is a discovery and communication platform, not a seller or technical intermediary. It never asks for or stores gaming-service passwords, payment details, recovery codes, or two-factor authentication codes, and it never transfers an account on a user's behalf. Users must review each platform's rules and assess the risks before arranging any exchange.
 
@@ -46,7 +63,13 @@ These App Store presentation mockups show the current product direction and core
 ## Architecture
 
 ```text
-UniShare/
+cloud/                    # Telegram Mini App, VK Mini App, web/PWA and the shared API
+├── shared/               # API contract, catalogs, validation, deep links, i18n
+├── server/               # Node.js + Fastify API, WebSocket chat, Telegram bot, PostgreSQL migrations
+├── web/                  # React client with one adaptive "Liquid Glass" UI for every screen size
+└── deploy/               # docker-compose (PostgreSQL + app + HTTPS), one-command VPS installer
+
+UniShare/                 # native iOS app (SwiftUI)
 ├── Core/                 # environment, theme, localization, haptics
 ├── Features/             # Auth, Onboarding, Feed, Search, Chat, AirShare, Profile
 ├── Models/               # profiles, chats, stories, reviews
@@ -63,6 +86,14 @@ supabase/
 
 ## Technology
 
+**Cloud (Telegram, VK, web):**
+- TypeScript end to end: React 19, Vite and Framer Motion on the client; Fastify, WebSockets and grammY on the server.
+- PostgreSQL 14+ with plain SQL migrations, hosted in Russia (Yandex Cloud recommended).
+- Storage on the local disk or any S3-compatible bucket (Yandex Object Storage).
+- Telegram Mini Apps (full-screen mode, safe areas, haptics, QR scanner, `shareMessage`), VK Bridge, PWA.
+
+**iOS:**
+
 - Swift 5.9, SwiftUI, iOS 16.1+, and iPadOS
 - Supabase Auth, PostgreSQL, Realtime, Storage, and Edge Functions
 - Swift Package Manager and XcodeGen
@@ -71,6 +102,19 @@ supabase/
 - Manrope, Archivo Black, and Plus Jakarta Sans
 
 ## Quick Start
+
+### Telegram, VK and web (`cloud/`)
+
+```bash
+cd cloud
+cp .env.example .env
+npm install
+npm run dev      # API :8080 + web :5173, use "Test sign-in" locally
+```
+
+Production deployment, with BotFather, VK and Yandex Cloud set up step by step, is covered in [docs/LAUNCH_GUIDE_RU.md](docs/LAUNCH_GUIDE_RU.md) and [cloud/README.md](cloud/README.md).
+
+### iOS app
 
 ```bash
 git clone https://github.com/EgorChulanov/UniShare.git
@@ -120,6 +164,7 @@ make test-static       # static validation
 make test-backend      # local migrations and security smoke tests
 make test-e2e          # deterministic multi-user API E2E
 make ci-ios-tests      # unit and UI tests through xcodebuild
+make cloud-test        # cloud typecheck + API tests on PostgreSQL
 ```
 
 GitHub Actions validates the project, runs automated tests, and provides a protected TestFlight workflow. Supabase, App Store Connect, and signing credentials must remain in GitHub Environments and must never be committed.
@@ -146,11 +191,11 @@ Metadata, localizations, privacy and support pages, and release procedures live 
 
 ## Status
 
-UniShare is under active development. The repository documents the current architecture and release materials, while the availability of hosted features depends on the configured Supabase project and environment secrets.
+UniShare is under active development. The cloud version (Telegram, VK, web) runs on its own PostgreSQL-backed server, documented in [cloud/README.md](cloud/README.md). The iOS app still uses the Supabase backend in [`supabase/`](supabase) until it is migrated to the shared API.
 
 ## Author
 
-**Egor Chulanov**, iOS developer and creator of UniShare
+**Egor Chulanov**, developer and creator of UniShare
 
 - GitHub: [@EgorChulanov](https://github.com/EgorChulanov)
 - Repository: [EgorChulanov/UniShare](https://github.com/EgorChulanov/UniShare)

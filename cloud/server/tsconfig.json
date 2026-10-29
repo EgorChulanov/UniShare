@@ -1,0 +1,9 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2023"],
+    "types": ["node"],
+    "paths": { "@unishare/shared": ["../shared/src/index.ts"] }
+  },
+  "include": ["src", "test", "../shared/src"]
+}
