@@ -10,8 +10,15 @@ import { query } from "./db";
 const sockets = new Map<string, Set<WebSocket>>();
 const typingListeners = new Set<(userId: string, chatId: string) => void>();
 
+/** Sockets whose app is minimized or in the background (Telegram keeps them open). */
+const hiddenSockets = new WeakSet<WebSocket>();
+
+/** True when the user has UniShare open on screen; notifications are then shown in-app. */
 export function isConnected(userId: string): boolean {
-  return (sockets.get(userId)?.size ?? 0) > 0;
+  for (const socket of sockets.get(userId) ?? []) {
+    if (!hiddenSockets.has(socket)) return true;
+  }
+  return false;
 }
 
 export function publish(userId: string, event: RealtimeEvent): void {
@@ -72,6 +79,10 @@ export function attachRealtime(server: Server): () => void {
               return;
             }
             if (command.type === "ping") ws.send(JSON.stringify({ type: "pong" }));
+            if (command.type === "visibility") {
+              if (command.visible) hiddenSockets.delete(ws);
+              else hiddenSockets.add(ws);
+            }
             if (command.type === "typing" && typeof command.chatId === "string") {
               for (const listener of typingListeners) listener(userId, command.chatId);
             }

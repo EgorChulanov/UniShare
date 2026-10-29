@@ -185,6 +185,9 @@ function telegramAdapter(): PlatformAdapter {
       tg.onEvent("contentSafeAreaChanged", updateInsets);
       tg.onEvent("fullscreenChanged", updateInsets);
       tg.onEvent("viewportChanged", updateInsets);
+      // Bot API 8.0: the Mini App was minimized or brought back.
+      tg.onEvent("deactivated", () => window.dispatchEvent(new CustomEvent("unishare:visibility", { detail: false })));
+      tg.onEvent("activated", () => window.dispatchEvent(new CustomEvent("unishare:visibility", { detail: true })));
     },
     async signInPayload() {
       return { provider: "telegram", data: tg.initData };

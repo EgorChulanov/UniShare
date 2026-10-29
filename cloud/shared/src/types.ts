@@ -214,4 +214,5 @@ export type RealtimeEvent =
 /** Client → server realtime events. */
 export type RealtimeCommand =
   | { type: "typing"; chatId: string }
+  | { type: "visibility"; visible: boolean }
   | { type: "ping" };

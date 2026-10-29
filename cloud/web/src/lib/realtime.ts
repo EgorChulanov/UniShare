@@ -29,6 +29,7 @@ function connect() {
   socket.onopen = () => {
     attempts = 0;
     setStatus(true);
+    socket?.send(JSON.stringify({ type: "visibility", visible: appVisible } satisfies RealtimeCommand));
   };
   socket.onmessage = (message) => {
     try {
@@ -76,11 +77,28 @@ export const realtime = {
   },
 };
 
+let appVisible = document.visibilityState === "visible";
+
+/**
+ * Tells the server whether UniShare is on screen. Telegram minimizes Mini Apps
+ * instead of closing them, so an open socket alone does not mean the user can
+ * see in-app notifications; while hidden, the bot sends them instead.
+ */
+export function setAppVisible(visible: boolean): void {
+  if (appVisible === visible) return;
+  appVisible = visible;
+  realtime.send({ type: "visibility", visible });
+}
+
 // Reconnect immediately when the app returns to the foreground.
 document.addEventListener("visibilitychange", () => {
+  setAppVisible(document.visibilityState === "visible");
   if (document.visibilityState === "visible" && !stopped && !socket) {
     if (reconnectTimer) clearTimeout(reconnectTimer);
     attempts = 0;
     connect();
   }
 });
+
+// Platform adapters (e.g. Telegram activated/deactivated) report visibility too.
+window.addEventListener("unishare:visibility", (event) => setAppVisible(Boolean((event as CustomEvent<boolean>).detail)));
