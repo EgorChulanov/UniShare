@@ -150,7 +150,9 @@ function mainKeyboard(t: (typeof COPY)["ru"], link?: DeepLink): InlineKeyboard {
 
 export function createTelegramBot(): Bot | null {
   if (!config.telegram.botToken || config.telegram.mode === "off") return null;
-  bot = new Bot(config.telegram.botToken);
+  bot = new Bot(config.telegram.botToken, {
+    client: { apiRoot: config.telegram.apiRoot ?? undefined, timeoutSeconds: 30 },
+  });
 
   bot.command("start", async (ctx) => {
     if (ctx.chat.type !== "private") return;
@@ -273,7 +275,28 @@ function escapeHtml(value: string): string {
 }
 
 /** Registers commands, descriptions, menu button and webhook for the bot. */
+/** Last outcome of configureTelegramBot, exposed through /health for operators. */
+export const telegramStatus: { configured: boolean; error: string | null; checkedAt: string | null } = {
+  configured: false,
+  error: null,
+  checkedAt: null,
+};
+
 export async function configureTelegramBot(log: (message: string) => void = console.log): Promise<void> {
+  try {
+    await applyTelegramSetup(log);
+    telegramStatus.configured = true;
+    telegramStatus.error = null;
+  } catch (error) {
+    telegramStatus.configured = false;
+    telegramStatus.error = (error as Error).message.slice(0, 300);
+    throw error;
+  } finally {
+    telegramStatus.checkedAt = new Date().toISOString();
+  }
+}
+
+async function applyTelegramSetup(log: (message: string) => void): Promise<void> {
   if (!bot) throw new Error("TELEGRAM_BOT_TOKEN is not configured");
   const api = bot.api;
   const me = await api.getMe();

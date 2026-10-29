@@ -58,8 +58,9 @@ SESSION_SECRET=$(openssl rand -hex 32)
 POSTGRES_PASSWORD=$(openssl rand -hex 18)
 TELEGRAM_BOT_TOKEN=$bot_token
 TELEGRAM_BOT_USERNAME=$bot_username
-TELEGRAM_WEBHOOK_SECRET=$(openssl rand -hex 16)
+TELEGRAM_WEBHOOK_SECRET=${UNISHARE_TELEGRAM_WEBHOOK_SECRET:-$(openssl rand -hex 16)}
 TELEGRAM_BOT_MODE=webhook
+TELEGRAM_API_ROOT=${UNISHARE_TELEGRAM_API_ROOT:-}
 VK_APP_ID=$vk_app_id
 VK_APP_SECRET=$vk_secret
 STORAGE_DRIVER=local
@@ -74,6 +75,47 @@ say "Building and starting containers"
 cd deploy
 docker compose --env-file ../.env up -d --build
 
+if [ "${AUTO_UPDATE:-1}" = "1" ]; then
+  say "Enabling auto-update from GitHub (branch $BRANCH, every 5 minutes)"
+  cat > /usr/local/bin/unishare-update <<UPDATE
+#!/bin/bash
+# Pulls new commits of $BRANCH and rebuilds the app when something changed.
+set -euo pipefail
+cd "$INSTALL_DIR"
+git fetch --quiet origin "$BRANCH"
+if [ "\$(git rev-parse HEAD)" != "\$(git rev-parse "origin/$BRANCH")" ]; then
+  git reset --quiet --hard "origin/$BRANCH"
+  cd cloud/deploy
+  docker compose --env-file ../.env up -d --build --remove-orphans
+  docker image prune -f >/dev/null
+  echo "UniShare updated to \$(git rev-parse --short HEAD)"
+fi
+UPDATE
+  chmod +x /usr/local/bin/unishare-update
+  cat > /etc/systemd/system/unishare-update.service <<'UNIT'
+[Unit]
+Description=Update UniShare from GitHub
+After=docker.service network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/unishare-update
+UNIT
+  cat > /etc/systemd/system/unishare-update.timer <<'UNIT'
+[Unit]
+Description=Check GitHub for UniShare updates
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=5min
+
+[Install]
+WantedBy=timers.target
+UNIT
+  systemctl daemon-reload
+  systemctl enable --now unishare-update.timer
+fi
+
 say "Waiting for the app"
 for _ in $(seq 1 60); do
   if docker compose --env-file ../.env exec -T app wget -qO- http://127.0.0.1:8080/health >/dev/null 2>&1; then break; fi
@@ -86,7 +128,7 @@ cat <<EOF
 
 ✅ UniShare is running: https://$domain
    Logs:     cd $INSTALL_DIR/cloud/deploy && docker compose --env-file ../.env logs -f app
-   Update:   sudo bash $INSTALL_DIR/cloud/deploy/setup-vps.sh
+   Update:   automatic every 5 minutes from GitHub (journalctl -u unishare-update), or: sudo unishare-update
    Backups:  docker volume "unishare_backups" (nightly pg_dump, 14 days)
 
 The Telegram bot (commands, menu button and webhook) is configured automatically on start.

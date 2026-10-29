@@ -19,10 +19,20 @@ async function main(): Promise<void> {
   console.log(`UniShare listening on ${config.host}:${config.port} (public URL ${config.publicUrl})`);
 
   if (bot) {
-    try {
-      await configureTelegramBot((message) => console.log(message));
-    } catch (error) {
-      console.error("Telegram bot setup failed:", (error as Error).message);
+    // Retry until Telegram accepts the setup (network hiccups, slow routes from RU hosting).
+    const setupBot = async (): Promise<boolean> => {
+      try {
+        await configureTelegramBot((message) => console.log(message));
+        return true;
+      } catch (error) {
+        console.error("Telegram bot setup failed:", (error as Error).message);
+        return false;
+      }
+    };
+    if (!(await setupBot())) {
+      const retry = setInterval(() => {
+        void setupBot().then((done) => done && clearInterval(retry));
+      }, 5 * 60 * 1000);
     }
     if (config.telegram.mode === "polling") {
       await bot.api.deleteWebhook().catch(() => undefined);

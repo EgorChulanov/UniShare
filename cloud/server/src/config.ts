@@ -42,6 +42,8 @@ export const config = {
     /** Optional Mini App short name created with /newapp (t.me/<bot>/<name>). */
     appShortName: optional("TELEGRAM_APP_SHORT_NAME"),
     webhookSecret: optional("TELEGRAM_WEBHOOK_SECRET"),
+    /** Alternative Bot API endpoint (e.g. a relay) if api.telegram.org is unreachable from the server. */
+    apiRoot: optional("TELEGRAM_API_ROOT"),
     /** "webhook" in production behind HTTPS, "polling" for local development. */
     // Local runs default to "off" so a dev machine never steals the production webhook.
     mode: (optional("TELEGRAM_BOT_MODE") ?? (isProduction ? "webhook" : "off")) as "webhook" | "polling" | "off",

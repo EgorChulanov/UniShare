@@ -14,7 +14,7 @@ import { meRoutes } from "./routes/me";
 import { feedRoutes } from "./routes/feed";
 import { chatRoutes } from "./routes/chats";
 import { socialRoutes } from "./routes/social";
-import { telegramWebhookHandler } from "./bot/telegram";
+import { telegramStatus, telegramWebhookHandler } from "./bot/telegram";
 
 function webDistDir(): string | null {
   const candidates = [
@@ -79,7 +79,12 @@ export async function buildApp(): Promise<FastifyInstance> {
 
   app.get("/health", async () => {
     await query("select 1");
-    return { ok: true };
+    return {
+      ok: true,
+      telegram: config.telegram.botToken
+        ? { mode: config.telegram.mode, configured: telegramStatus.configured, error: telegramStatus.error, checkedAt: telegramStatus.checkedAt }
+        : null,
+    };
   });
 
   app.get("/api/config", async (): Promise<PublicConfig> => ({
