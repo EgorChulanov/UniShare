@@ -9,7 +9,7 @@ import { query } from "./db";
 import { HttpError } from "./lib/errors";
 import { verifyMediaSignature } from "./lib/media";
 import { storage } from "./lib/storage";
-import { probeHost } from "./lib/netprobe";
+import { probeAddresses, probeHost } from "./lib/netprobe";
 import { authRoutes } from "./routes/auth";
 import { meRoutes } from "./routes/me";
 import { feedRoutes } from "./routes/feed";
@@ -78,7 +78,7 @@ export async function buildApp(): Promise<FastifyInstance> {
     });
   }
 
-  app.get<{ Querystring: { probe?: string } }>("/health", async (request) => {
+  app.get<{ Querystring: { probe?: string; ips?: string } }>("/health", async (request) => {
     await query("select 1");
     return {
       ok: true,
@@ -87,6 +87,11 @@ export async function buildApp(): Promise<FastifyInstance> {
         : null,
       // /health?probe=1 checks outbound reachability of the Bot API (DNS, IPv4/IPv6, TLS).
       probe: request.query.probe === "1" ? await probeHost(new URL(config.telegram.apiRoot ?? "https://api.telegram.org").hostname) : undefined,
+      // /health?probe=1&ips=a,b checks alternative Telegram addresses (Telegram ranges only).
+      probeAlternatives:
+        request.query.probe === "1" && request.query.ips
+          ? await probeAddresses("api.telegram.org", request.query.ips.split(","))
+          : undefined,
     };
   });
 

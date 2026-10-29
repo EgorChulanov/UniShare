@@ -34,3 +34,18 @@ export async function probeHost(host: string, timeoutMs = 5000): Promise<ProbeRe
     return { host, addresses: [], dnsError: (error as NodeJS.ErrnoException).code ?? (error as Error).message };
   }
 }
+
+/** Telegram-owned ranges only, so the operator probe cannot be used to scan other hosts. */
+export function isTelegramAddress(ip: string): boolean {
+  const parts = ip.split(".").map(Number);
+  if (parts.length !== 4 || parts.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) return false;
+  return (parts[0] === 149 && parts[1] === 154 && parts[2] >= 160 && parts[2] <= 175) || (parts[0] === 91 && parts[1] === 108);
+}
+
+/** TLS handshake with explicit Telegram addresses using the given SNI host. */
+export async function probeAddresses(host: string, ips: string[], timeoutMs = 5000): Promise<ProbeResult> {
+  const addresses = await Promise.all(
+    ips.filter(isTelegramAddress).slice(0, 12).map(async (address) => ({ address, family: 4, ...(await tryTls(host, address, timeoutMs)) })),
+  );
+  return { host, addresses };
+}
