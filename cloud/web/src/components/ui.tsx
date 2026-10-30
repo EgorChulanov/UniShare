@@ -1,5 +1,5 @@
 // Web ports of the iOS building blocks in UniShare/Components/*.swift.
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useIsPresent } from "framer-motion";
 import { Star, User, X } from "lucide-react";
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { PLATFORM_INFO, type GameTag, type Platform } from "@unishare/shared";
@@ -92,14 +92,18 @@ export function Avatar({ url, size = 44, ring, online }: { url?: string | null; 
   const [failed, setFailed] = useState(false);
   const src = mediaUrl(url);
   useEffect(() => setFailed(false), [src]);
+  // The dot sits outside the clipped circle, on its rim (45°) for large avatars.
+  const dotInset = Math.max(0, Math.round(size * 0.146 - 6));
   return (
-    <span className={`avatar ${ring ? "ring" : ""}`} style={{ width: size, height: size }}>
-      {src && !failed ? (
-        <img src={src} alt="" loading="lazy" onError={() => setFailed(true)} />
-      ) : (
-        <User size={size * 0.6} fill="currentColor" strokeWidth={0} />
-      )}
-      {online && <span className="online-dot" />}
+    <span className="avatar-wrap" style={{ width: size, height: size }}>
+      <span className={`avatar ${ring ? "ring" : ""}`} style={{ width: size, height: size }}>
+        {src && !failed ? (
+          <img src={src} alt="" loading="lazy" onError={() => setFailed(true)} />
+        ) : (
+          <User size={size * 0.6} fill="currentColor" strokeWidth={0} />
+        )}
+      </span>
+      {online && <span className="online-dot" style={{ right: dotInset, bottom: dotInset }} />}
     </span>
   );
 }
@@ -336,6 +340,70 @@ export function relativeTime(iso: string, language: string): string {
   return date.toLocaleDateString(language, { day: "numeric", month: "short" });
 }
 
+// ── Escape for nested layers ───────────────────────────────────────────────
+
+/** Open nested layers, last opened last; Escape closes only the top one. */
+const escapeHandlers: (() => void)[] = [];
+
+function onEscapeKey(event: KeyboardEvent) {
+  const handler = escapeHandlers[escapeHandlers.length - 1];
+  if (event.key !== "Escape" || event.isComposing || !handler) return;
+  // Capture phase on window runs before App's handler, which then leaves the overlay open.
+  event.preventDefault();
+  event.stopPropagation();
+  handler();
+}
+
+/** Escape closes this layer (lightbox, confirmation, menu) instead of the whole sheet under it. */
+export function useEscape(handler: () => void, active = true): void {
+  const latest = useRef(handler);
+  useEffect(() => {
+    latest.current = handler;
+  });
+  useEffect(() => {
+    if (!active) return;
+    const entry = () => latest.current();
+    if (!escapeHandlers.length) window.addEventListener("keydown", onEscapeKey, true);
+    escapeHandlers.push(entry);
+    return () => {
+      escapeHandlers.splice(escapeHandlers.indexOf(entry), 1);
+      if (!escapeHandlers.length) window.removeEventListener("keydown", onEscapeKey, true);
+    };
+  }, [active]);
+}
+
+// ── Clipboard ──────────────────────────────────────────────────────────────
+
+/** Clipboard API, or a hidden textarea + execCommand where it is missing or blocked (old webviews, http). */
+export async function copyText(text: string): Promise<boolean> {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {
+    /* fall through to the legacy path */
+  }
+  const focused = document.activeElement as HTMLElement | null;
+  const area = document.createElement("textarea");
+  area.value = text;
+  area.setAttribute("readonly", "");
+  // 16px keeps iOS from zooming in on the temporary field.
+  area.style.cssText = "position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;font-size:16px;pointer-events:none";
+  document.body.appendChild(area);
+  area.select();
+  area.setSelectionRange(0, text.length);
+  let copied = false;
+  try {
+    copied = document.execCommand("copy");
+  } catch {
+    copied = false;
+  }
+  area.remove();
+  focused?.focus?.({ preventScroll: true });
+  return copied;
+}
+
 // ── Confirmation dialog (SwiftUI .confirmationDialog → iOS action sheet) ──
 
 export interface ActionSheetAction {
@@ -345,6 +413,8 @@ export interface ActionSheetAction {
 }
 
 export function ActionSheet({ title, message, actions, cancelLabel, onCancel }: { title?: string; message?: string; actions: ActionSheetAction[]; cancelLabel: string; onCancel(): void }) {
+  // Not while it slides out, so the next Escape reaches the layer underneath.
+  useEscape(onCancel, useIsPresent());
   return (
     <>
       <motion.div className="backdrop" style={{ zIndex: 80 }} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onCancel} />

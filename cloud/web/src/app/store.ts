@@ -79,6 +79,8 @@ interface AppState {
   finishGreeting(): void;
   setTab(tab: Tab): void;
   push(overlay: Overlay): void;
+  /** Swaps the top overlay (e.g. a profile for its chat) without adding a history entry. */
+  replace(overlay: Overlay): void;
   pop(): void;
   closeOverlay(): void;
   toast(text: string, kind?: Toast["kind"]): void;
@@ -144,7 +146,7 @@ export const useApp = create<AppState>((set, get) => ({
     onUnauthorized(() => {
       setToken(null);
       realtime.stop();
-      set({ phase: "signed_out", profile: null });
+      set({ phase: "signed_out", profile: null, tab: "feed", lastTab: "feed", tabBarCollapsed: false });
     });
 
     const config = await api.config().catch(() => null);
@@ -218,7 +220,19 @@ export const useApp = create<AppState>((set, get) => ({
     await api.logout().catch(() => undefined);
     setToken(null);
     realtime.stop();
-    set({ profile: null, phase: platform.kind === "web" ? "signed_out" : "auth_error", authError: null, chats: [], requests: [], messages: {}, overlays: [], tab: "feed" });
+    set({
+      profile: null,
+      phase: platform.kind === "web" ? "signed_out" : "auth_error",
+      authError: null,
+      chats: [],
+      requests: [],
+      messages: {},
+      overlays: [],
+      tab: "feed",
+      lastTab: "feed",
+      tabBarCollapsed: false,
+    });
+    syncBackButton();
     if (platform.kind !== "web") void get().boot();
   },
 
@@ -247,6 +261,13 @@ export const useApp = create<AppState>((set, get) => ({
     set((state) => ({ overlays: [...state.overlays, overlay] }));
     historyDepth += 1;
     history.pushState({ unishareOverlay: historyDepth }, "");
+    syncBackButton();
+  },
+
+  replace(overlay) {
+    if (!get().overlays.length) return get().push(overlay);
+    // The history entry of the replaced overlay now belongs to the new one.
+    set((state) => ({ overlays: [...state.overlays.slice(0, -1), overlay] }));
     syncBackButton();
   },
 

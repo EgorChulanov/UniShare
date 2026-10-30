@@ -4,6 +4,7 @@
 // TLS still verifies the certificate against the real host name.
 import { lookup as dnsLookup, type LookupAddress } from "node:dns";
 import https from "node:https";
+import { HttpError } from "grammy";
 import { config } from "../config";
 import { probeAddresses, probeHost } from "../lib/netprobe";
 
@@ -50,13 +51,41 @@ export async function selectTelegramRoute(log: (message: string) => void): Promi
   return pinFallbackRoute(log);
 }
 
+/** Fallback Telegram addresses other than the pinned one that complete a TLS handshake, in list order. */
+async function reachableFallbacks(): Promise<string[]> {
+  if (config.telegram.apiRoot || process.env.TELEGRAM_API_IP) return [];
+  const alternatives = await probeAddresses(API_HOST, FALLBACK_IPS.filter((ip) => ip !== pinnedAddress));
+  return alternatives.addresses.filter((address) => address.ok).map((address) => address.address);
+}
+
 /** Pins the first fallback Telegram address that completes a TLS handshake. */
 export async function pinFallbackRoute(log: (message: string) => void): Promise<string | null> {
-  if (config.telegram.apiRoot || process.env.TELEGRAM_API_IP) return null;
-  const alternatives = await probeAddresses(API_HOST, FALLBACK_IPS.filter((ip) => ip !== pinnedAddress));
-  const working = alternatives.addresses.find((address) => address.ok);
+  const [working] = await reachableFallbacks();
   if (!working) return null;
-  pinnedAddress = working.address;
+  pinnedAddress = working;
   log(`api.telegram.org unreachable via DNS; using ${pinnedAddress}`);
   return pinnedAddress;
+}
+
+/**
+ * Retries a Bot API call that failed over the current route. An address can pass
+ * the TLS probe and still drop API requests, so each fallback address is tried in
+ * turn until the call goes through. Only transport failures (HttpError) are
+ * retried: API errors such as 401 or 429 are rethrown unchanged. When no address
+ * works, the previous route is restored and the original error rethrown.
+ */
+export async function retryViaFallbackRoutes<T>(call: () => Promise<T>, error: unknown, log: (message: string) => void): Promise<T> {
+  if (!(error instanceof HttpError)) throw error;
+  const previous = pinnedAddress;
+  for (const address of await reachableFallbacks()) {
+    log(`Bot API request failed via ${pinnedAddress ?? "DNS"}; trying ${address}`);
+    pinnedAddress = address;
+    try {
+      return await call();
+    } catch (retryError) {
+      if (!(retryError instanceof HttpError)) throw retryError;
+    }
+  }
+  pinnedAddress = previous;
+  throw error;
 }

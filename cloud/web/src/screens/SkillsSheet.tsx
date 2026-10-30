@@ -38,7 +38,8 @@ export function SkillsSheet() {
 
   const addCustom = () => {
     const value = custom.trim().slice(0, 40);
-    if (!value) return;
+    // The server drops skills shorter than 2 characters (profileUpdateToColumns).
+    if (value.length < 2) return;
     if (!skills.some((skill) => skill.toLowerCase() === value.toLowerCase()) && skills.length < LIMITS.skills) setSkills((current) => [...current, value]);
     setCustom("");
     platform.haptic("light");
@@ -118,7 +119,7 @@ export function SkillsSheet() {
                 >
                   <input className="plain-input grow" value={custom} maxLength={40} onChange={(event) => setCustom(event.target.value)} placeholder={t("skills.setup.custom")} />
                   <AnimatePresence>
-                    {custom.trim() && (
+                    {custom.trim().length >= 2 && (
                       <motion.button type="submit" initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0, opacity: 0 }} style={{ display: "flex", color: "var(--primary)" }} aria-label={t("profile.add.game")}>
                         <PlusCircle size={28} fill="currentColor" color="var(--bg)" />
                       </motion.button>

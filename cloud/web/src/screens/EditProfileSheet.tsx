@@ -23,19 +23,28 @@ import { GamePicker } from "../components/GamePicker";
 import { Avatar, BrandIcon, PlatformBadge, Sheet, Spinner, Toggle, platformColor } from "../components/ui";
 import { subscriptionProgress, tagFor } from "./ProfileScreen";
 
+/** A platform's games, or the wanted games tab after the platform tabs. */
+type GamesTab = Platform | "wanted";
+
 interface EditDraft {
   username: string;
   status: string;
   platforms: Platform[];
   games: Partial<Record<Platform, GameTag[]>>;
-  active: Platform | null;
+  wanted: GameTag[];
+  active: GamesTab | null;
   subscriptions: Subscription[];
 }
 
 /** Shared between the edit sheet and the subscription editor pushed on top of it. */
-const useEditDraft = create<EditDraft>(() => ({ username: "", status: "", platforms: [], games: {}, active: null, subscriptions: [] }));
+const useEditDraft = create<EditDraft>(() => ({ username: "", status: "", platforms: [], games: {}, wanted: [], active: null, subscriptions: [] }));
 
-const DAY_MS = 86_400_000;
+/** Calendar.date(byAdding: .day): adds local calendar days, so a DST change cannot shift the date. */
+function addDays(iso: string, days: number): string {
+  const date = new Date(iso);
+  date.setDate(date.getDate() + days);
+  return date.toISOString();
+}
 
 /** SubscriptionEditorSheet.normalizeDraft: valid plan / cycle, start date and expiry. */
 function normalizeSubscription(subscription: Subscription, recalculateExpiry: boolean): Subscription {
@@ -45,7 +54,7 @@ function normalizeSubscription(subscription: Subscription, recalculateExpiry: bo
   const cycle = (plan.cycles as string[]).includes(subscription.billingCycleId ?? "") ? (subscription.billingCycleId as BillingCycle["id"]) : plan.cycles[0];
   const startedAt = subscription.startedAt ?? new Date().toISOString();
   const next: Subscription = { ...subscription, planName: plan.name, billingCycleId: cycle, startedAt, autoRenew: subscription.autoRenew ?? false };
-  if (recalculateExpiry || !next.expiresAt) next.expiresAt = new Date(new Date(startedAt).getTime() + CYCLES[cycle].days * DAY_MS).toISOString();
+  if (recalculateExpiry || !next.expiresAt) next.expiresAt = addDays(startedAt, CYCLES[cycle].days);
   return next;
 }
 
@@ -68,6 +77,7 @@ export function EditProfileSheet() {
       status: profile.status ?? "",
       platforms: PLATFORMS.filter((id) => profile.platforms.includes(id)),
       games,
+      wanted: profile.wantedGames.map((name) => tagFor(profile, name)),
       active: PLATFORMS.find((id) => profile.platforms.includes(id)) ?? null,
       subscriptions: profile.subscriptions,
     });
@@ -84,6 +94,8 @@ export function EditProfileSheet() {
 
   const username = useMemo(() => sanitizeUsername(draft.username), [draft.username]);
   const canSave = Boolean(username) && draft.platforms.length > 0 && draft.status.length <= LIMITS.statusMax;
+  // togglePlatform moves `active` off a removed platform, so it is null only when no platform is selected.
+  const gamesTab: GamesTab = draft.active ?? "wanted";
 
   const togglePlatform = (id: Platform) => {
     platform.haptic("light");
@@ -95,11 +107,11 @@ export function EditProfileSheet() {
     useEditDraft.setState({ platforms, active });
   };
 
-  const toggleGame = (tag: GameTag, id: Platform) => {
-    const list = draft.games[id] ?? [];
+  const toggleGame = (tag: GameTag, tab: GamesTab) => {
+    const list = tab === "wanted" ? draft.wanted : (draft.games[tab] ?? []);
     const key = normalizeGameName(tag.name);
     const next = list.some((item) => normalizeGameName(item.name) === key) ? list.filter((item) => normalizeGameName(item.name) !== key) : [...list, tag];
-    useEditDraft.setState({ games: { ...draft.games, [id]: next } });
+    useEditDraft.setState(tab === "wanted" ? { wanted: next } : { games: { ...draft.games, [tab]: next } });
   };
 
   const onAvatar = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -126,11 +138,8 @@ export function EditProfileSheet() {
     if (draft.status.length > LIMITS.statusMax) return toast(t("profile.error.status.length"), "error");
     setSaving(true);
     try {
-      if (avatar) await api.uploadAvatar(avatar.blob);
       const gameMetadata = { ...profile.gameMetadata };
-      const platformGames: Partial<Record<Platform, string[]>> = {};
-      for (const id of draft.platforms) {
-        const tags = draft.games[id] ?? [];
+      const addMetadata = (tags: GameTag[]) => {
         for (const tag of tags) {
           const key = normalizeGameName(tag.name);
           const known = gameMetadata[key];
@@ -141,17 +150,30 @@ export function EditProfileSheet() {
             steamAppId: tag.steamAppId ?? known?.steamAppId ?? null,
           };
         }
+      };
+      const platformGames: Partial<Record<Platform, string[]>> = {};
+      for (const id of draft.platforms) {
+        const tags = draft.games[id] ?? [];
+        addMetadata(tags);
         if (tags.length) platformGames[id] = tags.map((tag) => tag.name);
       }
+      addMetadata(draft.wanted);
       const updated = await api.updateMe({
         username,
         status: draft.status.trim() || null,
         platforms: draft.platforms,
         platformGames,
+        wantedGames: draft.wanted.map((tag) => tag.name),
         gameMetadata,
         subscriptions: draft.subscriptions,
       });
       setProfile(updated);
+      // Upload the avatar only once the profile is saved, so a rejected save never replaces it.
+      // If the upload fails the saved profile stays and the sheet stays open with the error.
+      if (avatar) {
+        const { avatarUrl } = await api.uploadAvatar(avatar.blob);
+        setProfile({ ...updated, avatarUrl });
+      }
       platform.haptic("success");
       pop();
     } catch (error) {
@@ -202,6 +224,7 @@ export function EditProfileSheet() {
               onChange={(event) => useEditDraft.setState({ username: event.target.value })}
             />
           </label>
+          {draft.username.trim() && !username && <span style={{ fontSize: 13, color: "var(--red)" }}>{t("error.invalid_username")}</span>}
         </EditField>
 
         <EditField title={t("profile.status")}>
@@ -228,26 +251,27 @@ export function EditProfileSheet() {
           </div>
         </EditField>
 
-        {draft.platforms.length > 0 && (
+        {(draft.platforms.length > 0 || profile.wantedGames.length > 0) && (
           <EditField title={t("profile.games")}>
             <div className="col" style={{ gap: 12 }}>
               <div className="h-scroll" style={{ margin: 0, padding: 0, gap: 8 }}>
                 {draft.platforms.map((id) => (
-                  <button key={id} className={`platform-tab ${draft.active === id ? "active" : ""}`} onClick={() => useEditDraft.setState({ active: id })}>
+                  <button key={id} className={`platform-tab ${gamesTab === id ? "active" : ""}`} onClick={() => useEditDraft.setState({ active: id })}>
                     <PlatformBadge platform={id} size={18} />
                     {id}
                   </button>
                 ))}
+                <button className={`platform-tab ${gamesTab === "wanted" ? "active" : ""}`} onClick={() => useEditDraft.setState({ active: "wanted" })}>
+                  {t("profile.wanted")}
+                </button>
               </div>
-              {draft.active && (
-                <GamePicker
-                  key={draft.active}
-                  selected={draft.games[draft.active] ?? []}
-                  limit={LIMITS.gamesPerPlatform}
-                  chipColor={platformColor(draft.active)}
-                  onToggle={(tag) => toggleGame(tag, draft.active!)}
-                />
-              )}
+              <GamePicker
+                key={gamesTab}
+                selected={gamesTab === "wanted" ? draft.wanted : (draft.games[gamesTab] ?? [])}
+                limit={gamesTab === "wanted" ? LIMITS.wantedGames : LIMITS.gamesPerPlatform}
+                chipColor={gamesTab === "wanted" ? "var(--primary)" : platformColor(gamesTab)}
+                onToggle={(tag) => toggleGame(tag, gamesTab)}
+              />
             </div>
           </EditField>
         )}
@@ -332,7 +356,7 @@ export function SubscriptionEditorSheet({ name }: { name: string }) {
   const recalc = (next: Subscription) => {
     const cycle = (next.billingCycleId as BillingCycle["id"]) ?? cycles[0];
     const start = next.startedAt ?? new Date().toISOString();
-    return { ...next, startedAt: start, expiresAt: new Date(new Date(start).getTime() + CYCLES[cycle].days * DAY_MS).toISOString() };
+    return { ...next, startedAt: start, expiresAt: addDays(start, CYCLES[cycle].days) };
   };
 
   const save = () => {

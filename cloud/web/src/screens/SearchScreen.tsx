@@ -17,7 +17,8 @@ export function SearchScreen() {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResults | null>(null);
   const [searching, setSearching] = useState(false);
-  const [popular, setPopular] = useState<GameSearchResult[]>(popularCache.games ?? []);
+  // null while loading.
+  const [popular, setPopular] = useState<GameSearchResult[] | null>(popularCache.games);
   const onScroll = useMemo(() => collapseOnScroll(), []);
   const requestId = useRef(0);
 
@@ -26,15 +27,18 @@ export function SearchScreen() {
     api
       .popularGames()
       .then((games) => {
-        popularCache.games = games;
+        // An empty answer (Steam unreachable) is not cached, so the next visit asks again.
+        if (games.length) popularCache.games = games;
         setPopular(games);
       })
-      .catch(() => undefined);
+      .catch(() => setPopular([]));
   }, []);
 
   useEffect(() => {
     const trimmed = query.trim();
     if (trimmed.length < 2) {
+      // Drops the answer of a request still running for the old query.
+      requestId.current++;
       setResults(null);
       setSearching(false);
       return;
@@ -52,10 +56,11 @@ export function SearchScreen() {
   }, [query]);
 
   const rows = useMemo(() => {
-    const games = popular.filter((game) => game.backgroundImage);
-    if (games.length < 3) return [];
-    const third = Math.ceil(games.length / 3);
-    return [games.slice(0, third), games.slice(third, third * 2), games.slice(third * 2)].filter((row) => row.length);
+    const games = (popular ?? []).filter((game) => game.backgroundImage);
+    // Up to three rows of at least three games each; a short list gets a single row.
+    const count = Math.min(3, Math.max(1, Math.floor(games.length / 3)));
+    const size = Math.ceil(games.length / count);
+    return Array.from({ length: count }, (_, index) => games.slice(index * size, (index + 1) * size)).filter((row) => row.length);
   }, [popular]);
 
   const openGame = (game: GameSearchResult) =>
@@ -97,20 +102,25 @@ export function SearchScreen() {
             </motion.div>
           ) : (
             <motion.div key="discover" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}>
-              <div className="section-head">
-                <h2>{t("search.popular")}</h2>
-                <Sparkles size={24} color="var(--accent-text)" fill="var(--accent-text)" />
-              </div>
-              {rows.length ? (
-                <div className="col" style={{ gap: 12 }}>
-                  {rows.map((row, index) => (
-                    <GameMarquee key={index} games={row} reverse={index % 2 === 1} duration={42 + index * 9} onOpen={openGame} />
-                  ))}
-                </div>
-              ) : (
-                <div className="center" style={{ height: 120 }}>
-                  <Spinner />
-                </div>
+              {/* Hidden when the list came back empty or failed. */}
+              {(popular === null || rows.length > 0) && (
+                <>
+                  <div className="section-head">
+                    <h2>{t("search.popular")}</h2>
+                    <Sparkles size={24} color="var(--accent-text)" fill="var(--accent-text)" />
+                  </div>
+                  {rows.length ? (
+                    <div className="col" style={{ gap: 12 }}>
+                      {rows.map((row, index) => (
+                        <GameMarquee key={index} games={row} reverse={index % 2 === 1} duration={42 + index * 9} onOpen={openGame} />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="center" style={{ height: 120 }}>
+                      <Spinner />
+                    </div>
+                  )}
+                </>
               )}
 
               <div className="section-head" style={{ marginTop: 30 }}>
@@ -283,11 +293,8 @@ export function GameSheet({ game }: { game: GameTag }) {
         .catch(() => setFailed(true));
     }
     api
-      .search(game.name)
-      .then((value) => {
-        const needle = game.name.toLowerCase();
-        setPlayers(value.users.filter((user) => [...user.games, ...user.wantedGames].some((item) => item.name.toLowerCase() === needle)));
-      })
+      .gamePlayers(game.name)
+      .then(setPlayers)
       .catch(() => setPlayers([]));
   }, [game, key]);
 

@@ -124,7 +124,7 @@ export function FeedScreen() {
   const push = useApp((state) => state.push);
   const topRef = useRef<SwipeHandle>(null);
   const [storiesCollapsed, setStoriesCollapsed] = useState(false);
-  const dragStart = useRef<number | null>(null);
+  const dragStart = useRef<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
     const feed = useFeed.getState();
@@ -173,13 +173,21 @@ export function FeedScreen() {
     <div
       className="screen"
       style={{ display: "flex", flexDirection: "column", overflow: "hidden", paddingBottom: "var(--tabbar-space)" }}
-      onPointerDown={(event) => (dragStart.current = event.clientY)}
+      onPointerDown={(event) => (dragStart.current = { x: event.clientX, y: event.clientY })}
       onPointerMove={(event) => {
         if (dragStart.current === null) return;
-        const dy = event.clientY - dragStart.current;
-        if (dy < -22 && !storiesCollapsed && stories.length) setStoriesCollapsed(true);
+        // A mouse with no button held was released outside the window: this is a hover.
+        if (event.pointerType === "mouse" && event.buttons === 0) {
+          dragStart.current = null;
+          return;
+        }
+        const dx = event.clientX - dragStart.current.x;
+        const dy = event.clientY - dragStart.current.y;
+        // FeedView.swift: only a mostly vertical upward drag, not a card swipe that arcs up.
+        if (dy < -22 && Math.abs(dy) > Math.abs(dx) && !storiesCollapsed && stories.length) setStoriesCollapsed(true);
       }}
       onPointerUp={() => (dragStart.current = null)}
+      onPointerCancel={() => (dragStart.current = null)}
     >
       <div className="container feed-column" style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}>
         {stories.length > 0 && (

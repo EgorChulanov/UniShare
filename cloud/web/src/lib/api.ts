@@ -65,7 +65,8 @@ export function onUnauthorized(handler: () => void): void {
   unauthorizedHandler = handler;
 }
 
-async function request<T>(method: string, path: string, body?: unknown, raw?: Blob): Promise<T> {
+/** `keepalive` lets the request finish while the page is being closed or hidden. */
+async function request<T>(method: string, path: string, body?: unknown, raw?: Blob, keepalive?: boolean): Promise<T> {
   const headers: Record<string, string> = {};
   if (token) headers.Authorization = `Bearer ${token}`;
   let payload: BodyInit | undefined;
@@ -79,7 +80,7 @@ async function request<T>(method: string, path: string, body?: unknown, raw?: Bl
 
   let response: Response;
   try {
-    response = await fetch(apiUrl(path), { method, headers, body: payload });
+    response = await fetch(apiUrl(path), { method, headers, body: payload, keepalive });
   } catch {
     throw new ApiError(0, "network", "network");
   }
@@ -159,9 +160,12 @@ export const api = {
     if (platform) params.set("platform", platform);
     return request<SearchResults>("GET", `/api/search?${params}`);
   },
+  /** Everyone who has the game in their profile (not capped like the general search). */
+  gamePlayers: (name: string) => request<ProfileCard[]>("GET", `/api/players?game=${encodeURIComponent(name)}`),
   airsharePing: (location: { lat: number; lng: number; accuracy?: number } | null) =>
     request<AirShareResult>("POST", "/api/airshare/ping", location ?? {}),
-  airshareLeave: () => request<{ ok: true }>("DELETE", "/api/airshare"),
+  // keepalive: sent when AirShare closes, often together with the page being hidden.
+  airshareLeave: () => request<{ ok: true }>("DELETE", "/api/airshare", undefined, undefined, true),
 };
 
 /** Downscales an image to JPEG before upload (fast on mobile networks). */

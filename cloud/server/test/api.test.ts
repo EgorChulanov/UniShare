@@ -245,6 +245,45 @@ test("searches people by username, game, platform and skill; respects blocks", {
   assert.ok(!(await names("/api/search?q=danap")).includes("DanaPlays"));
 });
 
+test("lists the players of one game by exact name; respects onboarding and blocks", { skip: !hasDatabase }, async () => {
+  const signIn = async (name: string, profile: Record<string, unknown>) => {
+    const token = (await call("POST", "/api/auth/dev", undefined, { name })).body.token as string;
+    assert.equal((await call("PATCH", "/api/me", token, profile)).status, 200);
+    return { token, uid: (await call("GET", "/api/me", token)).body.uid as string };
+  };
+  const me = await signIn("seeker_dev", { username: "Seeker", platforms: ["PC"], platformGames: { PC: ["Hollow Knight"] }, onboardingComplete: true });
+  const erin = await signIn("erin_dev", { username: "ErinPlays", platforms: ["PC"], platformGames: { PC: ["Hollow Knight"] }, onboardingComplete: true });
+  const finn = await signIn("finn_dev", { username: "FinnWants", platforms: ["PC"], wantedGames: ["hollow knight"], onboardingComplete: true });
+  // A similar title or a username containing the name is not a match.
+  await signIn("silk_dev", { username: "HollowKnightFan", platforms: ["PC"], platformGames: { PC: ["Hollow Knight: Silksong"] }, onboardingComplete: true });
+  // Not onboarded yet: never listed.
+  await signIn("ghost_dev", { platforms: ["PC"], platformGames: { PC: ["Hollow Knight"] } });
+
+  const players = async (game: string, token = me.token) =>
+    ((await call("GET", `/api/players?game=${encodeURIComponent(game)}`, token)).body as { username: string }[]).map((user) => user.username);
+  // Most recently updated first; the caller is left out.
+  assert.deepEqual(await players("Hollow Knight"), ["FinnWants", "ErinPlays"]);
+  assert.deepEqual(await players("HOLLOW  knight"), ["FinnWants", "ErinPlays"]);
+  assert.deepEqual(await players("Hollow"), []);
+  assert.equal((await call("GET", "/api/players", me.token)).status, 400);
+  assert.equal((await call("GET", "/api/players?game=Hollow%20Knight")).status, 401);
+
+  // Blocks work in both directions.
+  assert.equal((await call("POST", "/api/blocks", me.token, { userId: erin.uid })).status, 200);
+  assert.equal((await call("POST", "/api/blocks", finn.token, { userId: me.uid })).status, 200);
+  assert.deepEqual(await players("Hollow Knight"), []);
+  assert.deepEqual(await players("Hollow Knight", erin.token), ["FinnWants"]);
+
+  // 60 lookups per minute per user.
+  const busy = await signIn("busy_dev", { username: "BusyBee", platforms: ["PC"], onboardingComplete: true });
+  for (let i = 0; i < 60; i++) {
+    assert.equal((await call("GET", "/api/players?game=Hollow%20Knight", busy.token)).status, 200);
+  }
+  const limited = await call("GET", "/api/players?game=Hollow%20Knight", busy.token);
+  assert.equal(limited.status, 429);
+  assert.equal(limited.body.code, "rate_limited");
+});
+
 test("AirShare finds people who open it nearby at the same time", { skip: !hasDatabase }, async () => {
   const one = (await call("POST", "/api/auth/dev", undefined, { name: "air_one" })).body.token as string;
   await call("PATCH", "/api/me", one, { username: "AirOne", platforms: ["PC"], onboardingComplete: true });

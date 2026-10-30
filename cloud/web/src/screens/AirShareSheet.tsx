@@ -14,6 +14,8 @@ import { Avatar, PlatformBadge, Sheet } from "../components/ui";
 type Status = "searching" | "received" | "sent";
 
 const PING_INTERVAL_MS = 2500;
+/** Bumped whenever searching starts, here or in a newly opened sheet: a late leave must not end it. */
+let searches = 0;
 
 export function AirShareSheet() {
   const t = useT();
@@ -28,35 +30,85 @@ export function AirShareSheet() {
     let alive = true;
     let location: GeoPoint | null = null;
     let timer: ReturnType<typeof setTimeout> | undefined;
+    // Searching only while the page / Mini App is on screen, like onAppear / onDisappear on iOS.
+    // `run` changes on every stop, so a ping still in flight does not schedule the next one.
+    let active = false;
+    let run = 0;
+    let inflight: Promise<unknown> | null = null;
+    let appHidden = false;
 
-    const ping = async () => {
+    const ping = async (current: number) => {
+      const request = api.airsharePing(location);
+      inflight = request;
       try {
-        const result = await api.airsharePing(location);
-        if (!alive) return;
+        const result = await request;
+        if (current !== run) return;
         const fresh = result.profiles.filter((profile) => !seen.current.has(profile.uid));
         if (fresh.length) {
           fresh.forEach((profile) => seen.current.add(profile.uid));
           platform.haptic("success");
-          setProfiles((current) => [...current, ...fresh]);
-          setStatus((current) => (current === "sent" ? current : "received"));
+          setProfiles((list) => [...list, ...fresh]);
+          setStatus((value) => (value === "sent" ? value : "received"));
         }
       } catch {
         /* keep trying while the sheet is open */
+      } finally {
+        if (inflight === request) inflight = null;
       }
-      if (alive) timer = setTimeout(ping, PING_INTERVAL_MS);
+      if (current === run) timer = setTimeout(() => void ping(current), PING_INTERVAL_MS);
     };
 
-    void (async () => {
-      location = await platform.getLocation().catch(() => null);
-      if (!alive) return;
-      setNoLocation(!location);
-      void ping();
-    })();
+    const start = () => {
+      if (active) return;
+      active = true;
+      searches += 1;
+      void ping(run);
+    };
+
+    const stop = () => {
+      if (!active) return;
+      active = false;
+      run += 1;
+      clearTimeout(timer);
+      const search = searches;
+      void api.airshareLeave().catch(() => undefined);
+      // A ping still in flight may reach the server after this DELETE and add the user back:
+      // leave again once it settles, unless searching has started again by then.
+      void inflight
+        ?.catch(() => undefined)
+        .then(() => (search === searches ? api.airshareLeave() : undefined))
+        .catch(() => undefined);
+    };
+
+    const sync = () => (alive && !appHidden && document.visibilityState === "visible" ? start() : stop());
+    const onAppVisibility = (event: Event) => {
+      appHidden = !(event as CustomEvent<boolean>).detail;
+      sync();
+    };
+    document.addEventListener("visibilitychange", sync);
+    window.addEventListener("pagehide", stop);
+    window.addEventListener("pageshow", sync);
+    window.addEventListener("unishare:visibility", onAppVisibility);
+    sync();
+
+    // Search on the same network right away; the coordinates join the next ping once they
+    // arrive (the permission prompt can take a while).
+    void platform
+      .getLocation()
+      .catch(() => null)
+      .then((point) => {
+        if (!alive) return;
+        location = point;
+        setNoLocation(!point);
+      });
 
     return () => {
       alive = false;
-      clearTimeout(timer);
-      void api.airshareLeave().catch(() => undefined);
+      document.removeEventListener("visibilitychange", sync);
+      window.removeEventListener("pagehide", stop);
+      window.removeEventListener("pageshow", sync);
+      window.removeEventListener("unishare:visibility", onAppVisibility);
+      stop();
     };
   }, []);
 
@@ -179,8 +231,11 @@ function AirShareProfileCard({ profile, onDismiss, onLiked }: { profile: Profile
         platform.haptic("success");
         state.toast(`${t("feed.swipe.match")} · ${profile.username}`, "success");
         void state.loadChats();
-        state.closeOverlay();
-        state.setTab("chats");
+        // Only while AirShare is still open: the user may have closed it during the request.
+        if (state.overlays.at(-1)?.type === "airshare") {
+          state.setTab("chats");
+          state.replace({ type: "chat", chatId: result.chatId });
+        }
         return;
       }
       state.toast(t("airshare.liked"), "success");

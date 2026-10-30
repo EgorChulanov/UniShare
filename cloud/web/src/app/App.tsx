@@ -80,10 +80,12 @@ function MainShell() {
   const tab = useApp((state) => state.tab);
   const overlays = useApp((state) => state.overlays);
 
-  // Desktop: Escape closes the top sheet, like the close button.
+  // Desktop: Escape closes the top sheet, like the close button. Nested layers
+  // (lightbox, confirmations, menus) claim the key first through useEscape.
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && useApp.getState().overlays.length) useApp.getState().pop();
+      if (event.key !== "Escape" || event.defaultPrevented || event.isComposing) return;
+      if (useApp.getState().overlays.length) useApp.getState().pop();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -109,7 +111,11 @@ function MainShell() {
       <TabBar />
       <AnimatePresence>
         {overlays.map((overlay, index) => (
-          <OverlayView key={`${overlay.type}-${index}`} overlay={overlay} />
+          // One stacking layer per overlay, above the tab bar: the last opened is drawn on top
+          // whatever its type (a chat over a sheet, a sheet opened from a chat).
+          <div key={`${overlay.type}-${index}`} style={{ position: "relative", zIndex: 50 + index }}>
+            <OverlayView overlay={overlay} />
+          </div>
         ))}
       </AnimatePresence>
     </>

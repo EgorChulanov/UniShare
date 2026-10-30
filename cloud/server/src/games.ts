@@ -16,21 +16,34 @@ const SEARCH_TTL_DAYS = 14;
 const COVER_TTL_DAYS = 14;
 const DETAILS_TTL_DAYS = 7;
 const POPULAR_TTL_HOURS = 12;
+/** "Every provider answered and nothing was found": cached shorter so new store entries show up. */
+const MISS_TTL_HOURS = 72;
+/** A provider did not answer: the fallback is kept for 10 minutes, just enough not to hammer it. */
+const FAILURE_TTL_HOURS = 10 / 60;
 const TIMEOUT_MS = 6_000;
 const USER_AGENT = "UniShare/1.0 (https://github.com/EgorChulanov/UniShare; official@egorchulanov.ru)";
 
 // ── HTTP + cache helpers ───────────────────────────────────────────────────
 
-async function fetchJson<T>(url: string): Promise<T | null> {
+/** A provider answer, or `ok: false` when the provider did not answer. */
+type Lookup<T> = { ok: true; data: T } | { ok: false };
+
+/**
+ * 404/410 is an answer ("no such page": `data` is null). A timeout, network
+ * error, rate limit (429), any other status or a body that is not JSON is a
+ * failure, which callers must not cache as "not found".
+ */
+async function fetchJson<T>(url: string): Promise<Lookup<T | null>> {
   try {
     const response = await fetch(url, {
       headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
-    if (!response.ok) return null;
-    return (await response.json()) as T;
+    if (response.status === 404 || response.status === 410) return { ok: true, data: null };
+    if (!response.ok) return { ok: false };
+    return { ok: true, data: (await response.json()) as T };
   } catch {
-    return null;
+    return { ok: false };
   }
 }
 
@@ -45,9 +58,9 @@ async function cacheGet<T>(key: string, allowStale = false): Promise<T | undefin
 async function cachePut(key: string, payload: unknown, hours: number): Promise<void> {
   await query(
     `insert into game_catalog_cache (cache_key, payload, expires_at)
-     values ($1, $2, now() + make_interval(hours => $3))
+     values ($1, $2, now() + make_interval(secs => $3))
      on conflict (cache_key) do update set payload = excluded.payload, expires_at = excluded.expires_at, updated_at = now()`,
-    [key.slice(0, 160), JSON.stringify(payload), hours],
+    [key.slice(0, 160), JSON.stringify(payload), Math.round(hours * 3600)],
   ).catch(() => undefined);
 }
 
@@ -108,7 +121,8 @@ export function mapSteamSearch(items: SteamSearchItem[]): GameSearchResult[] {
     }));
 }
 
-export async function steamSearch(term: string): Promise<GameSearchResult[]> {
+/** Steam store search; `null` when Steam did not answer and nothing is cached (unlike `[]`, "no such game"). */
+export async function steamSearch(term: string): Promise<GameSearchResult[] | null> {
   const needle = normalizeGameName(term);
   const key = `steam:${needle}`;
   const cached = await cacheGet<GameSearchResult[]>(key);
@@ -118,8 +132,8 @@ export async function steamSearch(term: string): Promise<GameSearchResult[]> {
   url.searchParams.set("l", "english");
   url.searchParams.set("cc", "US");
   const payload = await fetchJson<{ items?: SteamSearchItem[] }>(url.toString());
-  if (!payload) return (await cacheGet<GameSearchResult[]>(key, true)) ?? [];
-  const results = mapSteamSearch(payload.items ?? []).slice(0, 12);
+  if (!payload.ok || !payload.data) return (await cacheGet<GameSearchResult[]>(key, true)) ?? null;
+  const results = mapSteamSearch(payload.data.items ?? []).slice(0, 12);
   await cachePut(key, results, SEARCH_TTL_DAYS * 24);
   return results;
 }
@@ -142,6 +156,8 @@ function bestSteamMatch(results: GameSearchResult[], name: string): GameSearchRe
 interface WikiSummary {
   type?: string;
   title?: string;
+  /** Wikidata short description, e.g. "2020 video game". */
+  description?: string;
   extract?: string;
   thumbnail?: { source?: string };
   originalimage?: { source?: string };
@@ -152,14 +168,32 @@ function cleanWikiImage(url: string | undefined): string | null {
   return url.split("?")[0];
 }
 
-async function wikiSummary(name: string): Promise<WikiSummary | null> {
-  for (const title of [name, `${name} (video game)`]) {
-    const summary = await fetchJson<WikiSummary>(
+const VIDEO_GAME = /\bvideo ?games?\b|\bgame (?:developed|published)\b|компьютерн\S* игр|видеоигр/i;
+
+/** The short description or the first sentence of the article says it is about a game. */
+function describesVideoGame(summary: WikiSummary): boolean {
+  const firstSentence = summary.extract?.split(/(?<=[.!?])\s/)[0] ?? "";
+  return VIDEO_GAME.test(`${summary.description ?? ""} ${firstSentence}`);
+}
+
+/**
+ * The Wikipedia article about a game (`data: null` when there is none), or
+ * `ok: false` when Wikipedia did not answer. "<name> (video game)" is tried
+ * first; the bare title only counts when it describes a game ("Hades" alone is
+ * the god, "Spider-Man" the comic character).
+ */
+async function wikiSummary(name: string): Promise<Lookup<WikiSummary | null>> {
+  for (const [title, mustDescribeGame] of [[`${name} (video game)`, false], [name, true]] as const) {
+    const result = await fetchJson<WikiSummary>(
       `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title.replace(/ /g, "_"))}`,
     );
-    if (summary && summary.type !== "disambiguation" && (summary.thumbnail?.source || summary.extract)) return summary;
+    if (!result.ok) return result;
+    const summary = result.data;
+    if (!summary || summary.type === "disambiguation" || !(summary.thumbnail?.source || summary.extract)) continue;
+    if (mustDescribeGame && !describesVideoGame(summary)) continue;
+    return { ok: true, data: summary };
   }
-  return null;
+  return { ok: true, data: null };
 }
 
 // ── Covers ─────────────────────────────────────────────────────────────────
@@ -167,39 +201,56 @@ async function wikiSummary(name: string): Promise<WikiSummary | null> {
 export interface ResolvedCover {
   coverUrl: string;
   steamAppId: number | null;
+  /** Store title of the Steam app the cover belongs to (null for Wikipedia artwork). */
+  title: string | null;
 }
 
 /** Exact header image for apps whose assets live under a hashed path (search only returns a small capsule). */
-async function steamHeaderImage(appId: number): Promise<string | null> {
+async function steamHeaderImage(appId: number): Promise<Lookup<string | null>> {
   const payload = await fetchJson<Record<string, { success?: boolean; data?: { header_image?: string } }>>(
-    `https://store.steampowered.com/api/appdetails?appids=${appId}&filters=basic`,
+    `https://store.steampowered.com/api/appdetails?appids=${appId}&cc=us&filters=basic`,
   );
-  const image = payload?.[String(appId)]?.data?.header_image;
-  return image ? image.split("?")[0] : null;
+  if (!payload.ok || !payload.data) return { ok: false };
+  const image = payload.data[String(appId)]?.data?.header_image;
+  return { ok: true, data: image ? image.split("?")[0] : null };
 }
 
 /** Finds artwork for a game title: Steam first, then Wikipedia. Cached. */
 export async function resolveCover(name: string): Promise<ResolvedCover | null> {
   const sanitized = sanitizeGameName(name);
   if (!sanitized) return null;
-  const key = `cover2:${normalizeGameName(sanitized)}`;
+  // v3: v2 entries may hold misses cached during Steam outages and bare-title Wikipedia images.
+  const key = `cover3:${normalizeGameName(sanitized)}`;
   const cached = await cacheGet<{ cover: ResolvedCover | null }>(key);
   if (cached) return cached.cover;
 
+  // When a provider does not answer, the title is not guessed from Wikipedia
+  // and the empty result is kept for minutes, not as a 72 h miss.
+  const failed = async () => {
+    await cachePut(key, { cover: null }, FAILURE_TTL_HOURS);
+    return null;
+  };
   let cover: ResolvedCover | null = null;
-  const steam = bestSteamMatch(await steamSearch(sanitized), sanitized);
+  const results = await steamSearch(sanitized);
+  if (!results) return failed();
+  const steam = bestSteamMatch(results, sanitized);
   if (steam?.backgroundImage) {
     const appId = steam.steamAppId ?? steam.id;
-    const header = /\/capsule_[^/]+$/.test(steam.backgroundImage) ? await steamHeaderImage(appId) : null;
-    cover = { coverUrl: header ?? steam.backgroundImage, steamAppId: appId };
+    let header: string | null = null;
+    if (/\/capsule_[^/]+$/.test(steam.backgroundImage)) {
+      const lookup = await steamHeaderImage(appId);
+      if (!lookup.ok) return failed();
+      header = lookup.data;
+    }
+    cover = { coverUrl: header ?? steam.backgroundImage, steamAppId: appId, title: steam.name };
   }
   if (!cover) {
     const wiki = await wikiSummary(sanitized);
-    const image = cleanWikiImage(wiki?.thumbnail?.source ?? wiki?.originalimage?.source);
-    if (image) cover = { coverUrl: image, steamAppId: null };
+    if (!wiki.ok) return failed();
+    const image = cleanWikiImage(wiki.data?.thumbnail?.source ?? wiki.data?.originalimage?.source);
+    if (image) cover = { coverUrl: image, steamAppId: null, title: null };
   }
-  // Misses are cached for a shorter time so new store entries show up.
-  await cachePut(key, { cover }, cover ? COVER_TTL_DAYS * 24 : 72);
+  await cachePut(key, { cover }, cover ? COVER_TTL_DAYS * 24 : MISS_TTL_HOURS);
   return cover;
 }
 
@@ -223,8 +274,8 @@ async function rawgSearch(term: string, needle: string): Promise<GameSearchResul
   url.searchParams.set("page_size", "12");
   url.searchParams.set("search_precise", "true");
   const payload = await fetchJson<{ results?: RawgGame[] }>(url.toString());
-  if (!payload) return (await cacheGet<GameSearchResult[]>(key, true)) ?? null;
-  const results: GameSearchResult[] = (payload.results ?? []).map((game) => ({
+  if (!payload.ok || !payload.data) return (await cacheGet<GameSearchResult[]>(key, true)) ?? null;
+  const results: GameSearchResult[] = (payload.data.results ?? []).map((game) => ({
     id: game.id,
     name: game.name,
     backgroundImage: game.background_image ?? null,
@@ -257,7 +308,7 @@ export async function searchGames(input: string): Promise<GameSearchResult[]> {
   const rawg = await rawgSearch(sanitized, needle);
   if (rawg && rawg.length) return merge(curated, rawg);
 
-  const steam = await steamSearch(sanitized);
+  const steam = (await steamSearch(sanitized)) ?? [];
   return merge(merge(curated, steam), offline(needle));
 }
 
@@ -305,23 +356,29 @@ export async function popularGames(): Promise<GameSearchResult[]> {
     results.push(game);
   };
 
-  // 1. What UniShare players actually have.
+  // 1. What UniShare players actually have. Names are typed freely, so only
+  // titles that are a Steam app or in the offline catalog are shown, under
+  // their store/catalog name, and never text the content rules reject.
   const used = await query<{ name: string; count: number }>(
-    `select g as name, count(*)::int as count
+    `select g as name, count(distinct u.uid)::int as count
      from users u, unnest(u.games || u.wanted_games) as g
      where u.onboarding_complete and u.account_state = 'active'
+       and not exists (select 1 from content_rules r where r.is_active and g ~* r.pattern)
      group by g order by count desc, g limit 12`,
   ).catch(() => []);
+  const catalog = new Map(POPULAR_GAMES.map((name) => [normalizeGameName(name), name]));
   const usedCovers = await mapLimit(used, 4, async (row) => ({ name: row.name, cover: await resolveCover(row.name) }));
   for (const { name, cover } of usedCovers) {
-    if (cover) add({ id: cover.steamAppId ?? 0, name, backgroundImage: cover.coverUrl, released: null, source: cover.steamAppId ? "steam" : "catalog", steamAppId: cover.steamAppId });
+    const catalogName = catalog.get(normalizeGameName(name));
+    if (!cover || (!cover.steamAppId && !catalogName)) continue;
+    add({ id: cover.steamAppId ?? 0, name: catalogName ?? cover.title ?? name, backgroundImage: cover.coverUrl, released: null, source: cover.steamAppId ? "steam" : "catalog", steamAppId: cover.steamAppId });
   }
 
   // 2. Steam top sellers.
   const featured = await fetchJson<{ top_sellers?: { items?: SteamFeaturedItem[] } }>(
     "https://store.steampowered.com/api/featuredcategories?cc=US&l=english",
   );
-  for (const item of featured?.top_sellers?.items ?? []) {
+  for (const item of (featured.ok ? featured.data?.top_sellers?.items : null) ?? []) {
     if (!Number.isSafeInteger(item.id) || !item.name || NOT_A_GAME.test(item.name)) continue;
     const image = (item.header_image ?? item.large_capsule_image ?? "").split("?")[0] || steamImageFromCapsule(item.id, null);
     add({ id: item.id, name: item.name, backgroundImage: image, released: null, source: "steam", steamAppId: item.id });
@@ -401,25 +458,40 @@ interface RawgDetails {
   description_raw?: string | null;
 }
 
-async function steamDetails(appId: number, name: string): Promise<GameDetails | null> {
+/**
+ * Steam's answer for one app (`data: null` when Steam has no store page for
+ * it), or `ok: false` when Steam did not answer. cc=us: from the Russian-hosted
+ * server Steam would otherwise answer success:false for titles not sold there.
+ */
+async function steamDetails(appId: number, name: string): Promise<Lookup<GameDetails | null>> {
   const payload = await fetchJson<Record<string, { success?: boolean; data?: SteamAppDetails }>>(
-    `https://store.steampowered.com/api/appdetails?appids=${appId}&l=russian`,
+    `https://store.steampowered.com/api/appdetails?appids=${appId}&cc=us&l=russian`,
   );
-  const entry = payload?.[String(appId)];
-  if (!entry?.success || !entry.data) return null;
-  return mapSteamDetails(entry.data, name);
+  if (!payload.ok || !payload.data) return { ok: false };
+  const entry = payload.data[String(appId)];
+  return { ok: true, data: entry?.success && entry.data ? mapSteamDetails(entry.data, name) : null };
 }
 
 export async function gameDetails(input: { name: string; steamAppId?: number | null; rawgId?: number | null }): Promise<GameDetails> {
   const name = sanitizeGameName(input.name) ?? input.name.trim().slice(0, 80);
-  const key = `details:${input.rawgId ? `rawg:${input.rawgId}` : input.steamAppId ? `steam:${input.steamAppId}` : `name:${normalizeGameName(name)}`}`;
+  const rawgId = config.rawgApiKey && input.rawgId && input.rawgId > 0 ? input.rawgId : null;
+  const steamAppId = input.steamAppId && input.steamAppId > 0 ? input.steamAppId : null;
+  // The name is part of every key: content found by name is never served to
+  // requests that only share the (client-supplied) id.
+  const key = `details:${rawgId ? `rawg:${rawgId}:` : steamAppId ? `steam:${steamAppId}:` : "name:"}${normalizeGameName(name)}`;
   const cached = await cacheGet<GameDetails>(key);
   if (cached) return cached;
 
   let details: GameDetails | null = null;
+  // A provider did not answer: the result is kept for minutes only, and a
+  // failed Steam lookup is not replaced by a Wikipedia guess.
+  let failed = false;
+  let steamFailed = false;
 
-  if (config.rawgApiKey && input.rawgId && input.rawgId > 0) {
-    const data = await fetchJson<RawgDetails>(`https://api.rawg.io/api/games/${input.rawgId}?key=${encodeURIComponent(config.rawgApiKey)}`);
+  if (rawgId && config.rawgApiKey) {
+    const result = await fetchJson<RawgDetails>(`https://api.rawg.io/api/games/${rawgId}?key=${encodeURIComponent(config.rawgApiKey)}`);
+    if (!result.ok) failed = true;
+    const data = result.ok ? result.data : null;
     if (data) {
       details = {
         name: data.name ?? name,
@@ -436,13 +508,23 @@ export async function gameDetails(input: { name: string; steamAppId?: number | n
   }
 
   if (!details && name) {
-    let appId = input.steamAppId && input.steamAppId > 0 ? input.steamAppId : null;
-    if (!appId) appId = bestSteamMatch(await steamSearch(name), name)?.steamAppId ?? null;
-    if (appId) details = await steamDetails(appId, name);
+    let appId = steamAppId;
+    if (!appId) {
+      const results = await steamSearch(name);
+      if (results) appId = bestSteamMatch(results, name)?.steamAppId ?? null;
+      else steamFailed = true;
+    }
+    if (appId) {
+      const steam = await steamDetails(appId, name);
+      if (steam.ok) details = steam.data;
+      else steamFailed = true;
+    }
   }
 
-  if (!details && name) {
-    const wiki = await wikiSummary(name);
+  if (!details && name && !steamFailed) {
+    const result = await wikiSummary(name);
+    if (!result.ok) failed = true;
+    const wiki = result.ok ? result.data : null;
     if (wiki) {
       details = {
         name: wiki.title ?? name,
@@ -458,10 +540,10 @@ export async function gameDetails(input: { name: string; steamAppId?: number | n
     }
   }
 
-  if (!details) {
-    return { name, image: null, rating: null, playtimeHours: null, platforms: [], genres: [], released: null, about: null, source: "catalog" };
-  }
-  await cachePut(key, details, DETAILS_TTL_DAYS * 24);
+  failed ||= steamFailed;
+  const ttl = failed ? FAILURE_TTL_HOURS : details ? DETAILS_TTL_DAYS * 24 : MISS_TTL_HOURS;
+  details ??= { name, image: null, rating: null, playtimeHours: null, platforms: [], genres: [], released: null, about: null, source: "catalog" };
+  await cachePut(key, details, ttl);
   return details;
 }
 

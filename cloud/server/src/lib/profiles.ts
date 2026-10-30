@@ -118,7 +118,7 @@ export function toProfileCard(row: UserRow): ProfileCard {
   const metadata = row.game_metadata ?? {};
   const tag = (name: string): GameTag => {
     const known = metadata[normalizeGameName(name)];
-    return { name, coverUrl: known?.coverUrl ?? null, rawgId: known?.rawgId ?? null };
+    return { name, coverUrl: known?.coverUrl ?? null, rawgId: known?.rawgId ?? null, steamAppId: known?.steamAppId ?? null };
   };
   const platforms = platformsOf(row);
   const platformGames: Partial<Record<Platform, GameTag[]>> = {};
@@ -199,6 +199,7 @@ function sanitizeMetadata(value: unknown): Record<string, GameTag> {
       name,
       coverUrl: httpsUrl(tag.coverUrl),
       rawgId: Number.isSafeInteger(tag.rawgId) ? Number(tag.rawgId) : null,
+      steamAppId: Number.isSafeInteger(tag.steamAppId) && Number(tag.steamAppId) > 0 ? Number(tag.steamAppId) : null,
     };
   }
   return result;

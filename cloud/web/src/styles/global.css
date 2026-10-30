@@ -201,7 +201,9 @@ svg { flex-shrink: 0; }
 .avatar { border-radius: 50%; overflow: hidden; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; background: var(--card); color: color-mix(in srgb, var(--text) 50%, transparent); position: relative; }
 .avatar img { width: 100%; height: 100%; object-fit: cover; }
 .avatar.ring::after { content: ""; position: absolute; inset: 0; border-radius: 50%; padding: 2px; background: linear-gradient(135deg, var(--primary), var(--tertiary)); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
-.online-dot { position: absolute; right: 0; bottom: 0; width: 12px; height: 12px; border-radius: 50%; background: var(--green); border: 2px solid var(--bg); }
+/* Unclipped wrapper: the online dot sits outside the circular .avatar (overflow: hidden). */
+.avatar-wrap { position: relative; display: inline-flex; flex-shrink: 0; }
+.online-dot { position: absolute; z-index: 1; right: 0; bottom: 0; width: 12px; height: 12px; border-radius: 50%; background: var(--green); border: 2px solid var(--bg); }
 .brand-icon { display: inline-block; flex-shrink: 0; background-color: currentColor; -webkit-mask: var(--icon) center / contain no-repeat; mask: var(--icon) center / contain no-repeat; }
 .platform-badge { border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .game-circle { position: relative; border-radius: 50%; overflow: hidden; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 11px; }
@@ -312,6 +314,8 @@ svg { flex-shrink: 0; }
 /* Pushed screen (NavigationLink) */
 .pushed { position: fixed; inset: 0; z-index: 50; background: var(--bg); display: flex; flex-direction: column; }
 .nav-header { display: flex; align-items: center; gap: 8px; padding: calc(var(--safe-top) + 6px) 8px 6px; min-height: 52px; flex-shrink: 0; border-bottom: 0.5px solid var(--separator); background: color-mix(in srgb, var(--bg) 85%, transparent); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); }
+/* Embedded in the wide chats split, which already applies the safe-area inset. */
+.nav-header.embedded { padding-top: 6px; }
 .back-btn { display: inline-flex; align-items: center; gap: 2px; color: var(--accent-text); font-size: 17px; padding: 6px; }
 .chat-nav { display: grid; grid-template-columns: 56px 1fr 56px; padding-left: 4px; padding-right: 4px; }
 .chat-nav .trail { justify-self: end; }
@@ -324,7 +328,8 @@ svg { flex-shrink: 0; }
 .msg { display: flex; flex-direction: column; max-width: calc(100% - 50px); gap: 4px; }
 .msg.mine { align-self: flex-end; align-items: flex-end; }
 .msg.theirs { align-self: flex-start; align-items: flex-start; }
-.bubble { padding: 10px 14px; border-radius: 18px; font-size: 15px; white-space: pre-wrap; word-wrap: break-word; animation: pop 0.25s var(--ease); }
+/* Long links and tokens wrap inside the .msg width instead of pushing the bubble off screen. */
+.bubble { max-width: 100%; padding: 10px 14px; border-radius: 18px; font-size: 15px; white-space: pre-wrap; word-wrap: break-word; word-break: break-word; overflow-wrap: anywhere; animation: pop 0.25s var(--ease); }
 .msg.mine .bubble { color: #fff; background: linear-gradient(135deg, var(--primary), var(--tertiary)); }
 .msg.theirs .bubble { background: var(--card); }
 .msg img.photo { max-width: 220px; max-height: 220px; border-radius: 16px; object-fit: cover; cursor: zoom-in; }
@@ -457,7 +462,8 @@ svg { flex-shrink: 0; }
 
 /* ── Story viewer (CommunityStoryViewer) ───────────────────────────────── */
 
-.story-viewer { position: fixed; inset: 0; z-index: 75; color: #fff; overflow: hidden; color-scheme: dark; }
+/* #000 stays when the inline gradient is rejected (no color-mix() support). */
+.story-viewer { position: fixed; inset: 0; z-index: 75; color: #fff; overflow: hidden; color-scheme: dark; background: #000; }
 .story-image { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .story-image-shade { position: absolute; inset: 0; background: rgba(0,0,0,0.38); }
 .story-inner { position: relative; height: 100%; display: flex; flex-direction: column; max-width: 600px; margin: 0 auto; padding: calc(var(--safe-top) + 8px) 22px calc(var(--safe-bottom) + 34px); }
@@ -470,7 +476,9 @@ svg { flex-shrink: 0; }
 
 /* ── AirShare (AirShareView.swift) ─────────────────────────────────────── */
 
-.airshare { position: relative; display: flex; flex-direction: column; align-items: center; gap: 28px; padding: 36px 0 24px; min-height: 100%; }
+/* overflow-x: the pulsing 400px glow must not make the sheet scroll sideways on phones
+   (hidden first for engines without clip). */
+.airshare { position: relative; display: flex; flex-direction: column; align-items: center; gap: 28px; padding: 36px 0 24px; min-height: 100%; overflow-x: hidden; overflow-x: clip; }
 .airshare-glow { position: absolute; left: 50%; top: 190px; width: 400px; height: 400px; margin: -200px 0 0 -200px; border-radius: 50%; pointer-events: none; background: radial-gradient(circle, color-mix(in srgb, var(--primary) 30%, transparent), transparent 70%); animation: glow-pulse 2s ease-in-out infinite alternate; }
 @keyframes glow-pulse { from { transform: scale(1); } to { transform: scale(1.15); } }
 .airshare-name { font-size: 11px; width: 92px; text-align: center; }
@@ -480,7 +488,8 @@ svg { flex-shrink: 0; }
 .airshare-pill .dot { width: 8px; height: 8px; border-radius: 50%; animation: dot-pulse 0.8s ease-in-out infinite alternate; }
 @keyframes dot-pulse { from { transform: scale(1); } to { transform: scale(1.3); } }
 .airshare-row { display: flex; align-items: center; gap: 14px; padding: 14px; margin: 0 16px; border-radius: 16px; background: var(--card); border: 1px solid color-mix(in srgb, var(--primary) 25%, transparent); }
-.inner-sheet { position: absolute; left: 0; right: 0; bottom: 0; height: min(56%, 480px); z-index: 62; border-radius: 12px 12px 0 0; overflow: hidden; background: var(--bg); box-shadow: 0 -10px 40px rgba(0,0,0,0.25); touch-action: none; }
+/* Sized to its content; scrolls on short viewports so Skip / Like stay reachable. */
+.inner-sheet { position: absolute; left: 0; right: 0; bottom: 0; max-height: calc(100% - 12px); z-index: 62; border-radius: 12px 12px 0 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; background: var(--bg); box-shadow: 0 -10px 40px rgba(0,0,0,0.25); }
 .airshare-btn { flex: 1; height: 52px; border-radius: 16px; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 15px; font-weight: 600; }
 .airshare-btn.skip { color: var(--red); background: color-mix(in srgb, var(--red) 12%, transparent); }
 .airshare-btn.like { color: #fff; background: linear-gradient(90deg, var(--primary), var(--tertiary)); }
@@ -535,6 +544,40 @@ svg { flex-shrink: 0; }
 @media (min-width: 1000px) {
   .split-list { width: 360px; flex-shrink: 0; border-right: 0.5px solid var(--separator); }
   .split-detail { display: flex; flex: 1; min-width: 0; position: relative; padding-bottom: calc(var(--tabbar-space) - var(--safe-bottom)); }
+}
+
+/* ── Engines without color-mix() (iOS 15 WKWebView, Android WebView < 111) ── */
+/* There every color-mix() value is invalid. They contain var(), so that only shows at computed
+   time and an earlier fallback declaration in the same rule would not apply. Plain colors
+   instead; --primary (#0057ff) and --tertiary (#4d8bff) are the same in both themes. */
+@supports not (color: color-mix(in srgb, red 50%, blue)) {
+  .glass { background: var(--card); border: 1px solid var(--separator); }
+  .capsule-btn, .type-badge, .textarea { border: 1px solid var(--separator); }
+  .avatar { color: var(--text-2); }
+  .tab-pill, .chip.primary, .game-chip { background: rgba(0, 87, 255, 0.16); }
+  .chip.tertiary { background: rgba(77, 139, 255, 0.3); }
+  .stories-handle .bar { background: var(--text-3); }
+  .round-action.red, .airshare-btn.skip { background: rgba(255, 59, 48, 0.12); }
+  .round-action.green { background: rgba(52, 199, 89, 0.12); }
+  .nav-header, .sheet-footer { background: var(--bg); }
+  .safety { background: rgba(0, 87, 255, 0.08); }
+  .confirm-banner { background: rgba(0, 87, 255, 0.1); border-top: 0.5px solid rgba(0, 87, 255, 0.3); }
+  .report-list button.selected { background: linear-gradient(rgba(0, 87, 255, 0.08), rgba(0, 87, 255, 0.08)) var(--card); }
+  .platform-tile .tile-icon, .progress-bar { background: var(--fill); }
+  .sub-row, .skill-option { box-shadow: inset 0 0 0 1px var(--separator); }
+  .portfolio-add { box-shadow: inset 0 0 0 1px rgba(0, 87, 255, 0.3); }
+  .game-tag .cover { color: var(--primary); }
+  .skills-cta { background: linear-gradient(90deg, rgba(0, 87, 255, 0.12), rgba(77, 139, 255, 0.08)); border: 1px solid rgba(0, 87, 255, 0.3); }
+  .airshare-row { border: 1px solid rgba(0, 87, 255, 0.25); }
+  .airshare-glow { background: radial-gradient(circle, rgba(0, 87, 255, 0.3), transparent 70%); }
+  .login { background: linear-gradient(135deg, rgba(77, 139, 255, 0), rgba(77, 139, 255, 0.28)) var(--bg); }
+  .login-glow { background: radial-gradient(circle, rgba(0, 87, 255, 0.42), transparent 70%); }
+  .greeting-glow { background: conic-gradient(rgba(0, 87, 255, 0.6), rgba(77, 139, 255, 0.4), rgba(0, 87, 255, 0.3), rgba(77, 139, 255, 0.6), rgba(0, 87, 255, 0.6)); }
+  .gradient-border::after { background: conic-gradient(from var(--angle, 0deg), var(--primary), var(--tertiary), rgba(0, 87, 255, 0.5), rgba(77, 139, 255, 0.7), var(--primary)); }
+  .spinner { border: 2.5px solid rgba(0, 87, 255, 0.25); border-top-color: var(--primary); }
+  /* The story card's colors are inline (accent per story); keep an opaque base under them
+     so the white title and glyph stay readable. */
+  .story-card { background-color: var(--primary) !important; }
 }
 
 @media (prefers-reduced-motion: reduce) {

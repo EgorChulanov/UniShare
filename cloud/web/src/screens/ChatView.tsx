@@ -1,6 +1,6 @@
 // Port of UniShare/Features/Chat/ChatView.swift.
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowUp, BadgeCheck, CheckCircle2, ChevronLeft, ChevronRight, Clock, Ellipsis, Flag, Image as ImageIcon, ShieldCheck, UserX } from "lucide-react";
+import { ArrowUp, BadgeCheck, CheckCircle2, ChevronLeft, ChevronRight, Clock, Ellipsis, Flag, Image as ImageIcon, ShieldCheck, Trash2, UserX } from "lucide-react";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ChangeEvent, type KeyboardEvent, type UIEvent } from "react";
 import type { ChatDetails, ChatMessage } from "@unishare/shared";
 import { useApp } from "../app/store";
@@ -8,17 +8,21 @@ import { ApiError, api, compressImage, mediaUrl } from "../lib/api";
 import { realtime } from "../lib/realtime";
 import { platform } from "../platform/platform";
 import { errorMessage, useI18n, useT } from "../i18n/i18n";
-import { ActionSheet, PROVIDER_COLORS, ProviderIcon, Spinner } from "../components/ui";
+import { ActionSheet, PROVIDER_COLORS, ProviderIcon, Spinner, useEscape } from "../components/ui";
 
 const PAGE_SIZE = 50;
 const TYPING_INTERVAL = 2500;
 const EMPTY: ChatMessage[] = [];
 
 export function ChatSheet({ chatId }: { chatId: string }) {
-  const pop = useApp((state) => state.pop);
+  // Closes this chat only: a request may finish after it was closed or covered by a sheet.
+  const close = useCallback(() => {
+    const top = useApp.getState().overlays.at(-1);
+    if (top?.type === "chat" && top.chatId === chatId) useApp.getState().pop();
+  }, [chatId]);
   return (
     <motion.div className="pushed" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", stiffness: 420, damping: 42 }}>
-      <ChatView chatId={chatId} onClose={pop} />
+      <ChatView chatId={chatId} onClose={close} />
     </motion.div>
   );
 }
@@ -43,6 +47,7 @@ export function ChatView({ chatId, embedded, onClose }: { chatId: string; embedd
   const [pending, setPending] = useState<Set<string>>(() => new Set());
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmBlock, setConfirmBlock] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [lightbox, setLightbox] = useState<string | null>(null);
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
@@ -56,6 +61,10 @@ export function ChatView({ chatId, embedded, onClose }: { chatId: string; embedd
 
   const partner = details?.partner ?? summary?.partner ?? null;
   const close = useCallback(() => onClose?.(), [onClose]);
+
+  // Escape closes the photo or the menu, not the whole chat (the action sheets handle it themselves).
+  useEscape(() => setLightbox(null), lightbox !== null);
+  useEscape(() => setMenuOpen(false), menuOpen);
 
   const markRead = useCallback(() => {
     void api.markRead(chatId).catch(() => undefined);
@@ -272,11 +281,23 @@ export function ChatView({ chatId, embedded, onClose }: { chatId: string; embedd
     }
   };
 
+  const remove = async () => {
+    setConfirmDelete(false);
+    try {
+      await api.hideChat(chatId);
+      useApp.setState((state) => ({ chats: state.chats.filter((chat) => chat.id !== chatId) }));
+      useApp.getState().toast(t("chat.deleted"), "success");
+      close();
+    } catch (error) {
+      useApp.getState().toastError(error);
+    }
+  };
+
   const status = isTyping ? t("chat.typing") : partner?.isOnline ? t("chat.online") : t("chat.offline");
 
   return (
     <div className="col" style={{ flex: 1, minHeight: 0, height: "100%", width: "100%" }}>
-      <header className="nav-header chat-nav">
+      <header className={`nav-header chat-nav${embedded ? " embedded" : ""}`}>
         <div className="lead">
           {!embedded && (
             <button className="back-btn" onClick={close} aria-label={t("chat.back")}>
@@ -341,6 +362,15 @@ export function ChatView({ chatId, embedded, onClose }: { chatId: string; embedd
                     }}
                   >
                     {t("chat.block")} <UserX size={18} />
+                  </button>
+                  <button
+                    className="destructive"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      setConfirmDelete(true);
+                    }}
+                  >
+                    {t("chat.delete")} <Trash2 size={18} />
                   </button>
                 </motion.div>
               </>
@@ -420,6 +450,16 @@ export function ChatView({ chatId, embedded, onClose }: { chatId: string; embedd
             actions={[{ label: t("chat.block"), destructive: true, onSelect: () => void block() }]}
             cancelLabel={t("cancel")}
             onCancel={() => setConfirmBlock(false)}
+          />
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {confirmDelete && (
+          <ActionSheet
+            title={t("chat.delete.confirm")}
+            actions={[{ label: t("chat.delete"), destructive: true, onSelect: () => void remove() }]}
+            cancelLabel={t("cancel")}
+            onCancel={() => setConfirmDelete(false)}
           />
         )}
       </AnimatePresence>

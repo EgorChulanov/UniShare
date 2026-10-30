@@ -2,7 +2,7 @@
 // Tapping the right / left side moves between the stories of the rail.
 import { motion } from "framer-motion";
 import { Gamepad2, Heart, Link2, ShieldCheck, Sparkles, User, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { parseAnyLink } from "@unishare/shared";
 import { useApp } from "../app/store";
 import { mediaUrl } from "../lib/api";
@@ -28,24 +28,31 @@ export function StoryViewer({ index: initial }: { index: number }) {
   const [index, setIndex] = useState(initial);
   const [paused, setPaused] = useState(false);
   const [elapsed, setElapsed] = useState(0);
+  // The timer reads these, not the `elapsed` of an older render: every story starts at 0.
+  const elapsedRef = useRef(0);
+  const startRef = useRef(0);
   const story = stories[index];
 
   useEffect(() => {
     if (story) markViewed(story);
+    // Runs before the timer effect below, which then starts the new story from 0.
+    elapsedRef.current = 0;
     setElapsed(0);
   }, [index]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (paused) return;
-    const started = performance.now() - elapsed;
+    // Resumes where the pause stopped.
+    startRef.current = performance.now() - elapsedRef.current;
     let frame = 0;
     const tick = (now: number) => {
-      const value = now - started;
+      const value = now - startRef.current;
       if (value >= STORY_MS) {
         if (index < stories.length - 1) setIndex(index + 1);
         else pop();
         return;
       }
+      elapsedRef.current = value;
       setElapsed(value);
       frame = requestAnimationFrame(tick);
     };
@@ -60,8 +67,12 @@ export function StoryViewer({ index: initial }: { index: number }) {
   const go = (delta: number) => {
     platform.haptic("selection");
     const next = index + delta;
-    if (next < 0) setElapsed(0);
-    else if (next >= stories.length) pop();
+    if (next < 0) {
+      // Back on the first story restarts it.
+      startRef.current = performance.now();
+      elapsedRef.current = 0;
+      setElapsed(0);
+    } else if (next >= stories.length) pop();
     else setIndex(next);
   };
 
@@ -76,7 +87,12 @@ export function StoryViewer({ index: initial }: { index: number }) {
   return (
     <motion.div
       className="story-viewer"
-      style={{ background: `linear-gradient(135deg, ${accent}, color-mix(in srgb, ${accent} 58%, transparent) 50%, #000), #000` }}
+      // A plain accent stays where color-mix() is unsupported and drops the whole gradient value;
+      // otherwise the black layer covers it, as under the original gradient.
+      style={{
+        backgroundColor: accent,
+        backgroundImage: `linear-gradient(135deg, ${accent}, color-mix(in srgb, ${accent} 58%, transparent) 50%, #000), linear-gradient(#000, #000)`,
+      }}
       initial={{ y: "100%" }}
       animate={{ y: 0 }}
       exit={{ y: "100%" }}

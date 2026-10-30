@@ -4,7 +4,7 @@ import { Bot, InlineKeyboard, webhookCallback, type Context } from "grammy";
 import type { UserFromGetMe } from "grammy/types";
 import { decodeDeepLink, encodeDeepLink, webLink, type DeepLink, type ProfileCard } from "@unishare/shared";
 import { config } from "../config";
-import { pinFallbackRoute, selectTelegramRoute, telegramAgent, telegramRoute } from "./telegram-route";
+import { retryViaFallbackRoutes, selectTelegramRoute, telegramAgent, telegramRoute } from "./telegram-route";
 import { query, queryOne } from "../db";
 
 type Lang = "ru" | "en" | "uk" | "be";
@@ -334,9 +334,8 @@ async function applyTelegramSetup(log: (message: string) => void): Promise<void>
   try {
     me = await api.getMe();
   } catch (error) {
-    // The direct address can pass the TLS probe and still drop API requests; retry through a fallback address.
-    if (!(await pinFallbackRoute(log))) throw error;
-    me = await api.getMe();
+    // The current address can pass the TLS probe and still drop API requests; retry through the fallback addresses.
+    me = await retryViaFallbackRoutes(() => api.getMe(), error, log);
   }
   log(`bot: @${me.username}`);
 

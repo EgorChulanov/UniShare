@@ -19,11 +19,13 @@ export interface GeoPoint {
   accuracy?: number;
 }
 
-/** navigator.geolocation with a timeout; null when denied or unavailable. */
+/** navigator.geolocation; null when denied or unavailable. The API's own `timeout` starts only
+ *  after permission is granted, so a slow answer to the browser prompt still counts; the long
+ *  timer is only a safety net for engines that never call back. */
 function browserLocation(timeout = 8000): Promise<GeoPoint | null> {
   return new Promise((resolve) => {
     if (!("geolocation" in navigator)) return resolve(null);
-    const timer = setTimeout(() => resolve(null), timeout + 500);
+    const timer = setTimeout(() => resolve(null), 60_000);
     navigator.geolocation.getCurrentPosition(
       (position) => {
         clearTimeout(timer);
@@ -94,6 +96,7 @@ interface TelegramWebApp {
   LocationManager?: {
     isInited: boolean;
     isLocationAvailable: boolean;
+    isAccessGranted?: boolean;
     init(callback?: () => void): void;
     getLocation(callback: (data: { latitude: number; longitude: number; horizontal_accuracy?: number | null } | null) => void): void;
   };
@@ -316,22 +319,27 @@ function telegramAdapter(): PlatformAdapter {
     async getLocation() {
       const manager = tg?.LocationManager;
       if (!manager || !tg.isVersionAtLeast("8.0")) return browserLocation();
-      const fromTelegram = await new Promise<GeoPoint | null>((resolve) => {
-        const timer = setTimeout(() => resolve(null), 10_000);
+      // Telegram's answer is final: after "Deny" (or with location unavailable) the browser
+      // must not ask a second time.
+      return new Promise<GeoPoint | null>((resolve) => {
+        let settled = false;
+        const finish = (point: GeoPoint | null) => {
+          settled = true;
+          clearTimeout(timer);
+          resolve(point);
+        };
+        let timer = setTimeout(() => finish(null), 10_000);
         const read = () => {
-          if (!manager.isLocationAvailable) {
-            clearTimeout(timer);
-            return resolve(null);
-          }
-          manager.getLocation((data) => {
-            clearTimeout(timer);
-            resolve(data ? { lat: data.latitude, lng: data.longitude, accuracy: data.horizontal_accuracy ?? undefined } : null);
-          });
+          if (settled) return;
+          clearTimeout(timer);
+          if (!manager.isLocationAvailable) return finish(null);
+          // Telegram may show its permission popup now; the time spent on it must not count.
+          timer = setTimeout(() => finish(null), manager.isAccessGranted ? 10_000 : 60_000);
+          manager.getLocation((data) => finish(data ? { lat: data.latitude, lng: data.longitude, accuracy: data.horizontal_accuracy ?? undefined } : null));
         };
         if (manager.isInited) read();
         else manager.init(read);
       });
-      return fromTelegram ?? browserLocation(4000);
     },
   };
 }
@@ -431,9 +439,20 @@ function vkAdapter(): PlatformAdapter {
       /* not available */
     },
     async getLocation() {
-      const result = await withTimeout(bridge.send("VKWebAppGetGeodata"), 10_000);
-      if (result && result.available) return { lat: Number(result.lat), lng: Number(result.long), accuracy: Number((result as { accuracy?: number }).accuracy) || undefined };
-      return browserLocation(4000);
+      // available: 0 or a "User denied" error (client error 4) means the user said no: don't ask
+      // again through the browser. Only an unsupported or unanswered bridge call falls back.
+      // The long wait leaves time for VK's own permission popup.
+      const result = await withTimeout(
+        bridge.send("VKWebAppGetGeodata").then(
+          (data): GeoPoint | "denied" =>
+            data.available ? { lat: Number(data.lat), lng: Number(data.long), accuracy: Number((data as { accuracy?: number }).accuracy) || undefined } : "denied",
+          (error: { error_type?: string; error_data?: { error_code?: number } }) =>
+            error?.error_type === "client_error" && error.error_data?.error_code === 4 ? ("denied" as const) : null,
+        ),
+        30_000,
+      );
+      if (result === "denied") return null;
+      return result ?? browserLocation();
     },
   };
 }

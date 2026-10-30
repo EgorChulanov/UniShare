@@ -1,6 +1,6 @@
 // Port of UniShare/Features/Chat/RatingSheet.swift.
 import { Check, Star } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { LIMITS } from "@unishare/shared";
 import { useApp } from "../app/store";
 import { api } from "../lib/api";
@@ -15,6 +15,22 @@ export function RatingSheet({ chatId, uid, username }: { chatId: string; uid: st
   const [comment, setComment] = useState("");
   const [busy, setBusy] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const mounted = useRef(false);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      clearTimeout(closeTimer.current);
+    };
+  }, []);
+
+  /** Closes this sheet only: if the user already dismissed it, the chat underneath stays open. */
+  const closeSelf = () => {
+    const top = useApp.getState().overlays.at(-1);
+    if (mounted.current && top?.type === "rating" && top.chatId === chatId) pop();
+  };
 
   const submit = async () => {
     if (!rating || busy || submitted) return;
@@ -24,7 +40,7 @@ export function RatingSheet({ chatId, uid, username }: { chatId: string; uid: st
       setSubmitted(true);
       platform.haptic("success");
       window.dispatchEvent(new CustomEvent("unishare:reviewed", { detail: chatId }));
-      setTimeout(pop, 800);
+      if (mounted.current) closeTimer.current = setTimeout(closeSelf, 800);
     } catch (error) {
       useApp.getState().toastError(error);
     } finally {

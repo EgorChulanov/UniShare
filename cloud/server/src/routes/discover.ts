@@ -1,10 +1,20 @@
 import type { FastifyInstance } from "fastify";
-import { PLATFORMS, isPlatform, type AirShareResult, type GameDetails, type GameSearchResult, type SearchResults } from "@unishare/shared";
+import {
+  PLATFORMS,
+  isPlatform,
+  sanitizeGameName,
+  type AirShareResult,
+  type GameDetails,
+  type GameSearchResult,
+  type ProfileCard,
+  type SearchResults,
+} from "@unishare/shared";
 import { query } from "../db";
 import { requireSession } from "../auth/session";
 import { badRequest } from "../lib/errors";
 import { USER_COLUMNS, toProfileCard, type UserRow } from "../lib/profiles";
 import { blockedPair } from "../lib/sql";
+import { SlidingWindowLimit } from "../lib/ratelimit";
 import { gameDetails, popularGames, searchGames } from "../games";
 import { airshareLeave, airsharePing } from "../airshare";
 
@@ -19,9 +29,15 @@ function optionalNumber(value: unknown): number | null {
 }
 
 export async function discoverRoutes(app: FastifyInstance): Promise<void> {
+  // Per-user limits: these reads scan users and call Steam/RAWG/Wikipedia.
+  const searchLimit = new SlidingWindowLimit(60, 60_000);
+  const playersLimit = new SlidingWindowLimit(60, 60_000);
+  const detailsLimit = new SlidingWindowLimit(30, 60_000);
+
   // In-app search by username, game, platform, subscription or skill.
   app.get<{ Querystring: { q?: string; platform?: string } }>("/api/search", async (request): Promise<SearchResults> => {
     const session = await requireSession(request);
+    searchLimit.assert(session.userId);
     const q = String(request.query.q ?? "").trim().slice(0, 80);
     const platform = request.query.platform && isPlatform(request.query.platform) ? request.query.platform : null;
     if (!q && !platform) return { users: [], games: [], platforms: [] };
@@ -55,6 +71,28 @@ export async function discoverRoutes(app: FastifyInstance): Promise<void> {
     };
   });
 
+  // Players of one game (the game sheet): exact, case-insensitive match on
+  // games or wanted games, online people first.
+  app.get<{ Querystring: { game?: string } }>("/api/players", async (request): Promise<ProfileCard[]> => {
+    const session = await requireSession(request);
+    playersLimit.assert(session.userId);
+    const game = sanitizeGameName(String(request.query.game ?? ""));
+    if (!game) throw badRequest("game is required");
+    const rows = await query<UserRow>(
+      `select ${USER_COLUMNS}
+       from users u
+       where u.uid <> $1
+         and u.onboarding_complete
+         and u.account_state = 'active'
+         and not ${blockedPair("$1", "u.uid")}
+         and exists (select 1 from unnest(u.games || u.wanted_games) as g where lower(g) = lower($2))
+       order by u.is_online desc, u.updated_at desc
+       limit 50`,
+      [session.userId, game],
+    );
+    return rows.map(toProfileCard);
+  });
+
   app.get("/api/games/popular", async (request): Promise<GameSearchResult[]> => {
     await requireSession(request);
     return popularGames();
@@ -63,7 +101,8 @@ export async function discoverRoutes(app: FastifyInstance): Promise<void> {
   app.get<{ Querystring: { name?: string; steamAppId?: string; rawgId?: string } }>(
     "/api/games/details",
     async (request): Promise<GameDetails> => {
-      await requireSession(request);
+      const session = await requireSession(request);
+      detailsLimit.assert(session.userId);
       const name = String(request.query.name ?? "").trim();
       if (name.length < 2 || name.length > 160) throw badRequest("name is required");
       return gameDetails({
@@ -89,7 +128,8 @@ export async function discoverRoutes(app: FastifyInstance): Promise<void> {
     const rows = await query<UserRow>(
       `select ${USER_COLUMNS} from users u
        where u.uid = any($2::uuid[]) and u.onboarding_complete and u.account_state = 'active'
-         and not ${blockedPair("$1", "u.uid")}`,
+         and not ${blockedPair("$1", "u.uid")}
+       order by array_position($2::uuid[], u.uid)`,
       [session.userId, ids],
     );
     return { profiles: rows.map(toProfileCard) };

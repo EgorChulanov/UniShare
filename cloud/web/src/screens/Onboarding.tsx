@@ -224,7 +224,7 @@ export function Onboarding() {
                 <button className="glass row" style={{ gap: 8, padding: "14px 24px", borderRadius: 14, color: "var(--accent-text)", fontSize: 15, fontWeight: 500 }} onClick={() => fileInput.current?.click()}>
                   <ImageIcon size={18} /> {t("profile.change.avatar")}
                 </button>
-                {platformPhoto && avatarUrl !== platformPhoto && (
+                {platformPhoto && (avatarFile || avatarUrl !== platformPhoto) && (
                   <button
                     className="btn-plain"
                     style={{ fontSize: 15 }}

@@ -109,6 +109,7 @@ test("game details find the Steam app by name, then fall back to Wikipedia", asy
     "https://en.wikipedia.org/api/rest_v1/page/summary/Super_Mario_Odyssey": () => ({
       type: "standard",
       title: "Super Mario Odyssey",
+      description: "2017 video game",
       extract: "A 2017 platform game.",
       thumbnail: { source: "https://upload.wikimedia.org/wikipedia/en/8/8d/Super_Mario_Odyssey.jpg?utm_source=x" },
     }),
@@ -131,16 +132,19 @@ test("resolveCover prefers Steam and uses Wikipedia for console exclusives", asy
       url.searchParams.get("term") === "Dota 2" ? { items: [{ type: "app", id: 570, name: "Dota 2", tiny_image: null }] } : { items: [{ type: "app", id: 9, name: "Unrelated Thing", tiny_image: null }] },
     "https://en.wikipedia.org/api/rest_v1/page/summary/Mario_Kart_8_Deluxe": () => ({
       type: "standard",
+      description: "2017 video game",
       thumbnail: { source: "https://upload.wikimedia.org/wikipedia/en/b/b5/MarioKart8Boxart.jpg" },
     }),
   });
   assert.deepEqual(await games.resolveCover("Dota 2"), {
     coverUrl: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/570/header.jpg",
     steamAppId: 570,
+    title: "Dota 2",
   });
   assert.deepEqual(await games.resolveCover("Mario Kart 8 Deluxe"), {
     coverUrl: "https://upload.wikimedia.org/wikipedia/en/b/b5/MarioKart8Boxart.jpg",
     steamAppId: null,
+    title: null,
   });
   assert.equal(await games.resolveCover("Nothing Matches At All"), null);
 });
@@ -171,7 +175,7 @@ test("AirShare presence expires and can be left explicitly", () => {
   airshare.airsharePing("a", {}, "192.0.2.10", t);
   assert.deepEqual(airshare.airsharePing("b", {}, "192.0.2.10", t + airshare.PRESENCE_TTL_MS + 1), []);
   airshare.airsharePing("c", {}, "192.0.2.10", t + airshare.PRESENCE_TTL_MS + 2);
-  airshare.airshareLeave("c");
+  airshare.airshareLeave("c", t + airshare.PRESENCE_TTL_MS + 2);
   assert.deepEqual(airshare.airsharePing("b", {}, "192.0.2.10", t + airshare.PRESENCE_TTL_MS + 3_000), []);
 });
 

@@ -6,19 +6,10 @@ import { useApp } from "../app/store";
 import { api } from "../lib/api";
 import { useT } from "../i18n/i18n";
 import { platform } from "../platform/platform";
-import { PROVIDER_COLORS, ProviderIcon, Sheet, Spinner } from "../components/ui";
+import { PROVIDER_COLORS, ProviderIcon, Sheet, Spinner, copyText } from "../components/ui";
 
 type Provider = "telegram" | "vk";
 const NAMES: Record<Provider, string> = { telegram: "Telegram", vk: "ВКонтакте" };
-
-async function copyText(text: string): Promise<boolean> {
-  try {
-    await navigator.clipboard.writeText(text);
-    return true;
-  } catch {
-    return false;
-  }
-}
 
 export function LinkAccountsSheet() {
   const t = useT();
@@ -123,7 +114,7 @@ export function LinkAccountsSheet() {
                   {NAMES[link.provider]}
                 </span>
               </button>
-              <button className="group-row with-icon" onClick={() => void copyText(url).then((ok) => ok && toast(t("common.copied"), "success"))}>
+              <button className="group-row with-icon" onClick={() => void copyText(url).then((ok) => (ok ? toast(t("common.copied"), "success") : toast(t("error.generic"), "error")))}>
                 <span className="ico">
                   <Copy size={19} />
                 </span>

@@ -1,7 +1,7 @@
 // Port of UniShare/Features/Profile/ProfileView.swift.
 import { BadgeCheck, Camera, ChevronRight, Pencil, Plus, RefreshCw, Settings, Sparkles, Star, UserCheck } from "lucide-react";
 import { useMemo } from "react";
-import { normalizeGameName, subscriptionService, type GameTag, type MyProfile, type Platform, type Subscription } from "@unishare/shared";
+import { normalizeGameName, subscriptionService, type GameTag, type MyProfile, type Subscription } from "@unishare/shared";
 import { collapseOnScroll, useApp } from "../app/store";
 import { useI18n, useT } from "../i18n/i18n";
 import { Avatar, BrandIcon, GameCircle, PlatformBadgeRow, platformColor } from "../components/ui";
@@ -99,11 +99,11 @@ function ProfileHero({ profile }: { profile: MyProfile }) {
   );
 }
 
-/** Games card: one row per platform, alternating leading / trailing alignment; tap to edit. */
+/** Games card: one row per platform, alternating leading / trailing alignment, then the wanted games; tap to edit. */
 function GamesCard({ profile }: { profile: MyProfile }) {
   const t = useT();
   const push = useApp((state) => state.push);
-  if (!profile.platforms.length) return null;
+  if (!profile.platforms.length && !profile.wantedGames.length) return null;
   return (
     <div className="card-surface games-card" role="button" tabIndex={0} onClick={() => push({ type: "edit" })} onKeyDown={(event) => event.key === "Enter" && push({ type: "edit" })}>
       <div className="caption" style={{ fontSize: 14, padding: "14px 16px 8px" }}>
@@ -112,20 +112,25 @@ function GamesCard({ profile }: { profile: MyProfile }) {
       {profile.platforms.map((id, index) => (
         <div key={id}>
           {index > 0 && <div className="divider" style={{ margin: "0 16px" }} />}
-          <PlatformGamesRow platform={id} games={(profile.platformGames[id] ?? []).map((name) => tagFor(profile, name))} trailing={index % 2 === 1} />
+          <GamesRow title={id} color={platformColor(id)} games={(profile.platformGames[id] ?? []).map((name) => tagFor(profile, name))} trailing={index % 2 === 1} />
         </div>
       ))}
+      {profile.wantedGames.length > 0 && (
+        <div>
+          {profile.platforms.length > 0 && <div className="divider" style={{ margin: "0 16px" }} />}
+          <GamesRow title={t("profile.wanted")} color="var(--accent-text)" games={profile.wantedGames.map((name) => tagFor(profile, name))} trailing={profile.platforms.length % 2 === 1} />
+        </div>
+      )}
       <div style={{ height: 8 }} />
     </div>
   );
 }
 
-function PlatformGamesRow({ platform: id, games, trailing }: { platform: Platform; games: GameTag[]; trailing: boolean }) {
+function GamesRow({ title, color, games, trailing }: { title: string; color: string; games: GameTag[]; trailing: boolean }) {
   const t = useT();
-  const color = platformColor(id);
   return (
     <div className="col" style={{ gap: 8, padding: "12px 16px", alignItems: trailing ? "flex-end" : "flex-start" }}>
-      <span style={{ fontSize: 11, fontWeight: 600, color }}>{id}</span>
+      <span style={{ fontSize: 11, fontWeight: 600, color }}>{title}</span>
       <div className="row" style={{ gap: 10 }}>
         {games.length === 0 ? (
           <span className="secondary" style={{ fontSize: 12 }}>
