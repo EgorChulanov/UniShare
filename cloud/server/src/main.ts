@@ -31,11 +31,13 @@ export async function start(): Promise<void> {
         return false;
       }
     };
-    if (!(await setupBot())) {
-      const retry = setInterval(() => {
-        void setupBot().then((done) => done && clearInterval(retry));
-      }, 5 * 60 * 1000);
-    }
+    // The container network is often not ready right after a restart: retry soon, then every 5 minutes.
+    const retryDelays = [20_000, 60_000, 2 * 60 * 1000];
+    const scheduleRetry = (attempt: number) => {
+      const delay = retryDelays[attempt] ?? 5 * 60 * 1000;
+      setTimeout(() => void setupBot().then((done) => !done && scheduleRetry(attempt + 1)), delay).unref();
+    };
+    if (!(await setupBot())) scheduleRetry(0);
     if (config.telegram.mode === "polling") {
       await bot.api.deleteWebhook().catch(() => undefined);
       void bot.start({ allowed_updates: ["message", "my_chat_member"], onStart: () => console.log("Telegram bot polling") });
