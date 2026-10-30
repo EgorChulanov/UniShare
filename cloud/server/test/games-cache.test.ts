@@ -272,7 +272,7 @@ test("game details are cached per name, so another name cannot poison an app id"
 
 test("Popular now only shows user-entered names that are a Steam app or in the offline catalog", async () => {
   popularRows = [
-    { name: "dota 2 is life", count: 5 }, // prefix of Steam's "Dota 2": shown under the store title
+    { name: "dota 2 is life", count: 5 }, // prefix of Steam's "Dota 2": kept under the players' title, which /api/players matches
     { name: "Some Wiki Article", count: 4 }, // only a Wikipedia image: left out
     { name: "mario kart 8 deluxe", count: 3 }, // console title from the offline catalog
   ];
@@ -291,22 +291,22 @@ test("Popular now only shows user-entered names that are a Steam app or in the o
   assert.deepEqual(
     list.map((game) => [game.name, game.steamAppId]),
     [
-      ["Dota 2", 570],
+      ["dota 2 is life", 570],
       ["Mario Kart 8 Deluxe", null],
     ],
   );
   const usedQuery = statements.find((text) => text.includes("unnest(u.games || u.wanted_games)")) ?? "";
   assert.match(usedQuery, /not exists \(select 1 from content_rules r where r\.is_active and g ~\* r\.pattern\)/);
   // A title only one player has never becomes "popular".
-  assert.match(usedQuery, /having count\(distinct u\.uid\) >= 2/);
-  assert.equal(cache.get("popular:v3")?.seconds, 12 * 3600);
+  assert.match(usedQuery, /group by lower\(g\) having count\(distinct u\.uid\) >= 2/);
+  assert.equal(cache.get("popular:v4")?.seconds, 12 * 3600);
 });
 
 test("Popular now: a list built without Steam's top sellers is kept for minutes only", async () => {
   mockFetch((url) => (url.pathname === "/api/featuredcategories" ? status(503) : isSearch(url) ? { items: [{ type: "app", id: 570, name: url.searchParams.get("term"), tiny_image: null }] } : undefined));
   const list = await games.popularGames();
   assert.ok(list.length > 0);
-  assert.equal(cache.get("popular:v3")?.seconds, FAILURE_SECONDS);
+  assert.equal(cache.get("popular:v4")?.seconds, FAILURE_SECONDS);
 });
 
 // ── Cover enrichment ───────────────────────────────────────────────────────

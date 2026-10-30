@@ -7,7 +7,9 @@
 //   may be a carrier NAT or a VPN), and the radius stays within 250 m-1 km;
 // - a session keeps its first fix (snapped to a ~150 m grid) for its whole
 //   life, so one session cannot be moved around to measure distances;
-// - starting sessions at new places is rate-limited;
+// - reopening AirShare near the last place reuses that place's fix (position
+//   and accuracy), so leaving and rejoining reveals nothing new either;
+// - starting sessions at new places (or with a newly precise fix) is rate-limited;
 // - a client still waiting for its location is matched with nobody.
 import { tooMany } from "./lib/errors";
 import { SlidingWindowLimit } from "./lib/ratelimit";
@@ -54,8 +56,8 @@ export interface PingInput {
 
 const presence = new Map<string, Presence>();
 const leftAt = new Map<string, number>();
-/** Where each user's last located session started, to tell relocations from reopenings. */
-const lastPlace = new Map<string, { lat: number; lng: number; at: number }>();
+/** The fix of each user's last counted session, reused when they reopen nearby. */
+const lastPlace = new Map<string, Fix & { at: number }>();
 
 export function distanceMeters(aLat: number, aLng: number, bLat: number, bLng: number): number {
   const rad = Math.PI / 180;
@@ -101,13 +103,23 @@ export function airsharePing(userId: string, input: PingInput, ip: string | null
 
   let fix = previous?.fix ?? null;
   if (!fix) {
-    fix = readFix(input);
-    if (fix) {
-      // Reopening AirShare at the same place is free; starting at new places is limited.
+    const sent = readFix(input);
+    if (sent) {
+      // Reopening near the last place is free but reuses that place's fix, and
+      // does not move it; a new place, or a precise fix after a coarse one, is
+      // counted. The stored place expires ten minutes after it was counted.
       const last = lastPlace.get(userId);
-      const moved = !last || distanceMeters(last.lat, last.lng, fix.lat, fix.lng) > RELOCATION_M;
-      if (moved && !relocations.take(userId, now)) throw tooMany("Too many AirShare sessions, please try again later");
-      lastPlace.set(userId, { lat: fix.lat, lng: fix.lng, at: now });
+      const reopening =
+        last !== undefined &&
+        distanceMeters(last.lat, last.lng, sent.lat, sent.lng) <= RELOCATION_M &&
+        (last.accuracy <= MAX_PRECISE_ACCURACY_M || sent.accuracy > MAX_PRECISE_ACCURACY_M);
+      if (reopening) {
+        fix = { lat: last.lat, lng: last.lng, accuracy: last.accuracy };
+      } else {
+        if (!relocations.take(userId, now)) throw tooMany("Too many AirShare sessions, please try again later");
+        lastPlace.set(userId, { ...sent, at: now });
+        fix = sent;
+      }
     }
   }
   const me: Presence = { fix, locating: !fix && input.locating === true, ip: ip ?? previous?.ip ?? null, lastSeen: now };

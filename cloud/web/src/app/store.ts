@@ -110,6 +110,8 @@ function storedTheme(): ThemeMode {
 
 let toastId = 0;
 let historyDepth = 0;
+/** Overlays the next popstate closes: more than one after popOverlays(n). */
+let pendingPops = 0;
 
 export const useApp = create<AppState>((set, get) => ({
   phase: "booting",
@@ -282,8 +284,10 @@ export const useApp = create<AppState>((set, get) => ({
   popOverlays(count) {
     const steps = Math.min(count, get().overlays.length);
     if (steps <= 0) return;
-    if (historyDepth >= steps) history.go(-steps);
-    else for (let index = 0; index < steps; index += 1) get().closeOverlay();
+    if (historyDepth >= steps) {
+      pendingPops = steps;
+      history.go(-steps);
+    } else for (let index = 0; index < steps; index += 1) get().closeOverlay();
   },
 
   closeOverlay() {
@@ -394,11 +398,10 @@ function syncBackButton() {
   platform.setBackButton(visible, () => useApp.getState().pop());
 }
 
-window.addEventListener("popstate", (event) => {
-  // history.go(-n) arrives as one event: close every overlay above the entry we landed on.
-  const landed = (event.state as { unishareOverlay?: unknown } | null)?.unishareOverlay;
-  const target = typeof landed === "number" ? landed : 0;
-  const steps = historyDepth > target ? historyDepth - target : 1;
+window.addEventListener("popstate", () => {
+  // history.go(-n) from popOverlays arrives as one event; every other back closes one overlay.
+  const steps = Math.max(1, pendingPops);
+  pendingPops = 0;
   for (let index = 0; index < steps; index += 1) {
     if (historyDepth > 0) historyDepth -= 1;
     if (useApp.getState().overlays.length) useApp.getState().closeOverlay();

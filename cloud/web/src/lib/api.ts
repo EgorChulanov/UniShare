@@ -161,8 +161,7 @@ export const api = {
     return request<SearchResults>("GET", `/api/search?${params}`);
   },
   /** Everyone who has the game in their profile (not capped like the general search). */
-  gamePlayers: (name: string, steamAppId?: number | null) =>
-    request<ProfileCard[]>("GET", `/api/players?game=${encodeURIComponent(name)}${steamAppId ? `&steamAppId=${steamAppId}` : ""}`),
+  gamePlayers: (name: string) => request<ProfileCard[]>("GET", `/api/players?game=${encodeURIComponent(name)}`),
   /** `locating`: the location request is still pending, so the server matches nobody yet. */
   airsharePing: (location: { lat: number; lng: number; accuracy?: number } | null, locating = false) =>
     request<AirShareResult>("POST", "/api/airshare/ping", location ?? (locating ? { locating: true } : {})),

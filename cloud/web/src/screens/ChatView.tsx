@@ -1,5 +1,5 @@
 // Port of UniShare/Features/Chat/ChatView.swift.
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useIsPresent } from "framer-motion";
 import { ArrowUp, BadgeCheck, CheckCircle2, ChevronLeft, ChevronRight, Clock, Ellipsis, Flag, Image as ImageIcon, ShieldCheck, Trash2, UserX } from "lucide-react";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ChangeEvent, type KeyboardEvent, type UIEvent } from "react";
 import type { ChatDetails, ChatMessage } from "@unishare/shared";
@@ -18,6 +18,11 @@ export function ChatSheet({ chatId }: { chatId: string }) {
   // Closes this chat only: a request may finish after it was closed or covered by a sheet.
   // Once a pop is on its way, later calls (the list update right after it) do nothing.
   const closing = useRef(false);
+  // A sheet that was closing can be reused when a chat opens at the same layer during its exit.
+  const isPresent = useIsPresent();
+  useEffect(() => {
+    if (isPresent) closing.current = false;
+  }, [isPresent]);
   const close = useCallback(() => {
     const top = useApp.getState().overlays.at(-1);
     if (closing.current || top?.type !== "chat" || top.chatId !== chatId) return;
@@ -71,11 +76,13 @@ export function ChatView({ chatId, embedded, onClose }: { chatId: string; embedd
   useEscape(() => setMenuOpen(false), menuOpen);
 
   // The chat left the list while open (blocked from the partner's profile, deleted elsewhere): close it.
+  // Retried whenever the overlay stack changes, since a covered chat closes once it is on top again.
+  const overlayCount = useApp((state) => state.overlays.length);
   const listedRef = useRef(false);
   useEffect(() => {
     if (summary) listedRef.current = true;
     else if (listedRef.current) close();
-  }, [summary, close]);
+  }, [summary, close, overlayCount]);
 
   const markRead = useCallback(() => {
     void api.markRead(chatId).catch(() => undefined);

@@ -56,7 +56,8 @@ export function AirShareSheet() {
         if (fresh.length) platform.haptic("success");
         // The list shows who is nearby right now; people who left drop out.
         setProfiles(result.profiles);
-        if (result.profiles.length) setStatus((value) => (value === "sent" ? value : "received"));
+        // The list mirrors who is nearby now, so the status follows it both ways.
+        setStatus((value) => (value === "sent" ? value : result.profiles.length ? "received" : "searching"));
       } catch (error) {
         if (error instanceof ApiError && error.status === 429) {
           setLimited(true);

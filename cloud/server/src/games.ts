@@ -348,8 +348,8 @@ async function mapLimit<T, R>(items: T[], limit: number, work: (item: T) => Prom
 }
 
 export async function popularGames(): Promise<GameSearchResult[]> {
-  // v3: v2 lists may hold titles only one player had.
-  const key = "popular:v3";
+  // v4: earlier lists may hold titles only one player had, or player titles under a store name.
+  const key = "popular:v4";
   const cached = await cacheGet<GameSearchResult[]>(key);
   if (cached && cached.length) return cached;
 
@@ -363,23 +363,26 @@ export async function popularGames(): Promise<GameSearchResult[]> {
   };
 
   // 1. What UniShare players actually have. Names are typed freely, so only
-  // titles that are a Steam app or in the offline catalog are shown, under
-  // their store/catalog name, never text the content rules reject, and only
-  // titles at least two players share (one profile's games stay its own).
+  // titles that are a Steam app or in the offline catalog are shown, never
+  // text the content rules reject, and only titles at least two players share
+  // (one profile's games stay its own). Spellings that differ only in case
+  // count together, and the tile keeps the players' own title (or the catalog
+  // one, which only differs in case) so the game sheet finds them.
   const used = await query<{ name: string; count: number }>(
-    `select g as name, count(distinct u.uid)::int as count
+    `select mode() within group (order by g) as name, count(distinct u.uid)::int as count
      from users u, unnest(u.games || u.wanted_games) as g
      where u.onboarding_complete and u.account_state = 'active'
        and not exists (select 1 from content_rules r where r.is_active and g ~* r.pattern)
-     group by g having count(distinct u.uid) >= 2
-     order by count desc, g limit 12`,
+     group by lower(g) having count(distinct u.uid) >= 2
+     order by count desc, name limit 12`,
   ).catch(() => []);
   const catalog = new Map(POPULAR_GAMES.map((name) => [normalizeGameName(name), name]));
   const usedCovers = await mapLimit(used, 4, async (row) => ({ name: row.name, cover: await resolveCover(row.name) }));
   for (const { name, cover } of usedCovers) {
     const catalogName = catalog.get(normalizeGameName(name));
     if (!cover || (!cover.steamAppId && !catalogName)) continue;
-    add({ id: cover.steamAppId ?? 0, name: catalogName ?? cover.title ?? name, backgroundImage: cover.coverUrl, released: null, source: cover.steamAppId ? "steam" : "catalog", steamAppId: cover.steamAppId });
+    const title = catalogName && catalogName.toLowerCase() === name.toLowerCase() ? catalogName : name;
+    add({ id: cover.steamAppId ?? 0, name: title, backgroundImage: cover.coverUrl, released: null, source: cover.steamAppId ? "steam" : "catalog", steamAppId: cover.steamAppId });
   }
 
   // 2. Steam top sellers.

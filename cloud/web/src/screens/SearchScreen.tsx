@@ -293,7 +293,7 @@ export function GameSheet({ game }: { game: GameTag }) {
         .catch(() => setFailed(true));
     }
     api
-      .gamePlayers(game.name, game.steamAppId)
+      .gamePlayers(game.name)
       .then(setPlayers)
       .catch(() => setPlayers([]));
   }, [game, key]);

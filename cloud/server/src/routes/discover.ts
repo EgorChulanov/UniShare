@@ -72,14 +72,12 @@ export async function discoverRoutes(app: FastifyInstance): Promise<void> {
   });
 
   // Players of one game (the game sheet): exact, case-insensitive match on
-  // games or wanted games, or the same Steam app under another spelling
-  // (popular games are shown under their store title); online people first.
-  app.get<{ Querystring: { game?: string; steamAppId?: string } }>("/api/players", async (request): Promise<ProfileCard[]> => {
+  // games or wanted games, online people first.
+  app.get<{ Querystring: { game?: string } }>("/api/players", async (request): Promise<ProfileCard[]> => {
     const session = await requireSession(request);
     playersLimit.assert(session.userId);
     const game = sanitizeGameName(String(request.query.game ?? ""));
     if (!game) throw badRequest("game is required");
-    const steamAppId = optionalNumber(request.query.steamAppId);
     const rows = await query<UserRow>(
       `select ${USER_COLUMNS}
        from users u
@@ -87,15 +85,10 @@ export async function discoverRoutes(app: FastifyInstance): Promise<void> {
          and u.onboarding_complete
          and u.account_state = 'active'
          and not ${blockedPair("$1", "u.uid")}
-         and (exists (select 1 from unnest(u.games || u.wanted_games) as g where lower(g) = lower($2))
-           or ($3::bigint is not null and exists (
-             select 1 from jsonb_each(u.game_metadata) as m(key, value)
-             where m.value->>'steamAppId' ~ '^[0-9]{1,12}$'
-               and (m.value->>'steamAppId')::bigint = $3
-               and exists (select 1 from unnest(u.games || u.wanted_games) as g where lower(g) = lower(m.value->>'name')))))
+         and exists (select 1 from unnest(u.games || u.wanted_games) as g where lower(g) = lower($2))
        order by u.is_online desc, u.updated_at desc
        limit 50`,
-      [session.userId, game, steamAppId && steamAppId > 0 ? steamAppId : null],
+      [session.userId, game],
     );
     return rows.map(toProfileCard);
   });

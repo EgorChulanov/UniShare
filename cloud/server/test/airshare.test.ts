@@ -103,6 +103,44 @@ test("AirShare limits starting sessions at new places, not reopening at the same
   assert.deepEqual(airshare.airsharePing("hopper", { ...north(60_000), accuracy: 20 }, "198.51.100.1", t + 10 * 60_000 + 1), []);
 });
 
+test("AirShare: reopening nearby reuses the stored fix, so rejoining cannot probe distances", () => {
+  const t = 14_500_000;
+  airshare.airsharePing("target", { ...north(0), accuracy: 20 }, "198.51.100.9", t);
+  const probe = (accuracy: number, at: number) => {
+    const found = airshare.airsharePing("prober", { ...north(600), accuracy }, "198.51.100.8", at);
+    airshare.airshareLeave("prober", at + 10);
+    airshare.airsharePing("target", { ...north(0), accuracy: 20 }, "198.51.100.9", at + 20);
+    return found;
+  };
+  // The first session counts and fixes accuracy 200 (radius 250 m < 600 m).
+  let now = t + 1_000;
+  assert.deepEqual(probe(200, now), []);
+  // Rejoining with any other accuracy gives the same answer instead of a distance threshold.
+  for (const accuracy of [600, 800, 980]) {
+    now += airshare.LEAVE_GRACE_MS + 100;
+    assert.deepEqual(probe(accuracy, now), []);
+  }
+});
+
+test("AirShare: steps under 1 km do not move the stored place, so walking around is still limited", () => {
+  const t = 14_800_000;
+  let now = t;
+  let hits = 0;
+  for (let i = 0; i < 40; i++) {
+    try {
+      airshare.airsharePing("walker", { ...north(i * 900), accuracy: 20 }, "198.51.100.7", now);
+      hits++;
+    } catch (error) {
+      assert.ok(isTooMany(error));
+    }
+    airshare.airshareLeave("walker", now + 10);
+    now += airshare.LEAVE_GRACE_MS + 100;
+  }
+  // Every other step is more than 1 km from the stored place and counts; at most ten count.
+  assert.ok(hits <= 21, `hits=${hits}`);
+  assert.throws(() => airshare.airsharePing("walker", { ...north(100_000), accuracy: 20 }, "198.51.100.7", now), isTooMany);
+});
+
 test("AirShare ignores a ping that arrives right after leaving", () => {
   const t = 15_000_000;
   airshare.airsharePing("a", {}, "192.0.2.50", t);
