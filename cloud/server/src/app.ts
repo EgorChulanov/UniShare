@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import Fastify, { type FastifyInstance } from "fastify";
@@ -8,6 +8,7 @@ import { config } from "./config";
 import { query } from "./db";
 import { HttpError } from "./lib/errors";
 import { verifyMediaSignature } from "./lib/media";
+import { robotsTxt, sitemapXml, withPublicUrl } from "./lib/seo";
 import { storage } from "./lib/storage";
 import { probeAddresses, probeHost } from "./lib/netprobe";
 import { authRoutes } from "./routes/auth";
@@ -177,14 +178,19 @@ export async function buildApp(): Promise<FastifyInstance> {
         }
       },
     });
+    let indexHtml: string | null = null;
     app.get("/*", async (request, reply) => {
       const path = request.url.split("?")[0];
       if (path.startsWith("/api/") || path.startsWith("/media/")) return reply.status(404).send({ error: "Not found" });
+      // Crawler files name the public domain, so they are built here rather than shipped in dist.
+      if (path === "/robots.txt") return reply.type("text/plain; charset=utf-8").send(robotsTxt(config.publicUrl));
+      if (path === "/sitemap.xml") return reply.type("application/xml; charset=utf-8").send(sitemapXml(config.publicUrl));
       const file = path.replace(/^\/+/, "");
       if (file && !file.endsWith("/") && existsSync(join(dist, file))) {
         return reply.sendFile(file);
       }
-      return reply.header("Cache-Control", "no-cache").sendFile("index.html");
+      indexHtml ??= withPublicUrl(readFileSync(join(dist, "index.html"), "utf8"), config.publicUrl);
+      return reply.header("Cache-Control", "no-cache").type("text/html; charset=utf-8").send(indexHtml);
     });
   } else {
     app.get("/", async () => ({
