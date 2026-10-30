@@ -47,9 +47,16 @@ export async function selectTelegramRoute(log: (message: string) => void): Promi
     pinnedAddress = null;
     return null;
   }
-  const alternatives = await probeAddresses(API_HOST, FALLBACK_IPS);
+  return pinFallbackRoute(log);
+}
+
+/** Pins the first fallback Telegram address that completes a TLS handshake. */
+export async function pinFallbackRoute(log: (message: string) => void): Promise<string | null> {
+  if (config.telegram.apiRoot || process.env.TELEGRAM_API_IP) return null;
+  const alternatives = await probeAddresses(API_HOST, FALLBACK_IPS.filter((ip) => ip !== pinnedAddress));
   const working = alternatives.addresses.find((address) => address.ok);
-  pinnedAddress = working?.address ?? null;
-  if (pinnedAddress) log(`api.telegram.org unreachable via DNS; using ${pinnedAddress}`);
+  if (!working) return null;
+  pinnedAddress = working.address;
+  log(`api.telegram.org unreachable via DNS; using ${pinnedAddress}`);
   return pinnedAddress;
 }

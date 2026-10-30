@@ -4,7 +4,7 @@ import { Bot, InlineKeyboard, webhookCallback, type Context } from "grammy";
 import type { UserFromGetMe } from "grammy/types";
 import { decodeDeepLink, encodeDeepLink, webLink, type DeepLink, type ProfileCard } from "@unishare/shared";
 import { config } from "../config";
-import { selectTelegramRoute, telegramAgent, telegramRoute } from "./telegram-route";
+import { pinFallbackRoute, selectTelegramRoute, telegramAgent, telegramRoute } from "./telegram-route";
 import { query, queryOne } from "../db";
 
 type Lang = "ru" | "en" | "uk" | "be";
@@ -32,13 +32,13 @@ const COPY: Record<Lang, {
     feed: "🃏 Анкеты",
     chats: "💬 Чаты",
     profile: "👤 Профиль",
-    nearby: "📡 Рядом (QR)",
+    nearby: "📡 AirShare",
     help:
       "<b>Как пользоваться UniShare</b>\n\n" +
       "1. Открой приложение кнопкой ниже и заполни анкету: платформы, игры, навыки.\n" +
       "2. Свайпай вправо тех, с кем хочешь играть или меняться играми.\n" +
       "3. При взаимном лайке появится чат, а я пришлю уведомление.\n" +
-      "4. В «Рядом» покажи QR-код другу — он отсканирует его и сразу увидит твою анкету.\n\n" +
+      "4. Встретились с другом? Откройте AirShare на обоих телефонах — анкеты появятся сами.\n\n" +
       "Команды: /feed /chats /profile /nearby /privacy /support",
     fallback: "Я не читаю сообщения — вся переписка в приложении. Открой UniShare 👇",
     privacy: "Политика конфиденциальности и правила:",
@@ -55,13 +55,13 @@ const COPY: Record<Lang, {
     feed: "🃏 Profiles",
     chats: "💬 Chats",
     profile: "👤 Profile",
-    nearby: "📡 Nearby (QR)",
+    nearby: "📡 AirShare",
     help:
       "<b>How UniShare works</b>\n\n" +
       "1. Open the app and fill in your platforms, games and skills.\n" +
       "2. Swipe right on players you want to team up or trade games with.\n" +
       "3. A mutual like opens a chat and I will notify you.\n" +
-      "4. In “Nearby”, show your QR code so a friend can open your profile instantly.\n\n" +
+      "4. Met a friend? Open AirShare on both phones and your profiles appear instantly.\n\n" +
       "Commands: /feed /chats /profile /nearby /privacy /support",
     fallback: "I don't read messages — all conversations happen in the app. Open UniShare 👇",
     privacy: "Privacy policy and community rules:",
@@ -78,9 +78,9 @@ const COPY: Record<Lang, {
     feed: "🃏 Анкети",
     chats: "💬 Чати",
     profile: "👤 Профіль",
-    nearby: "📡 Поруч (QR)",
+    nearby: "📡 AirShare",
     help:
-      "<b>Як користуватися UniShare</b>\n\n1. Відкрий застосунок і заповни анкету.\n2. Свайпай вправо тих, з ким хочеш грати.\n3. Взаємний лайк відкриває чат, а я надішлю сповіщення.\n4. У «Поруч» покажи QR-код другу.\n\nКоманди: /feed /chats /profile /nearby /privacy /support",
+      "<b>Як користуватися UniShare</b>\n\n1. Відкрий застосунок і заповни анкету.\n2. Свайпай вправо тих, з ким хочеш грати.\n3. Взаємний лайк відкриває чат, а я надішлю сповіщення.\n4. Зустрілися з другом? Відкрийте AirShare на обох телефонах.\n\nКоманди: /feed /chats /profile /nearby /privacy /support",
     fallback: "Я не читаю повідомлення — листування в застосунку. Відкрий UniShare 👇",
     privacy: "Політика конфіденційності та правила:",
     support: "Підтримка UniShare:",
@@ -96,9 +96,9 @@ const COPY: Record<Lang, {
     feed: "🃏 Анкеты",
     chats: "💬 Чаты",
     profile: "👤 Профіль",
-    nearby: "📡 Побач (QR)",
+    nearby: "📡 AirShare",
     help:
-      "<b>Як карыстацца UniShare</b>\n\n1. Адкрый праграму і запоўні анкету.\n2. Свайпай управа тых, з кім хочаш гуляць.\n3. Узаемны лайк адкрывае чат, а я дашлю апавяшчэнне.\n4. У «Побач» пакажы QR-код сябру.\n\nКаманды: /feed /chats /profile /nearby /privacy /support",
+      "<b>Як карыстацца UniShare</b>\n\n1. Адкрый праграму і запоўні анкету.\n2. Свайпай управа тых, з кім хочаш гуляць.\n3. Узаемны лайк адкрывае чат, а я дашлю апавяшчэнне.\n4. Сустрэліся з сябрам? Адкрыйце AirShare на абодвух тэлефонах.\n\nКаманды: /feed /chats /profile /nearby /privacy /support",
     fallback: "Я не чытаю паведамленні — перапіска ў праграме. Адкрый UniShare 👇",
     privacy: "Палітыка канфідэнцыйнасці і правілы:",
     support: "Падтрымка UniShare:",
@@ -330,18 +330,25 @@ async function applyTelegramSetup(log: (message: string) => void): Promise<void>
   if (!bot) throw new Error("TELEGRAM_BOT_TOKEN is not configured");
   await selectTelegramRoute(log);
   const api = bot.api;
-  const me = await api.getMe();
+  let me;
+  try {
+    me = await api.getMe();
+  } catch (error) {
+    // The direct address can pass the TLS probe and still drop API requests; retry through a fallback address.
+    if (!(await pinFallbackRoute(log))) throw error;
+    me = await api.getMe();
+  }
   log(`bot: @${me.username}`);
 
   const commands = {
     ru: [
       ["start", "Открыть UniShare"], ["feed", "Анкеты игроков"], ["chats", "Мои чаты и мэтчи"],
-      ["profile", "Мой профиль"], ["nearby", "QR-код для друзей рядом"], ["help", "Как это работает"],
+      ["profile", "Мой профиль"], ["nearby", "AirShare: анкеты рядом"], ["help", "Как это работает"],
       ["privacy", "Конфиденциальность"], ["support", "Поддержка"],
     ],
     en: [
       ["start", "Open UniShare"], ["feed", "Player profiles"], ["chats", "My chats and matches"],
-      ["profile", "My profile"], ["nearby", "QR code for friends nearby"], ["help", "How it works"],
+      ["profile", "My profile"], ["nearby", "AirShare: profiles nearby"], ["help", "How it works"],
       ["privacy", "Privacy"], ["support", "Support"],
     ],
   } as const;
@@ -357,13 +364,13 @@ async function applyTelegramSetup(log: (message: string) => void): Promise<void>
   await api.setMyShortDescription("Find teammates and swap game libraries across PlayStation, Xbox, Nintendo and Steam.");
   await api.setMyDescription(
     "UniShare — приложение для геймеров прямо в Telegram.\n\n" +
-      "🃏 Анкеты игроков с играми и платформами\n❤️ Взаимный лайк открывает личный чат\n📡 QR-код для друзей рядом\n" +
+      "🃏 Анкеты игроков с играми и платформами\n❤️ Взаимный лайк открывает личный чат\n📡 AirShare: обмен анкетами рядом\n🔍 Поиск игр и игроков\n" +
       "🔔 Уведомления о мэтчах и сообщениях\n\nНажми «Запустить», чтобы начать.",
     { language_code: "ru" },
   );
   await api.setMyDescription(
     "UniShare is a gaming social app right inside Telegram.\n\n" +
-      "🃏 Player cards with games and platforms\n❤️ A mutual like opens a private chat\n📡 QR code for friends nearby\n" +
+      "🃏 Player cards with games and platforms\n❤️ A mutual like opens a private chat\n📡 AirShare: swap profiles nearby\n🔍 Search games and players\n" +
       "🔔 Match and message notifications\n\nPress Start to begin.",
   );
 
