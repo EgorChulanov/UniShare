@@ -1,10 +1,11 @@
 // Port of UniShare/Features/Profile/ProfileView.swift.
-import { BadgeCheck, Camera, ChevronRight, Pencil, Plus, RefreshCw, Settings, Sparkles, Star, UserCheck } from "lucide-react";
-import { useMemo } from "react";
-import { normalizeGameName, subscriptionService, type GameTag, type MyProfile, type Subscription } from "@unishare/shared";
+import { BadgeCheck, Camera, ChevronRight, Gamepad2, MonitorSmartphone, Pencil, Plus, RefreshCw, Settings, Sparkles, Star, UserCheck } from "lucide-react";
+import { useMemo, useState } from "react";
+import { normalizeGameName, subscriptionService, type DiscoveryKind, type GameTag, type MyProfile, type Subscription } from "@unishare/shared";
 import { collapseOnScroll, useApp } from "../app/store";
 import { useI18n, useT } from "../i18n/i18n";
 import { Avatar, BrandIcon, GameCircle, PlatformBadgeRow, platformColor } from "../components/ui";
+import { ProfileCardFace, type CardFaceData } from "../components/ProfileCardFace";
 
 export function tagFor(profile: Pick<MyProfile, "gameMetadata">, name: string): GameTag {
   const known = profile.gameMetadata[normalizeGameName(name)];
@@ -20,82 +21,105 @@ export function ProfileScreen() {
 
   return (
     <div className="screen" onScroll={onScroll}>
+      <ProfileHero profile={profile} />
       <div className="container">
-        <ProfileHero profile={profile} />
-        <div className="col" style={{ gap: 16, paddingTop: 20 }}>
+        <div className="col" style={{ gap: 18, paddingTop: 24 }}>
+          <ProfileCardPreview profile={profile} />
           <GamesCard profile={profile} />
-          {profile.skills.length > 0 && (
-            <div className="col" style={{ gap: 10 }}>
-              <div className="caption px">{t("profile.skills")}</div>
-              <div className="flow px">
-                {profile.skills.map((skill) => (
-                  <span key={skill} className="chip tertiary">
-                    {skill}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
           {profile.subscriptions.length > 0 && <SubscriptionsSection subscriptions={profile.subscriptions} />}
           <SkillsProfileButton profile={profile} />
-          <button className="settings-row glass" onClick={() => push({ type: "settings" })}>
-            <Settings size={20} fill="var(--primary)" color="var(--bg)" strokeWidth={2} />
-            <span className="grow" style={{ fontSize: 15 }}>
-              {t("profile.settings")}
-            </span>
-            <ChevronRight size={14} className="secondary" />
-          </button>
         </div>
       </div>
     </div>
   );
 }
 
+/** Store screenshots: a violet hero with the avatar, name, status and three stats. */
 function ProfileHero({ profile }: { profile: MyProfile }) {
   const t = useT();
   const push = useApp((state) => state.push);
   const edit = () => push({ type: "edit" });
+  const gameCount = new Set([...profile.games, ...Object.values(profile.platformGames).flat()].map((name) => normalizeGameName(name ?? ""))).size;
   return (
-    <div className="col" style={{ gap: 16, padding: "18px 20px 8px" }}>
-      <div className="row" style={{ gap: 18 }}>
+    <header className="profile-hero">
+      <button className="hero-settings liquid" onClick={() => push({ type: "settings" })} aria-label={t("profile.settings")}>
+        <Settings size={20} strokeWidth={2.2} />
+      </button>
+      <div className="hero-body">
         <div className="profile-avatar">
-          <span className="halo" />
           <button onClick={edit} aria-label={t("profile.change.avatar")}>
-            <Avatar url={profile.avatarUrl} size={100} ring />
+            <Avatar url={profile.avatarUrl} size={112} />
           </button>
           <button className="camera" onClick={edit} aria-label={t("profile.change.avatar")}>
-            <Camera size={12} fill="#fff" color="var(--primary)" strokeWidth={2} />
+            <Camera size={15} strokeWidth={2.4} />
           </button>
         </div>
-        <div className="col grow" style={{ gap: 7, alignItems: "flex-start" }}>
-          <div className="row" style={{ gap: 7, maxWidth: "100%" }}>
-            <span className="ellipsis" style={{ fontSize: 21, fontWeight: 700 }}>
-              @{profile.username}
-            </span>
-            {profile.rating >= 4.5 && <BadgeCheck size={20} fill="var(--primary)" color="var(--bg)" />}
+        <div className="col grow" style={{ gap: 6, minWidth: 0 }}>
+          <div className="row" style={{ gap: 7, minWidth: 0 }}>
+            <h1 className="hero-name ellipsis">{profile.username}</h1>
+            {profile.rating >= 4.5 && <BadgeCheck size={22} fill="#fff" color="var(--primary)" />}
           </div>
-          {profile.status && (
-            <span className="secondary clamp-2" style={{ fontSize: 13, fontWeight: 500 }}>
-              {profile.status}
-            </span>
-          )}
-          <button className="capsule-btn" onClick={edit}>
+          {profile.status && <p className="hero-status clamp-2">{profile.status}</p>}
+          <button className="hero-edit" onClick={edit}>
             <Pencil size={12} strokeWidth={2.6} /> {t("profile.edit")}
           </button>
         </div>
       </div>
-      {(profile.platforms.length > 0 || profile.rating > 0) && (
-        <div className="row" style={{ gap: 8 }}>
-          <PlatformBadgeRow platforms={profile.platforms} size={30} />
-          <span className="grow" />
-          {profile.rating > 0 && (
-            <span className="capsule-btn" style={{ border: 0, padding: "6px 10px" }}>
-              <Star size={12} fill="currentColor" /> {profile.rating.toFixed(1)}
-            </span>
-          )}
-        </div>
-      )}
-    </div>
+      <div className="hero-stats">
+        <span aria-label={profile.rating > 0 ? t("profile.stats.reviews", profile.rating.toFixed(1)) : t("profile.stats.no_reviews")}>
+          <Star size={16} fill="currentColor" strokeWidth={0} />
+          {profile.rating > 0 ? `${profile.rating.toFixed(1)} · ${profile.reviewCount}` : t("profile.stats.no_reviews")}
+        </span>
+        <span aria-label={t("profile.stats.games", gameCount)}>
+          <Gamepad2 size={18} strokeWidth={2.2} />
+          {gameCount}
+        </span>
+        <span aria-label={t("profile.stats.platforms", profile.platforms.length)}>
+          <MonitorSmartphone size={17} strokeWidth={2.2} />
+          {profile.platforms.length}
+        </span>
+        {profile.platforms.length > 0 && (
+          <span className="hero-platforms">
+            <PlatformBadgeRow platforms={profile.platforms.slice(0, 4)} size={26} />
+          </span>
+        )}
+      </div>
+    </header>
+  );
+}
+
+/** The card exactly as others see it in the feed, with a switch between Exchange and Skills. */
+function ProfileCardPreview({ profile }: { profile: MyProfile }) {
+  const t = useT();
+  const push = useApp((state) => state.push);
+  const [kind, setKind] = useState<DiscoveryKind>("teammates");
+  const card: CardFaceData = {
+    username: profile.username ?? "",
+    avatarUrl: profile.avatarUrl,
+    status: profile.status,
+    platforms: profile.platforms,
+    platformGames: Object.fromEntries(profile.platforms.map((id) => [id, (profile.platformGames[id] ?? []).map((name) => tagFor(profile, name))])),
+    games: profile.games.map((name) => tagFor(profile, name)),
+    wantedGames: profile.wantedGames.map((name) => tagFor(profile, name)),
+    skills: profile.skills,
+    rating: profile.rating,
+  };
+  const other: DiscoveryKind = kind === "teammates" ? "skills" : "teammates";
+  return (
+    <section className="col" style={{ gap: 10 }}>
+      <div className="row px" style={{ gap: 10 }}>
+        <h2 className="section-title grow">{t("profile.card.title")}</h2>
+        <button className="capsule-btn" onClick={() => setKind(other)}>
+          <RefreshCw size={13} strokeWidth={2.6} /> {t(other === "skills" ? "feed.segment.skills" : "feed.segment.teammates")}
+        </button>
+      </div>
+      <p className="secondary px" style={{ margin: 0, fontSize: 13, fontWeight: 600 }}>
+        {t("profile.card.hint")}
+      </p>
+      <div className="card-face" role="button" tabIndex={0} onClick={() => push({ type: kind === "skills" ? "skills" : "edit" })} onKeyDown={(event) => event.key === "Enter" && push({ type: kind === "skills" ? "skills" : "edit" })}>
+        <ProfileCardFace card={card} kind={kind} footer={false} />
+      </div>
+    </section>
   );
 }
 

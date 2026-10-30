@@ -1,6 +1,6 @@
 // FeedView.swift + FeedCardsOverlay.swift + SkillCardsOverlay.swift + CommunityStoriesRail.
 import { AnimatePresence, animate, motion, useMotionValue, useTransform, type PanInfo } from "framer-motion";
-import { Radio, Heart, Maximize2, Star, UsersRound, X } from "lucide-react";
+import { Radio, Heart, UsersRound, X } from "lucide-react";
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { create } from "zustand";
 import type { DiscoveryKind, ProfileCard, Story } from "@unishare/shared";
@@ -8,8 +8,8 @@ import { useApp } from "../app/store";
 import { api } from "../lib/api";
 import { useT } from "../i18n/i18n";
 import { platform } from "../platform/platform";
-import { Avatar, BrandIcon, GameCirclesRow, PlatformGlyph, Segmented, Spinner } from "../components/ui";
-import { PLATFORM_INFO } from "@unishare/shared";
+import { Segmented, Spinner } from "../components/ui";
+import { ProfileCardFace } from "../components/ProfileCardFace";
 import { StoryGlyph } from "./StoryViewer";
 
 // ── Stories ────────────────────────────────────────────────────────────────
@@ -312,9 +312,6 @@ const SwipeCard = forwardRef<SwipeHandle, {
     }
   };
 
-  const featured = card.platforms.find((id) => (card.platformGames[id]?.length ?? 0) > 0) ?? card.platforms[0] ?? null;
-  const playing = featured && card.platformGames[featured]?.length ? card.platformGames[featured]! : card.games;
-
   return (
     <motion.div
       className="swipe-card"
@@ -335,78 +332,19 @@ const SwipeCard = forwardRef<SwipeHandle, {
       onTap={() => isTop && Math.abs(x.get()) < 8 && onOpen()}
       aria-hidden={!isTop}
     >
-      <span className="deco" />
-      <div className="content">
-        <div className="row" style={{ gap: 13 }}>
-          <span style={{ borderRadius: "50%", boxShadow: "0 0 0 1px rgba(255,255,255,0.22)" }}>
-            <Avatar url={card.avatarUrl} size={54} />
-          </span>
-          <div className="grow">
-            <div className="name ellipsis">{card.username}</div>
-            {card.status && <div className="status ellipsis">{card.status}</div>}
-          </div>
-          {kind === "teammates" && card.rating > 0 && (
-            <span className="rating-pill">
-              <Star size={11} fill="#fff" color="#fff" /> {card.rating.toFixed(1)}
-            </span>
-          )}
-        </div>
-
-        <div style={{ flex: 1, minHeight: 18 }} />
-
-        {featured && (
-          <div style={{ marginBottom: kind === "skills" ? 24 : 20 }}>
-            <span className="platform-pill">
-              {PLATFORM_INFO[featured].brand ? <BrandIcon file={PLATFORM_INFO[featured].brand!} size={15} /> : <PlatformGlyph platform={featured} size={15} />}
-              {featured}
-            </span>
-          </div>
-        )}
-
-        {kind === "skills" ? (
-          <div>
-            <h4>{t("profile.skills")}</h4>
-            {card.skills.length ? (
-              <div className="flow" style={{ gap: 9 }}>
-                {card.skills.map((skill) => (
-                  <span key={skill} className="skill-chip">{skill}</span>
-                ))}
-              </div>
-            ) : (
-              <div style={{ fontSize: 13, fontWeight: 500, color: "rgba(255,255,255,0.48)" }}>{t("skills.empty")}</div>
-            )}
-          </div>
-        ) : (
-          <div>
-            <h4>{t("profile.games")}</h4>
-            {playing.length ? (
-              <GameCirclesRow games={playing} color="#ffffff" size={58} padding={22} />
-            ) : (
-              <div style={{ fontSize: 13, fontWeight: 500, color: "rgba(255,255,255,0.45)" }}>{t("profile.games.add.hint")}</div>
-            )}
-            {card.wantedGames.length > 0 && (
-              <div style={{ marginTop: 22 }}>
-                <h4>{t("profile.wanted")}</h4>
-                <GameCirclesRow games={card.wantedGames} color="#ffffff" size={58} padding={22} />
-              </div>
-            )}
-          </div>
-        )}
-
-        <div style={{ flex: 1, minHeight: 12 }} />
-        <div className="card-footer">
-          <span className="grow">{t("feed.card.tap_details")}</span>
-          <Maximize2 size={11} strokeWidth={2.6} />
-        </div>
-      </div>
+      <ProfileCardFace card={card} kind={kind} />
 
       {isTop && (
         <>
           <motion.div className="swipe-indicator" style={{ opacity: likeOpacity }}>
-            <Heart size={82} fill="#32D875" color="#32D875" />
+            <span className="swipe-badge like">
+              <Heart size={58} fill="#fff" color="#fff" />
+            </span>
           </motion.div>
           <motion.div className="swipe-indicator" style={{ opacity: passOpacity }}>
-            <X size={82} color="#FF453A" strokeWidth={4} />
+            <span className="swipe-badge pass">
+              <X size={64} color="#fff" strokeWidth={3.4} />
+            </span>
           </motion.div>
         </>
       )}

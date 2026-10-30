@@ -1,6 +1,6 @@
-/* UniShare web design system — a 1:1 port of the iOS app
-   (UniShare/Models/ThemeModels.swift, Components/*.swift):
-   Signal Blue theme, Manrope, glass surfaces, BrandBackground glow. */
+/* UniShare web design system. Layout ports the iOS app (UniShare/Components/*.swift);
+   the palette follows the latest App Store screenshots (docs/assets/store-mockups):
+   violet accent on a violet-tinted night background, Manrope, glass surfaces. */
 
 @font-face { font-family: "Manrope"; src: url("/fonts/Manrope-Regular.ttf") format("truetype"); font-weight: 400; font-display: swap; }
 @font-face { font-family: "Manrope"; src: url("/fonts/Manrope-Medium.ttf") format("truetype"); font-weight: 500; font-display: swap; }
@@ -9,14 +9,15 @@
 @font-face { font-family: "Manrope"; src: url("/fonts/Manrope-ExtraBold.ttf") format("truetype"); font-weight: 800; font-display: swap; }
 
 :root {
-  /* CardColorTheme.signalBlue */
-  --primary: #0057ff;
-  --tertiary: #4d8bff;
-  --bg: #f8f7f4;
+  /* Store-mockup palette: violet accent, lavender highlight, iOS blue for the selected tab. */
+  --primary: #5c48df;
+  --tertiary: #7f6ef0;
+  --tab-tint: #007aff;
+  --bg: #f6f5fa;
   --card: #ffffff;
   --text: #000000;
-  --text-2: rgba(60, 60, 67, 0.6);
-  --text-3: rgba(60, 60, 67, 0.3);
+  --text-2: rgba(60, 58, 76, 0.62);
+  --text-3: rgba(60, 58, 76, 0.32);
   --separator: rgba(60, 60, 67, 0.18);
   --fill: rgba(120, 120, 128, 0.12);
   --material: rgba(255, 255, 255, 0.72);
@@ -44,14 +45,16 @@
 }
 
 :root[data-theme="dark"] {
-  --bg: #0e1117;
-  --card: #171b24;
+  --tertiary: #a496f7;
+  --tab-tint: #4699ff;
+  --bg: #0d0b19;
+  --card: #1b1927;
   --text: #ffffff;
-  --text-2: rgba(235, 235, 245, 0.6);
-  --text-3: rgba(235, 235, 245, 0.3);
-  --separator: rgba(84, 84, 88, 0.6);
-  --fill: rgba(118, 118, 128, 0.24);
-  --material: rgba(30, 34, 44, 0.62);
+  --text-2: #94929d;
+  --text-3: rgba(235, 233, 245, 0.3);
+  --separator: rgba(86, 82, 104, 0.6);
+  --fill: rgba(120, 116, 140, 0.24);
+  --material: rgba(38, 37, 48, 0.66);
   --material-stroke: rgba(255, 255, 255, 0.10);
   --green: #30d158;
   --red: #ff453a;
@@ -135,29 +138,29 @@ svg { flex-shrink: 0; }
 .tabbar-wrap > * { pointer-events: auto; }
 .tabbar-wrap.searching { justify-content: space-between; max-width: 560px; margin: 0 auto; }
 .tabbar {
-  display: flex; gap: 6px; padding: 7px; border-radius: 27px; width: min(420px, calc(100vw - 32px - 72px));
-  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.22); transition: width 0.42s var(--spring), padding 0.3s;
+  display: flex; gap: 4px; padding: 6px; border-radius: 34px; width: min(300px, calc(100vw - 32px - 76px));
+  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.26); transition: width 0.42s var(--spring), padding 0.3s;
 }
 .tabbar.collapsed { width: 64px; border-radius: 32px; cursor: pointer; }
 .tabbar.searching .tab.active { background: transparent; color: var(--text); }
+/* Icon-only tabs (store screenshots): white glyphs, the selected one tinted iOS blue on a light capsule. */
 .tab {
-  flex: 1; height: 50px; border-radius: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
-  color: var(--text-2); position: relative; min-width: 50px; transition: background 0.3s var(--ease), color 0.25s, transform 0.18s;
+  flex: 1; height: 52px; border-radius: 26px; display: flex; align-items: center; justify-content: center;
+  color: var(--text); position: relative; min-width: 52px; transition: color 0.25s, transform 0.18s;
 }
-.tab:active { transform: scale(0.94); }
-.tab.active { color: var(--primary); }
+.tab:active { transform: scale(0.92); }
+.tab.active { color: var(--tab-tint); }
 .tab > :not(.tab-pill) { position: relative; z-index: 1; }
-.tab-pill { position: absolute; inset: 0; border-radius: 20px; background: color-mix(in srgb, var(--primary) 16%, transparent); }
-.tab .label { font-size: 10px; font-weight: 600; color: var(--text-2); white-space: nowrap; }
-.tab.active .label { font-weight: 700; color: var(--text); }
-.tab > .badge { position: absolute; top: 4px; left: calc(50% + 6px); z-index: 2; }
+.tab-pill { position: absolute; inset: 0; border-radius: 26px; background: color-mix(in srgb, var(--text) 12%, transparent); }
+.tab-avatar { display: flex; border-radius: 50%; box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--text) 22%, transparent); }
+.tab.active .tab-avatar { box-shadow: 0 0 0 2px var(--tab-tint); }
+.tab > .badge { position: absolute; top: 5px; left: calc(50% + 8px); z-index: 2; }
 .tabbar.collapsed .tab:not(.active) { display: none; }
-.tabbar.collapsed .tab .label { display: none; }
 .search-fab {
-  width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--tertiary);
-  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.22); transition: transform 0.18s;
+  width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--text);
+  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.26); transition: transform 0.18s, color 0.25s;
 }
-.search-fab.active { color: #fff; background: var(--primary); }
+.search-fab.active { color: var(--tab-tint); }
 .search-fab:active { transform: scale(0.92); }
 
 /* ── Buttons ───────────────────────────────────────────────────────────── */
@@ -192,8 +195,9 @@ svg { flex-shrink: 0; }
 
 .segmented { display: flex; gap: 4px; padding: 4px; border-radius: 999px; flex: 1; }
 .segmented button { position: relative; flex: 1; padding: 10px 0; border-radius: 999px; font-size: 14px; font-weight: 600; color: var(--text-2); text-align: center; transition: color 0.25s; }
-.segmented button.active { color: #fff; }
-.segmented .thumb { position: absolute; inset: 0; border-radius: 999px; background: var(--primary); z-index: -1; }
+.segmented button.active { color: var(--text); }
+/* Store mockups: the selected segment is a light glass capsule, not an accent fill. */
+.segmented .thumb { position: absolute; inset: 0; border-radius: 999px; background: color-mix(in srgb, var(--text) 16%, transparent); box-shadow: inset 0 0 0 0.5px color-mix(in srgb, var(--text) 18%, transparent); z-index: -1; }
 .segmented button > span { position: relative; z-index: 1; }
 
 /* ── Avatars, badges, game circles ─────────────────────────────────────── */
@@ -244,20 +248,29 @@ svg { flex-shrink: 0; }
 @media (min-height: 900px) { .feed-stage { max-height: 760px; } }
 .swipe-card {
   position: absolute; inset: 0; border-radius: 34px; overflow: hidden; color: #fff; cursor: grab; touch-action: none;
-  background: linear-gradient(135deg, #4a4a4a, #343434 55%, #292929);
-  border: 1px solid rgba(255, 255, 255, 0.12); box-shadow: 0 14px 24px rgba(0, 0, 0, 0.28);
+  background: #16132a; border: 1px solid rgba(255, 255, 255, 0.12); box-shadow: 0 16px 30px rgba(0, 0, 0, 0.34);
   user-select: none; -webkit-user-select: none;
 }
 .swipe-card:active { cursor: grabbing; }
-.swipe-card .deco { position: absolute; width: 280px; height: 280px; border-radius: 50%; background: rgba(255,255,255,0.04); filter: blur(2px); right: -5px; top: -80px; pointer-events: none; }
-.swipe-card .content { position: relative; height: 100%; display: flex; flex-direction: column; padding: 22px; }
-.swipe-card .name { font-size: 21px; font-weight: 700; }
-.swipe-card .status { font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.6); }
-.swipe-card h4 { margin: 0 0 12px; font-size: 16px; font-weight: 700; }
-.swipe-card .games-row { margin: 0 -22px; padding: 0 22px; }
-.platform-pill { display: inline-flex; align-items: center; gap: 7px; padding: 7px 12px; border-radius: 999px; font-size: 12px; font-weight: 700; background: rgba(0,0,0,0.16); border: 1px solid rgba(255,255,255,0.35); color: #fff; }
+/* Card face: the player's game artwork behind a violet-black veil (store screenshots). */
+.card-art { position: absolute; inset: 0; overflow: hidden; pointer-events: none; background: radial-gradient(120% 80% at 80% 0%, #3b3170, #16132a 62%); }
+.card-art img { position: absolute; inset: -24px; width: calc(100% + 48px); height: calc(100% + 48px); object-fit: cover; filter: blur(14px) saturate(1.2); opacity: 0.75; }
+.card-art::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(13, 11, 25, 0.55) 0%, rgba(13, 11, 25, 0.78) 40%, rgba(13, 11, 25, 0.94) 100%); }
+.swipe-card .content, .card-face .content { position: relative; height: 100%; display: flex; flex-direction: column; padding: 22px; }
+.swipe-card .name, .card-face .name { font-size: 26px; font-weight: 800; letter-spacing: -0.01em; line-height: 1.15; }
+.swipe-card .status, .card-face .status { margin-top: 3px; font-size: 13px; font-weight: 600; color: rgba(255, 255, 255, 0.68); }
+.swipe-card h4, .card-face h4 { margin: 0 0 12px; font-size: 15px; font-weight: 800; color: rgba(255, 255, 255, 0.92); }
+.swipe-card .games-row, .card-face .games-row { margin: 0 -22px; padding: 0 22px; }
+.card-avatar { display: flex; border-radius: 50%; box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.85), 0 8px 18px rgba(0, 0, 0, 0.35); }
+.card-muted { font-size: 13px; font-weight: 600; color: rgba(255, 255, 255, 0.5); }
+.swipe-card .game-circle, .card-face .game-circle { box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.9), 0 6px 14px rgba(0, 0, 0, 0.35) !important; background: rgba(255, 255, 255, 0.12) !important; }
+.platform-pill { display: inline-flex; align-items: center; gap: 7px; padding: 7px 13px; border-radius: 999px; font-size: 13px; font-weight: 800; background: rgba(255, 255, 255, 0.12); border: 1px solid rgba(255, 255, 255, 0.22); color: #fff; -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
 .rating-pill { display: inline-flex; align-items: center; gap: 4px; padding: 6px 9px; border-radius: 999px; font-size: 11px; font-weight: 700; background: rgba(0,0,0,0.18); color: #fff; }
-.swipe-indicator { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.22)); }
+.swipe-indicator { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; }
+/* Store screenshots: a solid round badge (red cross to skip, green heart to like). */
+.swipe-badge { width: 128px; height: 128px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 14px 30px rgba(0, 0, 0, 0.35); }
+.swipe-badge.pass { background: #d9504b; }
+.swipe-badge.like { background: #2fbf66; }
 .card-footer { display: flex; align-items: center; font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.48); }
 .skill-chip { padding: 8px 12px; border-radius: 999px; font-size: 13px; font-weight: 600; background: rgba(255,255,255,0.10); border: 1px solid rgba(255,255,255,0.18); }
 
@@ -360,6 +373,11 @@ svg { flex-shrink: 0; }
 .search-field input::placeholder { color: var(--text-3); }
 .game-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
 .game-grid .game-card { width: 100%; }
+/* Opened profile: hero in the card's language and games as a cover grid. */
+.detail-hero { position: relative; overflow: hidden; padding: 20px; border-radius: 28px; color: #fff; background: #16132a; border: 1px solid rgba(255, 255, 255, 0.12); }
+.detail-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.detail-grid .game-card { height: 96px; }
+.game-card-blank { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 800; color: rgba(255, 255, 255, 0.35); background: linear-gradient(135deg, #2a2545, #16132a); }
 .game-hero { width: 100%; aspect-ratio: 16 / 9; border-radius: 28px; overflow: hidden; background: var(--card); display: flex; align-items: center; justify-content: center; font-size: 34px; font-weight: 800; color: var(--text-3); }
 .game-hero img { width: 100%; height: 100%; object-fit: cover; }
 .stat-pill { display: inline-flex; align-items: center; gap: 8px; padding: 9px 16px; border-radius: 999px; font-size: 15px; font-weight: 800; }
@@ -369,15 +387,43 @@ svg { flex-shrink: 0; }
 .marquee { overflow: hidden; margin: 0 calc(50% - 50vw); }
 .marquee-track { display: flex; gap: 12px; width: max-content; padding: 0 6px; animation: marquee var(--dur, 60s) linear infinite; }
 .marquee-track.reverse { animation-direction: reverse; }
-.marquee:hover .marquee-track { animation-play-state: paused; }
+/* Pause only for a real mouse hover or while a card is pressed: on touch screens
+   :hover sticks after a tap, which used to freeze the row until the next tap elsewhere. */
+@media (hover: hover) and (pointer: fine) { .marquee:hover .marquee-track { animation-play-state: paused; } }
+.marquee-track:active { animation-play-state: paused; }
+.marquee, .game-card { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
 @keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 .game-card { position: relative; width: 184px; height: 108px; border-radius: 22px; overflow: hidden; flex-shrink: 0; background: var(--card); border: 1px solid rgba(255,255,255,0.10); color: #fff; text-align: left; transition: transform 0.2s var(--spring); }
 .game-card:active { transform: scale(0.96); }
 .game-card img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .game-card .shade { position: absolute; inset: 0; background: linear-gradient(180deg, transparent 40%, rgba(0,0,0,0.75)); }
 .game-card .name { position: absolute; left: 14px; right: 14px; bottom: 11px; font-size: 14px; font-weight: 800; line-height: 1.15; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-shadow: 0 1px 4px rgba(0,0,0,0.5); }
-.platform-tile { width: 128px; height: 136px; border-radius: 24px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; flex-shrink: 0; font-weight: 700; font-size: 14px; }
-.platform-tile .tile-icon { width: 72px; height: 72px; border-radius: 20px; display: flex; align-items: center; justify-content: center; background: color-mix(in srgb, var(--text) 6%, transparent); }
+/* Platforms: a brand grid (two columns on phones), each tile lit by its brand color. */
+.platform-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+@media (min-width: 560px) { .platform-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.platform-tile {
+  position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: flex-start; gap: 12px; min-height: 112px; padding: 14px;
+  border-radius: 20px; text-align: left; background: var(--card); border: 1px solid var(--material-stroke);
+  transition: transform 0.18s var(--spring), border-color 0.2s;
+}
+.platform-tile::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(120% 140% at 0% 0%, color-mix(in srgb, var(--brand) 34%, transparent), transparent 62%);
+}
+.platform-tile:active { transform: scale(0.97); }
+@media (hover: hover) and (pointer: fine) { .platform-tile:hover { border-color: color-mix(in srgb, var(--brand) 60%, var(--material-stroke)); } }
+.platform-tile .mark {
+  position: relative; width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+  color: #fff; background: var(--brand); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14), 0 6px 14px color-mix(in srgb, var(--brand) 40%, transparent);
+}
+.platform-tile .text { position: relative; display: flex; flex-direction: column; gap: 2px; min-width: 0; width: 100%; }
+.platform-tile .name { font-size: 15px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.platform-tile .kind { font-size: 12px; font-weight: 600; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.platform-tile .chev { position: absolute; top: 16px; right: 14px; color: var(--text-3); }
+/* The last tile of an odd row spans the grid, so the block ends evenly. */
+@media (max-width: 559px) {
+  .platform-grid > .platform-tile:last-child:nth-child(odd) { grid-column: 1 / -1; flex-direction: row; align-items: center; min-height: 72px; }
+}
 .h-scroll { display: flex; gap: 12px; overflow-x: auto; scrollbar-width: none; padding: 2px 16px; margin: 0 -16px; }
 .h-scroll::-webkit-scrollbar { display: none; }
 .section-head { display: flex; align-items: center; justify-content: space-between; margin: 26px 0 12px; }
@@ -412,11 +458,43 @@ svg { flex-shrink: 0; }
 
 /* ── Profile (ProfileView.swift) ───────────────────────────────────────── */
 
-.profile-avatar { position: relative; width: 100px; height: 100px; flex-shrink: 0; }
-.profile-avatar .halo { position: absolute; left: -8px; top: -8px; width: 116px; height: 116px; border-radius: 50%; background: var(--primary); opacity: 0.32; filter: blur(22px); }
-.profile-avatar > button:first-of-type { position: relative; display: block; border-radius: 50%; }
-.profile-avatar .camera { position: absolute; right: -3px; bottom: -3px; width: 28px; height: 28px; border-radius: 50%; background: var(--primary); display: flex; align-items: center; justify-content: center; }
+/* My Profile hero (store screenshots): violet light falling into the night background. */
+.profile-hero {
+  position: relative; margin-top: calc(-1 * (var(--safe-top) + 8px)); padding: calc(var(--safe-top) + 66px) 20px 24px;
+  border-radius: 0 0 34px 34px; color: #fff; overflow: hidden;
+  background: radial-gradient(90% 70% at 85% 0%, rgba(164, 150, 247, 0.55), transparent 70%), linear-gradient(172deg, #5f54b4 0%, #433b6a 48%, #1c1930 100%);
+  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.08);
+}
+.hero-settings {
+  position: absolute; top: calc(var(--safe-top) + 12px); right: 16px; width: 44px; height: 44px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; color: #fff; background: rgba(255, 255, 255, 0.16) !important; border: 1px solid rgba(255, 255, 255, 0.22);
+}
+.hero-body { display: flex; align-items: center; gap: 18px; max-width: var(--content-max); margin: 0 auto; }
+.hero-name { margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.01em; line-height: 1.1; }
+.hero-status { margin: 0; font-size: 15px; font-weight: 600; color: rgba(255, 255, 255, 0.8); }
+.hero-edit {
+  align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; margin-top: 4px; padding: 7px 12px; border-radius: 999px;
+  font-size: 12px; font-weight: 700; color: #fff; background: rgba(255, 255, 255, 0.14); border: 1px solid rgba(255, 255, 255, 0.24);
+}
+.hero-stats { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 20px; max-width: var(--content-max); margin: 22px auto 0; font-size: 15px; font-weight: 800; }
+.hero-stats > span { display: inline-flex; align-items: center; gap: 7px; }
+.hero-stats .hero-platforms { margin-left: auto; }
+/* On the violet hero and the artwork the brand tints get lost: white glyphs on frosted circles. */
+.hero-platforms .platform-badge { background: rgba(255, 255, 255, 0.16) !important; color: #fff !important; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2); }
+.profile-avatar { position: relative; width: 112px; height: 112px; flex-shrink: 0; }
+.profile-avatar > button:first-of-type { position: relative; display: block; border-radius: 50%; box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.85), 0 14px 30px rgba(0, 0, 0, 0.35); }
+.profile-avatar .camera {
+  position: absolute; right: -2px; bottom: -2px; width: 36px; height: 36px; border-radius: 50%; color: #fff;
+  background: #9f92ec; border: 3px solid #3f3866; display: flex; align-items: center; justify-content: center;
+}
+.section-title { margin: 0; font-size: 22px; font-weight: 800; }
 .clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+/* The card preview on My Profile: same face as the feed, at a fixed height. */
+.card-face {
+  position: relative; margin: 0 16px; height: 372px; border-radius: 34px; overflow: hidden; color: #fff; cursor: pointer;
+  background: #16132a; border: 1px solid rgba(255, 255, 255, 0.12); box-shadow: 0 16px 30px rgba(0, 0, 0, 0.3); transition: transform 0.2s var(--spring);
+}
+.card-face:active { transform: scale(0.985); }
 .games-card { margin: 0 16px; cursor: pointer; transition: transform 0.2s var(--spring); }
 .games-card:active { transform: scale(0.985); }
 .progress-bar { height: 4px; border-radius: 2px; background: color-mix(in srgb, var(--text) 10%, transparent); overflow: hidden; }
@@ -481,11 +559,30 @@ svg { flex-shrink: 0; }
 .airshare { position: relative; display: flex; flex-direction: column; align-items: center; gap: 28px; padding: 36px 0 24px; min-height: 100%; overflow-x: hidden; overflow-x: clip; }
 .airshare-glow { position: absolute; left: 50%; top: 190px; width: 400px; height: 400px; margin: -200px 0 0 -200px; border-radius: 50%; pointer-events: none; background: radial-gradient(circle, color-mix(in srgb, var(--primary) 30%, transparent), transparent 70%); animation: glow-pulse 2s ease-in-out infinite alternate; }
 @keyframes glow-pulse { from { transform: scale(1); } to { transform: scale(1.15); } }
-.airshare-name { font-size: 11px; width: 92px; text-align: center; }
-.airshare-phone { position: relative; width: 72px; height: 72px; display: flex; align-items: center; justify-content: center; }
-.airshare-phone .screen-slot { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding-top: 4px; }
-.airshare-pill { position: relative; display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; border-radius: 999px; background: var(--card); border: 1px solid; font-size: 14px; font-weight: 500; }
-.airshare-pill .dot { width: 8px; height: 8px; border-radius: 50%; animation: dot-pulse 0.8s ease-in-out infinite alternate; }
+/* Store screenshots: left-aligned title, two white phones, a lavender start button. */
+.airshare-head { position: relative; align-self: stretch; max-width: 560px; width: 100%; margin: 0 auto; padding: 0 24px; }
+.airshare-head h1 { margin: 0 0 8px; font-size: 34px; font-weight: 800; letter-spacing: -0.01em; }
+.airshare-head p { margin: 0; max-width: 360px; font-size: 15px; font-weight: 600; color: var(--text-2); }
+.airshare-phones { position: relative; display: flex; justify-content: center; align-items: center; gap: 4px; padding: 18px 0 8px; }
+.phone-illus {
+  position: relative; width: 108px; height: 206px; border-radius: 26px; display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(160deg, #ffffff, #e2e1ea); box-shadow: inset 0 0 0 3.5px #cfcdd9, 0 20px 40px rgba(0, 0, 0, 0.45);
+}
+.phone-illus .notch { position: absolute; top: 9px; left: 50%; width: 36px; height: 10px; margin-left: -18px; border-radius: 6px; background: #121018; }
+.phone-avatar { display: flex; border-radius: 50%; box-shadow: 0 0 0 3px #7f6ef0, 0 6px 14px rgba(40, 30, 90, 0.3); }
+.airshare-start {
+  position: relative; width: calc(100% - 48px); max-width: 420px; height: 58px; border-radius: 20px; font-size: 17px; font-weight: 800; color: #1a1440; text-align: center;
+  background: linear-gradient(90deg, #c8bfff, #9a8af5); box-shadow: 0 14px 30px rgba(140, 120, 245, 0.35); transition: transform 0.18s var(--spring);
+}
+.airshare-start:active { transform: scale(0.97); }
+.airshare-pill {
+  position: relative; display: flex; align-items: center; gap: 10px; width: calc(100% - 48px); max-width: 420px; padding: 16px 20px; border-radius: 20px;
+  background: var(--card); border: 1px solid var(--material-stroke); font-size: 16px; font-weight: 800;
+}
+.airshare-pill .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--text-2); animation: dot-pulse 0.8s ease-in-out infinite alternate; }
+.airshare-pill.found { border-color: color-mix(in srgb, var(--green) 45%, transparent); }
+.airshare-pill.found .dot { background: var(--green); }
+.airshare-hint { position: relative; display: flex; align-items: center; gap: 8px; margin: -12px 0 0; font-size: 14px; font-weight: 600; color: var(--text-2); }
 @keyframes dot-pulse { from { transform: scale(1); } to { transform: scale(1.3); } }
 .airshare-row { display: flex; align-items: center; gap: 14px; padding: 14px; margin: 0 16px; border-radius: 16px; background: var(--card); border: 1px solid color-mix(in srgb, var(--primary) 25%, transparent); }
 /* Sized to its content; scrolls on short viewports so Skip / Like stay reachable. */
@@ -551,32 +648,37 @@ svg { flex-shrink: 0; }
 /* ── Engines without color-mix() (iOS 15 WKWebView, Android WebView < 111) ── */
 /* There every color-mix() value is invalid. They contain var(), so that only shows at computed
    time and an earlier fallback declaration in the same rule would not apply. Plain colors
-   instead; --primary (#0057ff) and --tertiary (#4d8bff) are the same in both themes. */
+   instead; rgb(92, 72, 223) is --primary and rgb(164, 150, 247) the dark --tertiary. */
 @supports not (color: color-mix(in srgb, red 50%, blue)) {
   .glass { background: var(--card); border: 1px solid var(--separator); }
   .capsule-btn, .type-badge, .textarea { border: 1px solid var(--separator); }
   .avatar { color: var(--text-2); }
-  .tab-pill, .chip.primary, .game-chip { background: rgba(0, 87, 255, 0.16); }
-  .chip.tertiary { background: rgba(77, 139, 255, 0.3); }
+  .chip.primary, .game-chip { background: rgba(92, 72, 223, 0.16); }
+  .tab-pill { background: var(--fill); }
+  .tab-avatar { box-shadow: 0 0 0 1.5px var(--separator); }
+  .chip.tertiary { background: rgba(164, 150, 247, 0.3); }
   .stories-handle .bar { background: var(--text-3); }
+  .segmented .thumb { background: var(--fill); }
   .round-action.red, .airshare-btn.skip { background: rgba(255, 59, 48, 0.12); }
   .round-action.green { background: rgba(52, 199, 89, 0.12); }
   .nav-header, .sheet-footer { background: var(--bg); }
-  .safety { background: rgba(0, 87, 255, 0.08); }
-  .confirm-banner { background: rgba(0, 87, 255, 0.1); border-top: 0.5px solid rgba(0, 87, 255, 0.3); }
-  .report-list button.selected { background: linear-gradient(rgba(0, 87, 255, 0.08), rgba(0, 87, 255, 0.08)) var(--card); }
-  .platform-tile .tile-icon, .progress-bar { background: var(--fill); }
+  .safety { background: rgba(92, 72, 223, 0.08); }
+  .confirm-banner { background: rgba(92, 72, 223, 0.1); border-top: 0.5px solid rgba(92, 72, 223, 0.3); }
+  .report-list button.selected { background: linear-gradient(rgba(92, 72, 223, 0.08), rgba(92, 72, 223, 0.08)) var(--card); }
+  .progress-bar { background: var(--fill); }
+  .platform-tile::before { background: none; }
+  .platform-tile .mark { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14); }
   .sub-row, .skill-option { box-shadow: inset 0 0 0 1px var(--separator); }
-  .portfolio-add { box-shadow: inset 0 0 0 1px rgba(0, 87, 255, 0.3); }
+  .portfolio-add { box-shadow: inset 0 0 0 1px rgba(92, 72, 223, 0.3); }
   .game-tag .cover { color: var(--primary); }
-  .skills-cta { background: linear-gradient(90deg, rgba(0, 87, 255, 0.12), rgba(77, 139, 255, 0.08)); border: 1px solid rgba(0, 87, 255, 0.3); }
-  .airshare-row { border: 1px solid rgba(0, 87, 255, 0.25); }
-  .airshare-glow { background: radial-gradient(circle, rgba(0, 87, 255, 0.3), transparent 70%); }
-  .login { background: linear-gradient(135deg, rgba(77, 139, 255, 0), rgba(77, 139, 255, 0.28)) var(--bg); }
-  .login-glow { background: radial-gradient(circle, rgba(0, 87, 255, 0.42), transparent 70%); }
-  .greeting-glow { background: conic-gradient(rgba(0, 87, 255, 0.6), rgba(77, 139, 255, 0.4), rgba(0, 87, 255, 0.3), rgba(77, 139, 255, 0.6), rgba(0, 87, 255, 0.6)); }
-  .gradient-border::after { background: conic-gradient(from var(--angle, 0deg), var(--primary), var(--tertiary), rgba(0, 87, 255, 0.5), rgba(77, 139, 255, 0.7), var(--primary)); }
-  .spinner { border: 2.5px solid rgba(0, 87, 255, 0.25); border-top-color: var(--primary); }
+  .skills-cta { background: linear-gradient(90deg, rgba(92, 72, 223, 0.12), rgba(164, 150, 247, 0.08)); border: 1px solid rgba(92, 72, 223, 0.3); }
+  .airshare-row { border: 1px solid rgba(92, 72, 223, 0.25); }
+  .airshare-glow { background: radial-gradient(circle, rgba(92, 72, 223, 0.3), transparent 70%); }
+  .login { background: linear-gradient(135deg, rgba(164, 150, 247, 0), rgba(164, 150, 247, 0.28)) var(--bg); }
+  .login-glow { background: radial-gradient(circle, rgba(92, 72, 223, 0.42), transparent 70%); }
+  .greeting-glow { background: conic-gradient(rgba(92, 72, 223, 0.6), rgba(164, 150, 247, 0.4), rgba(92, 72, 223, 0.3), rgba(164, 150, 247, 0.6), rgba(92, 72, 223, 0.6)); }
+  .gradient-border::after { background: conic-gradient(from var(--angle, 0deg), var(--primary), var(--tertiary), rgba(92, 72, 223, 0.5), rgba(164, 150, 247, 0.7), var(--primary)); }
+  .spinner { border: 2.5px solid rgba(92, 72, 223, 0.25); border-top-color: var(--primary); }
   /* The story card's colors are inline (accent per story); keep an opaque base under them
      so the white title and glyph stay readable. */
   .story-card { background-color: var(--primary) !important; }

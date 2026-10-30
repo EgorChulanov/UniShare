@@ -1,9 +1,9 @@
 // In-app search, laid out like the App Store screenshots
 // (docs/assets/store-mockups/iphone-4.jpg and iphone-5.jpg).
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowRight, Clock3, Search, Sparkles, Star, X } from "lucide-react";
+import { ChevronRight, Clock3, Search, Sparkles, Star, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { PLATFORMS, type GameDetails, type GameSearchResult, type GameTag, type Platform, type ProfileCard, type SearchResults } from "@unishare/shared";
+import { PLATFORMS, PLATFORM_INFO, type GameDetails, type GameSearchResult, type GameTag, type Platform, type ProfileCard, type SearchResults } from "@unishare/shared";
 import { api } from "../lib/api";
 import { collapseOnScroll, useApp } from "../app/store";
 import { useT } from "../i18n/i18n";
@@ -126,13 +126,12 @@ export function SearchScreen() {
               <div className="section-head" style={{ marginTop: 30 }}>
                 <div>
                   <h2>{t("search.platforms")}</h2>
-                  <p className="secondary" style={{ margin: "4px 0 0", fontSize: 15, fontWeight: 600, maxWidth: 300 }}>
+                  <p className="secondary" style={{ margin: "4px 0 0", fontSize: 15, fontWeight: 600, maxWidth: 320 }}>
                     {t("search.platforms.subtitle")}
                   </p>
                 </div>
-                <ArrowRight size={26} className="secondary" />
               </div>
-              <div className="h-scroll" style={{ paddingBottom: 8 }}>
+              <div className="platform-grid">
                 {PLATFORMS.map((id) => (
                   <PlatformTile key={id} platform={id} onClick={() => push({ type: "platform", platform: id })} />
                 ))}
@@ -163,21 +162,27 @@ function GameCard({ game, onClick, hidden }: { game: GameSearchResult; onClick()
   const [failed, setFailed] = useState(false);
   return (
     <button className="game-card" onClick={onClick} aria-hidden={hidden || undefined} tabIndex={hidden ? -1 : undefined}>
-      {game.backgroundImage && !failed && <img src={game.backgroundImage} alt="" loading="lazy" onError={() => setFailed(true)} />}
+      {game.backgroundImage && !failed && <img src={game.backgroundImage} alt="" loading="lazy" draggable={false} onError={() => setFailed(true)} />}
       <span className="shade" />
       <span className="name">{game.name}</span>
     </button>
   );
 }
 
+/** A platform as a brand tile: solid brand mark, name and what it covers, with a soft brand glow. */
 function PlatformTile({ platform: id, onClick }: { platform: Platform; onClick(): void }) {
-  const color = platformColor(id);
+  const t = useT();
+  const brand = PLATFORM_INFO[id].color;
   return (
-    <button className="platform-tile glass" onClick={onClick}>
-      <span className="tile-icon" style={{ background: `color-mix(in srgb, ${color} 16%, transparent)`, color }}>
-        <PlatformGlyph platform={id} size={36} />
+    <button className="platform-tile" style={{ ["--brand" as string]: brand }} onClick={onClick}>
+      <span className="mark">
+        <PlatformGlyph platform={id} size={24} />
       </span>
-      <span>{id}</span>
+      <span className="text">
+        <span className="name">{id}</span>
+        <span className="kind">{t(`platform.kind.${id}`)}</span>
+      </span>
+      <ChevronRight size={16} strokeWidth={2.6} className="chev" />
     </button>
   );
 }

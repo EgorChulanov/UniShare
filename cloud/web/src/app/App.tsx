@@ -25,7 +25,7 @@ import { RatingSheet } from "../screens/RatingSheet";
 import { TransparencySheet } from "../screens/TransparencySheet";
 
 let booted = false;
-const COLORS = { light: "#F8F7F4", dark: "#0E1117" };
+const COLORS = { light: "#F6F5FA", dark: "#0D0B19" };
 
 function useThemeSync() {
   const theme = useApp(resolvedTheme);
@@ -166,18 +166,14 @@ function TabBar() {
   const profile = useApp((state) => state.profile);
   const unread = useUnreadCount();
   const items: { id: Exclude<Tab, "search">; label: string; icon: ReactNode }[] = [
-    { id: "feed", label: t("tab.feed"), icon: <CardStackIcon active={tab === "feed"} /> },
-    {
-      id: "chats",
-      label: t("tab.chats"),
-      icon: <MessageCircle size={22} strokeWidth={2.2} fill={tab === "chats" ? "currentColor" : "none"} />,
-    },
+    { id: "feed", label: t("tab.feed"), icon: <CardStackIcon /> },
+    { id: "chats", label: t("tab.chats"), icon: <MessageCircle size={27} strokeWidth={1.6} fill="currentColor" /> },
     {
       id: "profile",
       label: t("tab.profile"),
       icon: (
-        <span style={{ borderRadius: "50%", boxShadow: tab === "profile" ? "0 0 0 2px var(--primary)" : undefined }}>
-          <Avatar url={profile?.avatarUrl} size={25} />
+        <span className="tab-avatar">
+          <Avatar url={profile?.avatarUrl} size={32} />
         </span>
       ),
     },
@@ -219,7 +215,6 @@ function TabBar() {
               >
                 {shown === item.id && !searching && <motion.span layoutId="tab-pill" className="tab-pill" transition={{ type: "spring", stiffness: 420, damping: 34 }} />}
                 {item.icon}
-                <span className="label">{item.label}</span>
                 {item.id === "chats" && unread > 0 && <span className="badge red">{unread > 99 ? "99+" : unread}</span>}
               </button>
             ))}

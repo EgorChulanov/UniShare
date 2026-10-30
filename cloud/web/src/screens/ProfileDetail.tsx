@@ -2,14 +2,14 @@
 // Opened from search, chats or AirShare it also gets a Like / Message button.
 // Other people's profiles get Report / Block in the top-left menu, as in ChatView.
 import { AnimatePresence, motion } from "framer-motion";
-import { Ellipsis, Flag, Heart, MessageCircle, Search, UserX } from "lucide-react";
+import { Ellipsis, Flag, Gamepad2, Heart, MessageCircle, Search, Star, UserX } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { DiscoveryKind, GameTag, Platform, ProfileCard } from "@unishare/shared";
 import { useApp } from "../app/store";
 import { api } from "../lib/api";
 import { useT } from "../i18n/i18n";
 import { platform } from "../platform/platform";
-import { ActionSheet, Avatar, GameCircle, PlatformBadgeRow, PlatformGlyph, Sheet, Spinner, platformColor, useEscape } from "../components/ui";
+import { ActionSheet, Avatar, PlatformBadgeRow, PlatformGlyph, Sheet, Spinner, platformColor, useEscape } from "../components/ui";
 import { useFeed } from "./FeedScreen";
 
 export function ProfileDetailSheet({ uid, card: initial, source }: { uid: string; card?: ProfileCard; source?: "feed" }) {
@@ -185,25 +185,12 @@ export function ProfileDetailSheet({ uid, card: initial, source }: { uid: string
           </div>
         ) : (
           <div className="container col" style={{ gap: 20, padding: "4px 20px 20px" }}>
+            <DetailHero card={card} />
+
             <label className="search-bar">
               <Search size={17} />
               <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t("feed.search.placeholder")} enterKeyHint="search" />
             </label>
-
-            <div className="row" style={{ gap: 16 }}>
-              <Avatar url={card.avatarUrl} size={76} ring online={card.isOnline} />
-              <div className="col grow" style={{ gap: 6, minWidth: 0 }}>
-                <span className="ellipsis" style={{ fontSize: 24, fontWeight: 700 }}>
-                  {card.username}
-                </span>
-                {card.status && (
-                  <span className="secondary" style={{ fontSize: 14, fontWeight: 500 }}>
-                    {card.status}
-                  </span>
-                )}
-                <PlatformBadgeRow platforms={card.platforms} size={28} />
-              </div>
-            </div>
 
             {card.platforms.map((id) => {
               const tags = filter(card.platformGames[id] ?? []);
@@ -253,9 +240,51 @@ export function ProfileDetailSheet({ uid, card: initial, source }: { uid: string
   );
 }
 
+/** Hero in the card's language: the player's game artwork behind a dark veil, avatar, name and stats. */
+function DetailHero({ card }: { card: ProfileCard }) {
+  const t = useT();
+  const art = [...Object.values(card.platformGames).flat(), ...card.games, ...card.wantedGames].find((game) => game?.coverUrl)?.coverUrl ?? null;
+  const [artFailed, setArtFailed] = useState(false);
+  const gameCount = new Set([...card.games, ...Object.values(card.platformGames).flat()].map((game) => game?.name.toLowerCase())).size;
+  return (
+    <div className="detail-hero">
+      <span className="card-art" aria-hidden>
+        {art && !artFailed && <img src={art} alt="" draggable={false} onError={() => setArtFailed(true)} />}
+      </span>
+      <div className="row" style={{ position: "relative", gap: 16 }}>
+        <span className="card-avatar">
+          <Avatar url={card.avatarUrl} size={80} online={card.isOnline} />
+        </span>
+        <div className="col grow" style={{ gap: 4, minWidth: 0 }}>
+          <span className="ellipsis" style={{ fontSize: 26, fontWeight: 800, letterSpacing: "-0.01em" }}>
+            {card.username}
+          </span>
+          {card.status && <span className="clamp-2" style={{ fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,0.75)" }}>{card.status}</span>}
+        </div>
+      </div>
+      <div className="hero-stats" style={{ position: "relative", marginTop: 18 }}>
+        <span>
+          <Star size={16} fill="currentColor" strokeWidth={0} />
+          {card.rating > 0 ? `${card.rating.toFixed(1)} · ${card.reviewCount}` : t("profile.stats.no_reviews")}
+        </span>
+        <span aria-label={t("profile.stats.games", gameCount)}>
+          <Gamepad2 size={18} strokeWidth={2.2} />
+          {gameCount}
+        </span>
+        {card.platforms.length > 0 && (
+          <span className="hero-platforms">
+            <PlatformBadgeRow platforms={card.platforms.slice(0, 4)} size={26} />
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** One platform's games as a grid of covers; tap opens the game page. */
 function GameList({ title, platform: id, tags }: { title: string; platform?: Platform; tags: GameTag[] }) {
   const push = useApp((state) => state.push);
-  const color = id ? platformColor(id) : "var(--primary)";
+  const color = id ? platformColor(id) : "var(--accent-text)";
   return (
     <div className="col" style={{ gap: 12 }}>
       <div className="row" style={{ gap: 8 }}>
@@ -264,16 +293,33 @@ function GameList({ title, platform: id, tags }: { title: string; platform?: Pla
             <PlatformGlyph platform={id} size={18} />
           </span>
         )}
-        <span style={{ fontSize: 18, fontWeight: 700 }}>{title}</span>
+        <span style={{ fontSize: 18, fontWeight: 800 }}>{title}</span>
+        <span className="secondary" style={{ fontSize: 14, fontWeight: 700 }}>
+          {tags.length}
+        </span>
       </div>
-      {tags.map((tag) => (
-        <button key={tag.name} className="detail-game" onClick={() => push({ type: "game", game: tag })}>
-          <GameCircle game={tag} color={color} size={58} />
-          <span className="grow ellipsis" style={{ fontSize: 15, fontWeight: 600 }}>
-            {tag.name}
-          </span>
-        </button>
-      ))}
+      <div className="game-grid detail-grid">
+        {tags.map((tag) => (
+          <DetailGameCard key={tag.name} tag={tag} onClick={() => push({ type: "game", game: tag })} />
+        ))}
+      </div>
     </div>
+  );
+}
+
+function DetailGameCard({ tag, onClick }: { tag: GameTag; onClick(): void }) {
+  const [failed, setFailed] = useState(false);
+  return (
+    <button className="game-card" onClick={onClick}>
+      {tag.coverUrl && !failed ? (
+        <img src={tag.coverUrl} alt="" loading="lazy" draggable={false} onError={() => setFailed(true)} />
+      ) : (
+        <span className="game-card-blank" aria-hidden>
+          {tag.name.slice(0, 2).toUpperCase()}
+        </span>
+      )}
+      <span className="shade" />
+      <span className="name">{tag.name}</span>
+    </button>
   );
 }

@@ -73,15 +73,13 @@ export function ProviderIcon({ provider, size = 18 }: { provider: "telegram" | "
 export const PROVIDER_COLORS = { telegram: "#2AABEE", vk: "#0077FF" } as const;
 
 /** Two overlapping cards, CardStackTabIcon in TabBarView.swift. */
-export function CardStackIcon({ active }: { active: boolean }) {
+/** Feed tab glyph from the store screenshots: a filled card in front of two stacked edges. */
+export function CardStackIcon({ size = 30 }: { size?: number }) {
   return (
-    <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden>
-      <g transform="rotate(-11 11 14)">
-        <rect x="2.5" y="3.5" width="17" height="21" rx="3.5" fill="currentColor" fillOpacity={active ? 0.18 : 0.1} stroke="currentColor" strokeWidth="1.5" />
-      </g>
-      <g transform="rotate(8 18 14)">
-        <rect x="9.5" y="3.5" width="17" height="21" rx="3.5" fill={active ? "var(--primary)" : "currentColor"} fillOpacity={active ? 1 : 0.32} stroke="currentColor" strokeWidth="1.7" />
-      </g>
+    <svg width={size} height={size} viewBox="0 0 30 30" aria-hidden>
+      <rect x="7.5" y="3" width="15" height="2.6" rx="1.3" fill="currentColor" opacity="0.55" />
+      <rect x="5.5" y="6.8" width="19" height="2.8" rx="1.4" fill="currentColor" opacity="0.8" />
+      <rect x="3.5" y="11" width="23" height="16" rx="4" fill="currentColor" />
     </svg>
   );
 }
@@ -151,12 +149,16 @@ export function GameCirclesRow({
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const index = useRef(0);
+  /** Last touch or press on the row: auto-scroll waits a moment instead of fighting the finger. */
+  const touchedAt = useRef(0);
 
   useEffect(() => {
     if (!autoScroll || games.length <= 3) return;
+    // :hover sticks on touch screens after a tap, so it only counts for a real mouse.
+    const mouse = window.matchMedia("(hover: hover) and (pointer: fine)");
     const timer = setInterval(() => {
       const row = ref.current;
-      if (!row || row.matches(":hover")) return;
+      if (!row || (mouse.matches && row.matches(":hover")) || Date.now() - touchedAt.current < 4000) return;
       index.current = (index.current + 1) % games.length;
       const item = row.children[index.current] as HTMLElement | undefined;
       if (!item) return;
@@ -173,7 +175,13 @@ export function GameCirclesRow({
     return <div className="secondary" style={{ fontSize: 12, padding: `0 ${padding}px` }}>—</div>;
   }
   return (
-    <div ref={ref} className="games-row" style={{ justifyContent: trailing ? "flex-end" : undefined, padding: `0 ${padding}px` }}>
+    <div
+      ref={ref}
+      className="games-row"
+      style={{ justifyContent: trailing ? "flex-end" : undefined, padding: `0 ${padding}px` }}
+      onPointerDown={() => (touchedAt.current = Date.now())}
+      onScroll={() => (touchedAt.current = Math.max(touchedAt.current, Date.now() - 2500))}
+    >
       {games.map((game) => (
         <div className="game-item" key={game.name} style={{ width: titles ? Math.max(size, 54) : size }}>
           <GameCircle game={game} color={color} size={size} />

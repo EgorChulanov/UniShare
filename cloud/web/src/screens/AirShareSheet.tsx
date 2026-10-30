@@ -2,7 +2,7 @@
 // phones that open AirShare at the same time find each other by location
 // (Telegram LocationManager, VK geodata or the browser) or the same network.
 import { AnimatePresence, motion, useDragControls } from "framer-motion";
-import { ChevronRight, Heart, HelpCircle, Smartphone, X } from "lucide-react";
+import { ChevronRight, Heart, Vibrate, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { ProfileCard } from "@unishare/shared";
 import { ApiError, api } from "../lib/api";
@@ -27,9 +27,12 @@ export function AirShareSheet() {
   const [noLocation, setNoLocation] = useState(false);
   const [limited, setLimited] = useState(false);
   const [selected, setSelected] = useState<ProfileCard | null>(null);
+  /** Searching (and the location request) starts only after "Start nearby search", as in the store screenshots. */
+  const [started, setStarted] = useState(false);
   const seen = useRef(new Set<string>());
 
   useEffect(() => {
+    if (!started) return;
     let alive = true;
     let location: GeoPoint | null = null;
     // Until getLocation settles the server matches nobody, so a pending permission
@@ -123,51 +126,53 @@ export function AirShareSheet() {
       window.removeEventListener("unishare:visibility", onAppVisibility);
       stop();
     };
-  }, []);
+  }, [started]);
 
   const connected = status !== "searching";
   const first = profiles[0];
   const statusText = status === "searching" ? t("airshare.searching") : status === "sent" ? t("airshare.success") : t("airshare.found");
-  const statusColor = status === "searching" ? "var(--text-2)" : "var(--green)";
 
   return (
     <Sheet>
       <div className="airshare">
         <div className="airshare-glow" aria-hidden />
-        <div className="col" style={{ alignItems: "center", gap: 6, textAlign: "center", padding: "0 32px", position: "relative" }}>
-          <h1 style={{ margin: 0, fontSize: 28, fontWeight: 700 }}>{t("airshare.title")}</h1>
-          <p className="secondary" style={{ margin: 0, fontSize: 14 }}>
-            {t("airshare.description")}
-          </p>
+        <div className="airshare-head">
+          <h1>{t("airshare.title")}</h1>
+          <p>{t("airshare.subtitle")}</p>
         </div>
 
-        <motion.div className="row" style={{ justifyContent: "center", padding: "16px 0", position: "relative" }} animate={{ gap: connected ? 0 : 40 }} transition={{ type: "spring", stiffness: 160, damping: 13 }}>
-          <div className="col" style={{ alignItems: "center", gap: 8 }}>
-            <motion.div className="airshare-phone" style={{ color: "var(--primary)", rotate: -12 }} animate={{ x: connected ? 16 : 0 }} transition={{ type: "spring", stiffness: 160, damping: 13 }}>
-              <Smartphone size={72} strokeWidth={1.6} />
-              <span className="screen-slot">
-                <Avatar url={me?.avatarUrl} size={28} />
-              </span>
-            </motion.div>
-            <span className="secondary ellipsis airshare-name">
-              {me?.username ?? t("airshare.me")}
+        <div className="airshare-phones">
+          <motion.div className="phone-illus" style={{ rotate: -10 }} animate={{ x: connected ? 8 : -30, y: connected ? 0 : 8 }} transition={{ type: "spring", stiffness: 160, damping: 13 }}>
+            <span className="notch" />
+            <span className="phone-avatar" title={me?.username ?? t("airshare.me")}>
+              <Avatar url={me?.avatarUrl} size={40} />
             </span>
-          </div>
-          <div className="col" style={{ alignItems: "center", gap: 8 }}>
-            <motion.div className="airshare-phone" style={{ color: "var(--tertiary)", rotate: 12 }} animate={{ x: connected ? -16 : 0 }} transition={{ type: "spring", stiffness: 160, damping: 13 }}>
-              <Smartphone size={72} strokeWidth={1.6} />
-              <span className="screen-slot">{first ? <Avatar url={first.avatarUrl} size={28} /> : <HelpCircle size={20} strokeWidth={2.6} className="secondary" />}</span>
-            </motion.div>
-            <span className="secondary ellipsis airshare-name">
-              {first?.username ?? "?"}
+          </motion.div>
+          <motion.div className="phone-illus" style={{ rotate: 10 }} animate={{ x: connected ? -8 : 30, y: connected ? 0 : -8 }} transition={{ type: "spring", stiffness: 160, damping: 13 }}>
+            <span className="notch" />
+            <span className="phone-avatar" title={first?.username}>
+              <Avatar url={first?.avatarUrl} size={40} />
             </span>
-          </div>
-        </motion.div>
-
-        <div className="airshare-pill" style={{ borderColor: `color-mix(in srgb, ${statusColor} 40%, transparent)` }}>
-          <span className="dot" style={{ background: statusColor }} />
-          {statusText}
+          </motion.div>
         </div>
+
+        {started ? (
+          <>
+            <div className={`airshare-pill ${status !== "searching" ? "found" : ""}`}>
+              <span className="dot" />
+              {statusText}
+            </div>
+            {status === "searching" && (
+              <p className="airshare-hint">
+                <Vibrate size={18} strokeWidth={2.2} /> {t("airshare.hold")}
+              </p>
+            )}
+          </>
+        ) : (
+          <button className="airshare-start" onClick={() => setStarted(true)}>
+            {t("airshare.start")}
+          </button>
+        )}
         {(limited || (noLocation && status === "searching")) && (
           <p className="secondary" style={{ margin: "-14px 32px 0", fontSize: 12, textAlign: "center", position: "relative" }}>
             {limited ? t("error.rate_limited") : t("airshare.location.denied")}
