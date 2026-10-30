@@ -72,12 +72,14 @@ export async function discoverRoutes(app: FastifyInstance): Promise<void> {
   });
 
   // Players of one game (the game sheet): exact, case-insensitive match on
-  // games or wanted games, online people first.
-  app.get<{ Querystring: { game?: string } }>("/api/players", async (request): Promise<ProfileCard[]> => {
+  // games or wanted games, or the same Steam app under another spelling
+  // (popular games are shown under their store title); online people first.
+  app.get<{ Querystring: { game?: string; steamAppId?: string } }>("/api/players", async (request): Promise<ProfileCard[]> => {
     const session = await requireSession(request);
     playersLimit.assert(session.userId);
     const game = sanitizeGameName(String(request.query.game ?? ""));
     if (!game) throw badRequest("game is required");
+    const steamAppId = optionalNumber(request.query.steamAppId);
     const rows = await query<UserRow>(
       `select ${USER_COLUMNS}
        from users u
@@ -85,10 +87,15 @@ export async function discoverRoutes(app: FastifyInstance): Promise<void> {
          and u.onboarding_complete
          and u.account_state = 'active'
          and not ${blockedPair("$1", "u.uid")}
-         and exists (select 1 from unnest(u.games || u.wanted_games) as g where lower(g) = lower($2))
+         and (exists (select 1 from unnest(u.games || u.wanted_games) as g where lower(g) = lower($2))
+           or ($3::bigint is not null and exists (
+             select 1 from jsonb_each(u.game_metadata) as m(key, value)
+             where m.value->>'steamAppId' ~ '^[0-9]{1,12}$'
+               and (m.value->>'steamAppId')::bigint = $3
+               and exists (select 1 from unnest(u.games || u.wanted_games) as g where lower(g) = lower(m.value->>'name')))))
        order by u.is_online desc, u.updated_at desc
        limit 50`,
-      [session.userId, game],
+      [session.userId, game, steamAppId && steamAppId > 0 ? steamAppId : null],
     );
     return rows.map(toProfileCard);
   });
@@ -114,9 +121,10 @@ export async function discoverRoutes(app: FastifyInstance): Promise<void> {
   );
 
   // AirShare: discover people who opened AirShare nearby at the same time.
-  app.post<{ Body: { lat?: number; lng?: number; accuracy?: number } }>("/api/airshare/ping", async (request): Promise<AirShareResult> => {
+  app.post<{ Body: { lat?: number; lng?: number; accuracy?: number; locating?: boolean } }>("/api/airshare/ping", async (request): Promise<AirShareResult> => {
     const session = await requireSession(request);
     const body = request.body ?? {};
+    if (body.locating !== undefined && typeof body.locating !== "boolean") throw badRequest("locating must be a boolean");
     for (const [field, limit] of [["lat", 90], ["lng", 180]] as const) {
       const value = body[field];
       if (value !== undefined && value !== null && (typeof value !== "number" || !Number.isFinite(value) || Math.abs(value) > limit)) {
@@ -129,7 +137,8 @@ export async function discoverRoutes(app: FastifyInstance): Promise<void> {
       `select ${USER_COLUMNS} from users u
        where u.uid = any($2::uuid[]) and u.onboarding_complete and u.account_state = 'active'
          and not ${blockedPair("$1", "u.uid")}
-       order by array_position($2::uuid[], u.uid)`,
+       order by array_position($2::uuid[], u.uid)
+       limit 20`,
       [session.userId, ids],
     );
     return { profiles: rows.map(toProfileCard) };

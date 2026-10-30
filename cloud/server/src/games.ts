@@ -169,11 +169,14 @@ function cleanWikiImage(url: string | undefined): string | null {
 }
 
 const VIDEO_GAME = /\bvideo ?games?\b|\bgame (?:developed|published)\b|компьютерн\S* игр|видеоигр/i;
+/** Short descriptions are terse ("2016 mobile game", "Online game platform"), so any mention of a game counts. */
+const GAME_DESCRIPTION = /\bgames?\b|(?:^|[^а-яё])игр/i;
 
 /** The short description or the first sentence of the article says it is about a game. */
 function describesVideoGame(summary: WikiSummary): boolean {
+  if (GAME_DESCRIPTION.test(summary.description ?? "")) return true;
   const firstSentence = summary.extract?.split(/(?<=[.!?])\s/)[0] ?? "";
-  return VIDEO_GAME.test(`${summary.description ?? ""} ${firstSentence}`);
+  return VIDEO_GAME.test(firstSentence);
 }
 
 /**
@@ -231,6 +234,8 @@ export async function resolveCover(name: string): Promise<ResolvedCover | null> 
     return null;
   };
   let cover: ResolvedCover | null = null;
+  /** The small capsule stands in while the header lookup is down; it is replaced on the next lookup. */
+  let provisional = false;
   const results = await steamSearch(sanitized);
   if (!results) return failed();
   const steam = bestSteamMatch(results, sanitized);
@@ -239,8 +244,8 @@ export async function resolveCover(name: string): Promise<ResolvedCover | null> 
     let header: string | null = null;
     if (/\/capsule_[^/]+$/.test(steam.backgroundImage)) {
       const lookup = await steamHeaderImage(appId);
-      if (!lookup.ok) return failed();
-      header = lookup.data;
+      if (lookup.ok) header = lookup.data;
+      else provisional = true;
     }
     cover = { coverUrl: header ?? steam.backgroundImage, steamAppId: appId, title: steam.name };
   }
@@ -250,7 +255,7 @@ export async function resolveCover(name: string): Promise<ResolvedCover | null> 
     const image = cleanWikiImage(wiki.data?.thumbnail?.source ?? wiki.data?.originalimage?.source);
     if (image) cover = { coverUrl: image, steamAppId: null, title: null };
   }
-  await cachePut(key, { cover }, cover ? COVER_TTL_DAYS * 24 : MISS_TTL_HOURS);
+  await cachePut(key, { cover }, provisional ? FAILURE_TTL_HOURS : cover ? COVER_TTL_DAYS * 24 : MISS_TTL_HOURS);
   return cover;
 }
 
@@ -343,7 +348,8 @@ async function mapLimit<T, R>(items: T[], limit: number, work: (item: T) => Prom
 }
 
 export async function popularGames(): Promise<GameSearchResult[]> {
-  const key = "popular:v2";
+  // v3: v2 lists may hold titles only one player had.
+  const key = "popular:v3";
   const cached = await cacheGet<GameSearchResult[]>(key);
   if (cached && cached.length) return cached;
 
@@ -358,13 +364,15 @@ export async function popularGames(): Promise<GameSearchResult[]> {
 
   // 1. What UniShare players actually have. Names are typed freely, so only
   // titles that are a Steam app or in the offline catalog are shown, under
-  // their store/catalog name, and never text the content rules reject.
+  // their store/catalog name, never text the content rules reject, and only
+  // titles at least two players share (one profile's games stay its own).
   const used = await query<{ name: string; count: number }>(
     `select g as name, count(distinct u.uid)::int as count
      from users u, unnest(u.games || u.wanted_games) as g
      where u.onboarding_complete and u.account_state = 'active'
        and not exists (select 1 from content_rules r where r.is_active and g ~* r.pattern)
-     group by g order by count desc, g limit 12`,
+     group by g having count(distinct u.uid) >= 2
+     order by count desc, g limit 12`,
   ).catch(() => []);
   const catalog = new Map(POPULAR_GAMES.map((name) => [normalizeGameName(name), name]));
   const usedCovers = await mapLimit(used, 4, async (row) => ({ name: row.name, cover: await resolveCover(row.name) }));
@@ -395,7 +403,8 @@ export async function popularGames(): Promise<GameSearchResult[]> {
   }
 
   const list = results.slice(0, 24);
-  if (list.length) await cachePut(key, list, POPULAR_TTL_HOURS);
+  // Without Steam's top sellers the list is a fallback: keep it for minutes only.
+  if (list.length) await cachePut(key, list, featured.ok ? POPULAR_TTL_HOURS : FAILURE_TTL_HOURS);
   else if (cached) return cached;
   return list;
 }

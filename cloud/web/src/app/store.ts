@@ -82,6 +82,8 @@ interface AppState {
   /** Swaps the top overlay (e.g. a profile for its chat) without adding a history entry. */
   replace(overlay: Overlay): void;
   pop(): void;
+  /** Closes the top `count` overlays in one history step (e.g. a profile and the chat under it). */
+  popOverlays(count: number): void;
   closeOverlay(): void;
   toast(text: string, kind?: Toast["kind"]): void;
   toastError(error: unknown): void;
@@ -277,6 +279,13 @@ export const useApp = create<AppState>((set, get) => ({
     else get().closeOverlay();
   },
 
+  popOverlays(count) {
+    const steps = Math.min(count, get().overlays.length);
+    if (steps <= 0) return;
+    if (historyDepth >= steps) history.go(-steps);
+    else for (let index = 0; index < steps; index += 1) get().closeOverlay();
+  },
+
   closeOverlay() {
     set((state) => ({ overlays: state.overlays.slice(0, -1) }));
     syncBackButton();
@@ -385,9 +394,15 @@ function syncBackButton() {
   platform.setBackButton(visible, () => useApp.getState().pop());
 }
 
-window.addEventListener("popstate", () => {
-  if (historyDepth > 0) historyDepth -= 1;
-  if (useApp.getState().overlays.length) useApp.getState().closeOverlay();
+window.addEventListener("popstate", (event) => {
+  // history.go(-n) arrives as one event: close every overlay above the entry we landed on.
+  const landed = (event.state as { unishareOverlay?: unknown } | null)?.unishareOverlay;
+  const target = typeof landed === "number" ? landed : 0;
+  const steps = historyDepth > target ? historyDepth - target : 1;
+  for (let index = 0; index < steps; index += 1) {
+    if (historyDepth > 0) historyDepth -= 1;
+    if (useApp.getState().overlays.length) useApp.getState().closeOverlay();
+  }
 });
 
 function afterSignIn(profile: MyProfile) {

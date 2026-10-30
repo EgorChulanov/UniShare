@@ -37,6 +37,13 @@ export const telegramAgent = new https.Agent({
   lookup: pinnedLookup as unknown as https.AgentOptions["lookup"],
 });
 
+/** Switches the route; kept-alive sockets to the old address are closed so requests really move. */
+function setRoute(address: string | null): void {
+  if (address === pinnedAddress) return;
+  pinnedAddress = address;
+  telegramAgent.destroy();
+}
+
 /**
  * Chooses how to reach the Bot API: DNS when it works, otherwise the first
  * reachable fallback Telegram address. Returns the pinned address, if any.
@@ -45,7 +52,7 @@ export async function selectTelegramRoute(log: (message: string) => void): Promi
   if (config.telegram.apiRoot || process.env.TELEGRAM_API_IP) return pinnedAddress;
   const direct = await probeHost(API_HOST);
   if (direct.addresses.some((address) => address.ok)) {
-    pinnedAddress = null;
+    setRoute(null);
     return null;
   }
   return pinFallbackRoute(log);
@@ -62,7 +69,7 @@ async function reachableFallbacks(): Promise<string[]> {
 export async function pinFallbackRoute(log: (message: string) => void): Promise<string | null> {
   const [working] = await reachableFallbacks();
   if (!working) return null;
-  pinnedAddress = working;
+  setRoute(working);
   log(`api.telegram.org unreachable via DNS; using ${pinnedAddress}`);
   return pinnedAddress;
 }
@@ -79,13 +86,13 @@ export async function retryViaFallbackRoutes<T>(call: () => Promise<T>, error: u
   const previous = pinnedAddress;
   for (const address of await reachableFallbacks()) {
     log(`Bot API request failed via ${pinnedAddress ?? "DNS"}; trying ${address}`);
-    pinnedAddress = address;
+    setRoute(address);
     try {
       return await call();
     } catch (retryError) {
       if (!(retryError instanceof HttpError)) throw retryError;
     }
   }
-  pinnedAddress = previous;
+  setRoute(previous);
   throw error;
 }

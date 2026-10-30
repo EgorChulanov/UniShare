@@ -1,19 +1,21 @@
 // Port of UniShare/Features/AirShare/AirShareView.swift. Instead of Bluetooth,
 // phones that open AirShare at the same time find each other by location
 // (Telegram LocationManager, VK geodata or the browser) or the same network.
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useDragControls } from "framer-motion";
 import { ChevronRight, Heart, HelpCircle, Smartphone, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { ProfileCard } from "@unishare/shared";
-import { api } from "../lib/api";
+import { ApiError, api } from "../lib/api";
 import { useApp } from "../app/store";
 import { platform, type GeoPoint } from "../platform/platform";
 import { useT } from "../i18n/i18n";
-import { Avatar, PlatformBadge, Sheet } from "../components/ui";
+import { Avatar, PlatformBadge, Sheet, useEscape } from "../components/ui";
 
 type Status = "searching" | "received" | "sent";
 
 const PING_INTERVAL_MS = 2500;
+/** After a 429 (too many AirShare sessions at new places) wait before trying again. */
+const LIMITED_RETRY_MS = 30_000;
 /** Bumped whenever searching starts, here or in a newly opened sheet: a late leave must not end it. */
 let searches = 0;
 
@@ -23,12 +25,16 @@ export function AirShareSheet() {
   const [profiles, setProfiles] = useState<ProfileCard[]>([]);
   const [status, setStatus] = useState<Status>("searching");
   const [noLocation, setNoLocation] = useState(false);
+  const [limited, setLimited] = useState(false);
   const [selected, setSelected] = useState<ProfileCard | null>(null);
   const seen = useRef(new Set<string>());
 
   useEffect(() => {
     let alive = true;
     let location: GeoPoint | null = null;
+    // Until getLocation settles the server matches nobody, so a pending permission
+    // prompt never falls back to "same network" (which may be a carrier NAT).
+    let locating = true;
     let timer: ReturnType<typeof setTimeout> | undefined;
     // Searching only while the page / Mini App is on screen, like onAppear / onDisappear on iOS.
     // `run` changes on every stop, so a ping still in flight does not schedule the next one.
@@ -38,24 +44,29 @@ export function AirShareSheet() {
     let appHidden = false;
 
     const ping = async (current: number) => {
-      const request = api.airsharePing(location);
+      const request = api.airsharePing(location, locating);
       inflight = request;
+      let delay = PING_INTERVAL_MS;
       try {
         const result = await request;
         if (current !== run) return;
+        setLimited(false);
         const fresh = result.profiles.filter((profile) => !seen.current.has(profile.uid));
-        if (fresh.length) {
-          fresh.forEach((profile) => seen.current.add(profile.uid));
-          platform.haptic("success");
-          setProfiles((list) => [...list, ...fresh]);
-          setStatus((value) => (value === "sent" ? value : "received"));
+        fresh.forEach((profile) => seen.current.add(profile.uid));
+        if (fresh.length) platform.haptic("success");
+        // The list shows who is nearby right now; people who left drop out.
+        setProfiles(result.profiles);
+        if (result.profiles.length) setStatus((value) => (value === "sent" ? value : "received"));
+      } catch (error) {
+        if (error instanceof ApiError && error.status === 429) {
+          setLimited(true);
+          delay = LIMITED_RETRY_MS;
         }
-      } catch {
-        /* keep trying while the sheet is open */
+        /* otherwise keep trying while the sheet is open */
       } finally {
         if (inflight === request) inflight = null;
       }
-      if (current === run) timer = setTimeout(() => void ping(current), PING_INTERVAL_MS);
+      if (current === run) timer = setTimeout(() => void ping(current), delay);
     };
 
     const start = () => {
@@ -91,14 +102,15 @@ export function AirShareSheet() {
     window.addEventListener("unishare:visibility", onAppVisibility);
     sync();
 
-    // Search on the same network right away; the coordinates join the next ping once they
-    // arrive (the permission prompt can take a while).
+    // Presence starts right away; the coordinates join the next ping once they arrive
+    // (the permission prompt can take a while).
     void platform
       .getLocation()
       .catch(() => null)
       .then((point) => {
         if (!alive) return;
         location = point;
+        locating = false;
         setNoLocation(!point);
       });
 
@@ -155,9 +167,9 @@ export function AirShareSheet() {
           <span className="dot" style={{ background: statusColor }} />
           {statusText}
         </div>
-        {noLocation && status === "searching" && (
+        {(limited || (noLocation && status === "searching")) && (
           <p className="secondary" style={{ margin: "-14px 32px 0", fontSize: 12, textAlign: "center", position: "relative" }}>
-            {t("airshare.location.denied")}
+            {limited ? t("error.rate_limited") : t("airshare.location.denied")}
           </p>
         )}
 
@@ -220,6 +232,9 @@ export function AirShareSheet() {
 function AirShareProfileCard({ profile, onDismiss, onLiked }: { profile: ProfileCard; onDismiss(): void; onLiked(): void }) {
   const t = useT();
   const [busy, setBusy] = useState(false);
+  // Swipe down from the grabber; the rest of the card scrolls on short screens.
+  const dragControls = useDragControls();
+  useEscape(onDismiss);
 
   const like = async () => {
     if (busy) return;
@@ -257,13 +272,17 @@ function AirShareProfileCard({ profile, onDismiss, onLiked }: { profile: Profile
         exit={{ y: "100%" }}
         transition={{ type: "spring", stiffness: 380, damping: 38 }}
         drag="y"
+        dragControls={dragControls}
+        dragListener={false}
         dragConstraints={{ top: 0, bottom: 0 }}
         dragElastic={{ top: 0, bottom: 0.6 }}
         onDragEnd={(_, info) => info.offset.y > 120 && onDismiss()}
       >
         <div className="brand-bg" style={{ position: "absolute" }} aria-hidden />
         <div className="col" style={{ alignItems: "center", position: "relative", height: "100%" }}>
-          <span style={{ width: 40, height: 4, borderRadius: 2, background: "color-mix(in srgb, var(--text-2) 60%, transparent)", margin: "14px 0 24px" }} />
+          <span className="inner-grabber" onPointerDown={(event) => dragControls.start(event)}>
+            <span />
+          </span>
           <Avatar url={profile.avatarUrl} size={100} ring />
           <div style={{ fontSize: 24, fontWeight: 700, marginTop: 16 }}>{profile.username}</div>
           {profile.platforms.length > 0 && (

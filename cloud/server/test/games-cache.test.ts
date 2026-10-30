@@ -144,7 +144,7 @@ test("a real miss (both providers answered) is cached for 72 hours", async () =>
   assert.equal(cache.get("cover3:nothing matches")?.seconds, MISS_SECONDS);
 });
 
-test("a hashed capsule asks appdetails for the header with cc=us; a failure there is not cached", async () => {
+test("a hashed capsule asks appdetails for the header with cc=us; while that fails the capsule is kept for minutes", async () => {
   const capsule = "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2622380/abc123/capsule_231x87.jpg";
   let detailsUp = false;
   const calls = mockFetch((url) => {
@@ -152,7 +152,7 @@ test("a hashed capsule asks appdetails for the header with cc=us; a failure ther
     if (isAppDetails(url)) return detailsUp ? { "2622380": { success: true, data: { header_image: "https://cdn/header.jpg?t=1" } } } : status(429);
     return undefined;
   });
-  assert.equal(await games.resolveCover("Elden Ring Nightreign"), null);
+  assert.deepEqual(await games.resolveCover("Elden Ring Nightreign"), { coverUrl: capsule, steamAppId: 2622380, title: "ELDEN RING NIGHTREIGN" });
   assert.equal(cache.get("cover3:elden ring nightreign")?.seconds, FAILURE_SECONDS);
 
   cache.delete("cover3:elden ring nightreign");
@@ -189,6 +189,8 @@ test("Wikipedia: '<name> (video game)' first, the bare title only when it descri
         return { type: "standard", title: "Pathologic", description: "компьютерная игра 2005 года", thumbnail: image("pathologic") };
       case "Mor":
         return { type: "standard", title: "Mor", extract: "«Мор» — видеоигра в жанре survival horror.", thumbnail: image("mor") };
+      case "Roblox":
+        return { type: "standard", title: "Roblox", description: "Online game platform and game creation system", thumbnail: image("roblox") };
       default:
         return undefined;
     }
@@ -202,6 +204,7 @@ test("Wikipedia: '<name> (video game)' first, the bare title only when it descri
 
   assert.equal((await games.resolveCover("Pathologic"))?.coverUrl, "https://upload.wikimedia.org/pathologic.jpg");
   assert.equal((await games.resolveCover("Mor"))?.coverUrl, "https://upload.wikimedia.org/mor.jpg");
+  assert.equal((await games.resolveCover("Roblox"))?.coverUrl, "https://upload.wikimedia.org/roblox.jpg");
 });
 
 // ── Details ────────────────────────────────────────────────────────────────
@@ -294,6 +297,16 @@ test("Popular now only shows user-entered names that are a Steam app or in the o
   );
   const usedQuery = statements.find((text) => text.includes("unnest(u.games || u.wanted_games)")) ?? "";
   assert.match(usedQuery, /not exists \(select 1 from content_rules r where r\.is_active and g ~\* r\.pattern\)/);
+  // A title only one player has never becomes "popular".
+  assert.match(usedQuery, /having count\(distinct u\.uid\) >= 2/);
+  assert.equal(cache.get("popular:v3")?.seconds, 12 * 3600);
+});
+
+test("Popular now: a list built without Steam's top sellers is kept for minutes only", async () => {
+  mockFetch((url) => (url.pathname === "/api/featuredcategories" ? status(503) : isSearch(url) ? { items: [{ type: "app", id: 570, name: url.searchParams.get("term"), tiny_image: null }] } : undefined));
+  const list = await games.popularGames();
+  assert.ok(list.length > 0);
+  assert.equal(cache.get("popular:v3")?.seconds, FAILURE_SECONDS);
 });
 
 // ── Cover enrichment ───────────────────────────────────────────────────────

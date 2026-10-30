@@ -89,6 +89,10 @@ export function ProfileDetailSheet({ uid, card: initial, source }: { uid: string
   const block = async () => {
     setConfirmBlock(false);
     if (!card) return;
+    // Opened from the chat with this person: that chat goes away too. Checked before
+    // the request, since the realtime update may drop the chat while it is in flight.
+    const below = useApp.getState().overlays.at(-2);
+    const fromTheirChat = below?.type === "chat" && useApp.getState().chats.some((chat) => chat.id === below.chatId && chat.partner.uid === card.uid);
     try {
       await api.block(card.uid);
       useFeed.getState().remove("teammates", card.uid);
@@ -98,7 +102,10 @@ export function ProfileDetailSheet({ uid, card: initial, source }: { uid: string
         requests: state.requests.filter((item) => item.from.uid !== card.uid),
       }));
       useApp.getState().toast(t("chat.blocked"), "success");
-      if (isOpen()) pop();
+      if (isOpen()) {
+        if (fromTheirChat) useApp.getState().popOverlays(2);
+        else pop();
+      }
     } catch (error) {
       useApp.getState().toastError(error);
     }

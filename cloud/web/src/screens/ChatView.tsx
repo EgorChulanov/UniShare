@@ -16,9 +16,13 @@ const EMPTY: ChatMessage[] = [];
 
 export function ChatSheet({ chatId }: { chatId: string }) {
   // Closes this chat only: a request may finish after it was closed or covered by a sheet.
+  // Once a pop is on its way, later calls (the list update right after it) do nothing.
+  const closing = useRef(false);
   const close = useCallback(() => {
     const top = useApp.getState().overlays.at(-1);
-    if (top?.type === "chat" && top.chatId === chatId) useApp.getState().pop();
+    if (closing.current || top?.type !== "chat" || top.chatId !== chatId) return;
+    closing.current = true;
+    useApp.getState().pop();
   }, [chatId]);
   return (
     <motion.div className="pushed" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", stiffness: 420, damping: 42 }}>
@@ -65,6 +69,13 @@ export function ChatView({ chatId, embedded, onClose }: { chatId: string; embedd
   // Escape closes the photo or the menu, not the whole chat (the action sheets handle it themselves).
   useEscape(() => setLightbox(null), lightbox !== null);
   useEscape(() => setMenuOpen(false), menuOpen);
+
+  // The chat left the list while open (blocked from the partner's profile, deleted elsewhere): close it.
+  const listedRef = useRef(false);
+  useEffect(() => {
+    if (summary) listedRef.current = true;
+    else if (listedRef.current) close();
+  }, [summary, close]);
 
   const markRead = useCallback(() => {
     void api.markRead(chatId).catch(() => undefined);

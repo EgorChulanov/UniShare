@@ -179,10 +179,10 @@ test("AirShare presence expires and can be left explicitly", () => {
   assert.deepEqual(airshare.airsharePing("b", {}, "192.0.2.10", t + airshare.PRESENCE_TTL_MS + 3_000), []);
 });
 
-test("AirShare ignores invalid coordinates and throttles pings", () => {
+test("AirShare ignores invalid coordinates", () => {
   const t = 4_000_000;
   airshare.airsharePing("a", { lat: 999, lng: 37 }, "192.0.2.20", t);
-  airshare.airsharePing("a", { lat: 55, lng: 37 }, "192.0.2.21", t + 100); // within 1 s: not recorded
+  // Without a valid fix "a" is matched on the shared network only.
   assert.deepEqual(airshare.airsharePing("b", {}, "192.0.2.20", t + 200), ["a"]);
   assert.deepEqual(airshare.airsharePing("c", {}, "192.0.2.21", t + 300), []);
 });

@@ -268,6 +268,18 @@ test("lists the players of one game by exact name; respects onboarding and block
   assert.equal((await call("GET", "/api/players", me.token)).status, 400);
   assert.equal((await call("GET", "/api/players?game=Hollow%20Knight")).status, 401);
 
+  // The same Steam app under the store title (popular games use it) also matches.
+  await signIn("gale_dev", {
+    username: "GaleDev",
+    platforms: ["PC"],
+    platformGames: { PC: ["BG3"] },
+    gameMetadata: { bg3: { name: "BG3", coverUrl: null, steamAppId: 1086940 } },
+    onboardingComplete: true,
+  });
+  const byApp = await call("GET", `/api/players?game=${encodeURIComponent("Baldur's Gate 3")}&steamAppId=1086940`, me.token);
+  assert.deepEqual((byApp.body as { username: string }[]).map((user) => user.username), ["GaleDev"]);
+  assert.deepEqual(await players("Baldur's Gate 3"), []);
+
   // Blocks work in both directions.
   assert.equal((await call("POST", "/api/blocks", me.token, { userId: erin.uid })).status, 200);
   assert.equal((await call("POST", "/api/blocks", finn.token, { userId: me.uid })).status, 200);

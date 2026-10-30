@@ -2,45 +2,60 @@
 // physically close (geolocation) or on the same network (public IP) find each
 // other. Presence lives in memory only and expires quickly.
 //
-// The server bounds what a ping can reveal about others: when both sides have
-// coordinates only the distance counts (one public IP may be a carrier NAT or a
-// VPN), the radius stays within 250 m-1 km whatever accuracy the client claims,
-// a session keeps its first position (later fixes may only refine it), and
-// starting new sessions is rate-limited.
+// The server bounds what a ping can reveal about others:
+// - when both sides have a precise fix only the distance counts (one public IP
+//   may be a carrier NAT or a VPN), and the radius stays within 250 m-1 km;
+// - a session keeps its first fix (snapped to a ~150 m grid) for its whole
+//   life, so one session cannot be moved around to measure distances;
+// - starting sessions at new places is rate-limited;
+// - a client still waiting for its location is matched with nobody.
 import { tooMany } from "./lib/errors";
 import { SlidingWindowLimit } from "./lib/ratelimit";
 
 export const PRESENCE_TTL_MS = 45_000;
-const MIN_PING_INTERVAL_MS = 1_000;
 const MIN_RADIUS_M = 250;
 const MAX_RADIUS_M = 1_000;
-/** How far later fixes may move a session from its first coordinates (GPS refinement). */
-const MAX_DRIFT_M = 1_000;
-const MAX_NEARBY = 20;
+/** Fixes coarser than this (city-level or IP-based) cannot place anyone "nearby". */
+const MAX_PRECISE_ACCURACY_M = 1_000;
+/** Assumed accuracy when the platform does not report one. */
+const DEFAULT_ACCURACY_M = 100;
+/** Stored coordinates are snapped to this grid (about 150 m of latitude). */
+const GRID_DEG = 0.00135;
+/** A session started farther than this from the previous one counts as a relocation. */
+const RELOCATION_M = 1_000;
+/** Candidates returned per ping; the route drops blocked and inactive users, then keeps 20. */
+export const MAX_CANDIDATES = 60;
 /** Pings this soon after leaving are ignored, so a request still in flight cannot re-add the user. */
 export const LEAVE_GRACE_MS = 3_000;
-const sessionStarts = new SlidingWindowLimit(10, 10 * 60_000);
+const RELOCATION_WINDOW_MS = 10 * 60_000;
+const relocations = new SlidingWindowLimit(10, RELOCATION_WINDOW_MS);
+
+interface Fix {
+  lat: number;
+  lng: number;
+  accuracy: number;
+}
 
 interface Presence {
-  lat: number | null;
-  lng: number | null;
-  accuracy: number;
-  /** First coordinates of this session. */
-  origin: { lat: number; lng: number } | null;
+  /** First fix of this session; never changes afterwards. */
+  fix: Fix | null;
+  /** The client is still waiting for its location (permission prompt open). */
+  locating: boolean;
   ip: string | null;
   lastSeen: number;
 }
-
-type Fix = Pick<Presence, "lat" | "lng" | "accuracy" | "origin">;
 
 export interface PingInput {
   lat?: number | null;
   lng?: number | null;
   accuracy?: number | null;
+  locating?: boolean | null;
 }
 
 const presence = new Map<string, Presence>();
 const leftAt = new Map<string, number>();
+/** Where each user's last located session started, to tell relocations from reopenings. */
+const lastPlace = new Map<string, { lat: number; lng: number; at: number }>();
 
 export function distanceMeters(aLat: number, aLng: number, bLat: number, bLng: number): number {
   const rad = Math.PI / 180;
@@ -54,6 +69,8 @@ function validCoordinate(value: unknown, limit: number): value is number {
   return typeof value === "number" && Number.isFinite(value) && Math.abs(value) <= limit;
 }
 
+const snap = (value: number) => Math.round(value / GRID_DEG) * GRID_DEG;
+
 function prune(now: number): void {
   for (const [userId, entry] of presence) {
     if (now - entry.lastSeen > PRESENCE_TTL_MS) presence.delete(userId);
@@ -61,52 +78,57 @@ function prune(now: number): void {
   for (const [userId, time] of leftAt) {
     if (now - time >= LEAVE_GRACE_MS) leftAt.delete(userId);
   }
+  for (const [userId, place] of lastPlace) {
+    if (now - place.at > RELOCATION_WINDOW_MS) lastPlace.delete(userId);
+  }
 }
 
-/** The session's position after this ping: the first fix anchors it, later ones may only refine it. */
-function nextFix(previous: Presence | undefined, input: PingInput): Fix {
-  const kept: Fix = {
-    lat: previous?.lat ?? null,
-    lng: previous?.lng ?? null,
-    accuracy: previous?.accuracy ?? 0,
-    origin: previous?.origin ?? null,
-  };
-  if (!validCoordinate(input.lat, 90) || !validCoordinate(input.lng, 180)) return kept;
-  const origin = kept.origin ?? { lat: input.lat, lng: input.lng };
-  // A bigger jump is spoofing or probing, not GPS refinement.
-  if (distanceMeters(origin.lat, origin.lng, input.lat, input.lng) > MAX_DRIFT_M) return kept;
+/** The fix sent with this ping, if any (snapped, accuracy bounded). */
+function readFix(input: PingInput): Fix | null {
+  if (!validCoordinate(input.lat, 90) || !validCoordinate(input.lng, 180)) return null;
   const accuracy =
-    typeof input.accuracy === "number" && Number.isFinite(input.accuracy) && input.accuracy > 0
-      ? Math.min(input.accuracy, MAX_RADIUS_M)
-      : kept.accuracy;
-  return { lat: input.lat, lng: input.lng, accuracy, origin };
+    typeof input.accuracy === "number" && Number.isFinite(input.accuracy) && input.accuracy > 0 ? Math.min(input.accuracy, 50_000) : DEFAULT_ACCURACY_M;
+  return { lat: snap(input.lat), lng: snap(input.lng), accuracy };
 }
 
-/** Records the caller's presence and returns the ids of people nearby, closest first. */
+const precise = (entry: Presence): entry is Presence & { fix: Fix } => entry.fix !== null && entry.fix.accuracy <= MAX_PRECISE_ACCURACY_M;
+
+/** Records the caller's presence and returns candidate ids of people nearby, closest first. */
 export function airsharePing(userId: string, input: PingInput, ip: string | null, now = Date.now()): string[] {
   prune(now);
   if (leftAt.has(userId)) return [];
   const previous = presence.get(userId);
-  if (!previous && !sessionStarts.take(userId, now)) throw tooMany("Too many AirShare sessions, please try again later");
-  if (!previous || now - previous.lastSeen >= MIN_PING_INTERVAL_MS) {
-    presence.set(userId, { ...nextFix(previous, input), ip: ip ?? previous?.ip ?? null, lastSeen: now });
+
+  let fix = previous?.fix ?? null;
+  if (!fix) {
+    fix = readFix(input);
+    if (fix) {
+      // Reopening AirShare at the same place is free; starting at new places is limited.
+      const last = lastPlace.get(userId);
+      const moved = !last || distanceMeters(last.lat, last.lng, fix.lat, fix.lng) > RELOCATION_M;
+      if (moved && !relocations.take(userId, now)) throw tooMany("Too many AirShare sessions, please try again later");
+      lastPlace.set(userId, { lat: fix.lat, lng: fix.lng, at: now });
+    }
   }
-  const me = presence.get(userId)!;
+  const me: Presence = { fix, locating: !fix && input.locating === true, ip: ip ?? previous?.ip ?? null, lastSeen: now };
+  presence.set(userId, me);
+  if (me.locating) return [];
+
   const located: { id: string; distance: number }[] = [];
   const sameNetwork: string[] = [];
   for (const [otherId, other] of presence) {
-    if (otherId === userId) continue;
-    if (me.lat !== null && me.lng !== null && other.lat !== null && other.lng !== null) {
-      // Both located: the distance decides, a shared IP alone is not enough.
-      const radius = Math.min(MAX_RADIUS_M, Math.max(MIN_RADIUS_M, me.accuracy + other.accuracy));
-      const distance = distanceMeters(me.lat, me.lng, other.lat, other.lng);
+    if (otherId === userId || other.locating) continue;
+    if (precise(me) && precise(other)) {
+      // Both precisely located: the distance decides, a shared IP alone is not enough.
+      const radius = Math.min(MAX_RADIUS_M, Math.max(MIN_RADIUS_M, me.fix.accuracy + other.fix.accuracy));
+      const distance = distanceMeters(me.fix.lat, me.fix.lng, other.fix.lat, other.fix.lng);
       if (distance <= radius) located.push({ id: otherId, distance });
     } else if (me.ip && other.ip && me.ip === other.ip) {
       sameNetwork.push(otherId);
     }
   }
   located.sort((a, b) => a.distance - b.distance);
-  return [...located.map((entry) => entry.id), ...sameNetwork].slice(0, MAX_NEARBY);
+  return [...located.map((entry) => entry.id), ...sameNetwork].slice(0, MAX_CANDIDATES);
 }
 
 export function airshareLeave(userId: string, now = Date.now()): void {
@@ -118,5 +140,6 @@ export function airshareLeave(userId: string, now = Date.now()): void {
 export function resetAirshare(): void {
   presence.clear();
   leftAt.clear();
-  sessionStarts.clear();
+  lastPlace.clear();
+  relocations.clear();
 }
