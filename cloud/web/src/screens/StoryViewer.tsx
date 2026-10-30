@@ -1,8 +1,8 @@
 // Port of CommunityStoryViewer in UniShare/Features/Chat/CommunityStoriesView.swift.
 // Tapping the right / left side moves between the stories of the rail.
-import { motion } from "framer-motion";
+import { motion, useIsPresent } from "framer-motion";
 import { ChevronLeft, ChevronRight, Gamepad2, Heart, Link2, ShieldCheck, Sparkles, User, X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { parseAnyLink } from "@unishare/shared";
 import { useApp } from "../app/store";
 import { mediaUrl } from "../lib/api";
@@ -60,18 +60,25 @@ export function StoryViewer({ index: initial }: { index: number }) {
     return () => cancelAnimationFrame(frame);
   }, [paused, index]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Desktop: the arrow keys move between stories like the arrow buttons beside the stage.
+  // Desktop: the arrow keys move between stories like the arrow buttons beside the stage. The
+  // viewer owns them until it unmounts, exit animation included, so they never reach the feed's
+  // like / pass keys underneath; a held key does not race through the rail.
+  const isPresent = useIsPresent();
+  const presentRef = useRef(isPresent);
+  useLayoutEffect(() => {
+    presentRef.current = isPresent;
+  });
   const goRef = useRef<(delta: number) => void>(() => undefined);
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if (event.defaultPrevented || event.altKey || event.metaKey || event.ctrlKey) return;
-      if (event.key === "ArrowRight") goRef.current(1);
-      else if (event.key === "ArrowLeft") goRef.current(-1);
-      else return;
+      if ((event.key !== "ArrowRight" && event.key !== "ArrowLeft") || event.altKey || event.metaKey || event.ctrlKey) return;
       event.preventDefault();
+      event.stopImmediatePropagation();
+      if (event.repeat || !presentRef.current) return;
+      goRef.current(event.key === "ArrowRight" ? 1 : -1);
     };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
   }, []);
 
   if (!story) return null;
@@ -90,7 +97,11 @@ export function StoryViewer({ index: initial }: { index: number }) {
     else setIndex(next);
   };
 
-  goRef.current = go;
+  // The keyboard stops at the last story, as ← does at the first; Escape and the close button close.
+  goRef.current = (delta) => {
+    if (delta > 0 && index >= stories.length - 1) return;
+    go(delta);
+  };
 
   const cta = () => {
     if (!story.ctaUrl) return;

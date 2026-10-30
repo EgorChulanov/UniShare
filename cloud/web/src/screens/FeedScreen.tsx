@@ -160,7 +160,7 @@ export function FeedScreen() {
   // Keyboard on desktop: ← pass, → like.
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
-      if (useApp.getState().overlays.length || (event.target as HTMLElement)?.tagName === "INPUT") return;
+      if (event.defaultPrevented || useApp.getState().overlays.length || (event.target as HTMLElement)?.tagName === "INPUT") return;
       if (event.key === "ArrowRight") topRef.current?.swipe("right");
       if (event.key === "ArrowLeft") topRef.current?.swipe("left");
     };

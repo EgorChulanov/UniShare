@@ -406,7 +406,7 @@ All chat routes answer `404 Chat is unavailable` when the id is not a UUID, you 
 - Limit: 60 requests per minute.
 
 **GET /api/players**
-- Players who own or want this exact game (ignoring case), online first, at most 50.
+- Players who own or want this game, online first, at most 50. Titles match when they differ only in case, accents, ™/® or punctuation ("Apex Legends™" = "Apex Legends", "Counter-Strike 2" = "Counter Strike 2"), the same rule search uses to show one card per game. A longer or shorter title ("Hollow Knight: Silksong", "Hollow") is a different game.
 - `game` is required: 2 to 80 characters after whitespace is collapsed (`400 game is required`).
 - Limit: 60 requests per minute. Invalid requests count too.
 

@@ -50,7 +50,9 @@ export function platformColor(id: Platform): string {
 /** Two letters for a game without artwork: the first letters of its first two words ("Dota 2" → "D2"). */
 export function gameInitials(name: string): string {
   const [first = name, second] = name.match(/[\p{L}\p{N}]+/gu) ?? [];
-  return (second ? first[0] + second[0] : first.slice(0, 2)).toUpperCase();
+  // By code point, so letters outside the BMP ("𝔇𝔞𝔯𝔨 𝔖𝔬𝔲𝔩𝔰") are never cut in half.
+  const letters = [...first];
+  return (second ? letters[0] + [...second][0] : letters.slice(0, 2).join("")).toUpperCase();
 }
 
 export function PlatformBadge({ platform: id, size = 32 }: { platform: Platform; size?: number }) {

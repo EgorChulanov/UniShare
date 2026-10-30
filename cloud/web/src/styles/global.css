@@ -510,6 +510,8 @@ body:has(.sheet) .marquee-track { animation-play-state: paused; }
 .form-select option { color: initial; }
 .date-pill { position: relative; border: 0; outline: 0; font: inherit; font-size: 15px; font-weight: 600; color: var(--text); background: var(--fill); border-radius: 10px; padding: 7px 12px; }
 .date-pill input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; border: 0; padding: 0; cursor: pointer; }
+/* The real input is invisible, so the pill shows where keyboard focus is. */
+.date-pill:focus-within { outline: 2px solid var(--primary); outline-offset: 2px; }
 
 /* ── Profile (ProfileView.swift) ───────────────────────────────────────── */
 
@@ -575,7 +577,8 @@ body:has(.sheet) .marquee-track { animation-play-state: paused; }
 .skill-option.selected { color: #fff; background: var(--accent-grad); box-shadow: none; }
 .plain-input { border: 0; outline: 0; font: inherit; font-size: 14px; padding: 10px 14px; border-radius: 12px; background: var(--card); color: var(--text); min-width: 0; }
 .portfolio-add { display: flex; align-items: center; gap: 10px; padding: 16px; border-radius: 14px; background: var(--card); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary) 30%, transparent); width: 100%; text-align: left; }
-.btn-secondary { flex: 1; height: 52px; border-radius: 16px; background: var(--card); font-size: 16px; font-weight: 600; }
+.btn-secondary { flex: 1; height: 52px; padding: 0 16px; border-radius: 16px; background: var(--card); font-size: 16px; font-weight: 600; display: flex; align-items: center; justify-content: center; text-align: center; }
+.btn-secondary:disabled { color: var(--text-3); }
 
 /* ── Onboarding (OnboardingView.swift) ─────────────────────────────────── */
 
@@ -618,9 +621,10 @@ body:has(.sheet) .marquee-track { animation-play-state: paused; }
 .story-nav:disabled { opacity: 0.3; }
 @media (hover: hover) and (pointer: fine) { .story-nav:not(:disabled):hover { background: rgba(255, 255, 255, 0.18); } }
 /* Desktop: the story is a phone-sized stage in the middle, with arrows beside it. */
-@media (min-width: 760px) and (min-height: 560px) {
+/* From 760px tall the stage is at least phone-sized (376×669), so what fits on a phone fits here. */
+@media (min-width: 760px) and (min-height: 760px) {
   .story-stage { position: relative; inset: auto; height: min(88vh, 860px); aspect-ratio: 9 / 16; border-radius: 28px; box-shadow: 0 30px 90px rgba(0, 0, 0, 0.55), inset 0 0 0 1px rgba(255, 255, 255, 0.08); }
-  .story-stage .story-inner { padding: 16px 22px 28px; }
+  .story-stage .story-inner { padding: 16px 22px 28px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; }
   .story-nav { display: flex; }
 }
 .story-progress { display: flex; gap: 4px; }
@@ -737,7 +741,6 @@ body:has(.sheet) .marquee-track { animation-play-state: paused; }
   .capsule-btn, .type-badge, .textarea { border: 1px solid var(--separator); }
   .avatar { color: var(--text-2); background: var(--card); }
   .platform-badge { background: var(--fill); }
-  .round-action.red { background: var(--card); }
   .list-row.active { background: rgba(92, 72, 223, 0.16); }
   .progress-caps span { background: var(--fill); }
   .chip.primary, .game-chip { background: rgba(92, 72, 223, 0.16); }
@@ -749,8 +752,6 @@ body:has(.sheet) .marquee-track { animation-play-state: paused; }
   .airshare-btn.skip { background: rgba(255, 59, 48, 0.12); }
   .nav-header { background: var(--bg); }
   .sheet-footer { background: var(--sheet-bg); }
-  .safety { background: rgba(92, 72, 223, 0.08); }
-  .confirm-banner { background: rgba(92, 72, 223, 0.1); border-top: 0.5px solid rgba(92, 72, 223, 0.3); }
   .report-list button.selected { background: linear-gradient(rgba(92, 72, 223, 0.08), rgba(92, 72, 223, 0.08)) var(--card); }
   .progress-bar { background: var(--fill); }
   .platform-tile::before { background: none; }

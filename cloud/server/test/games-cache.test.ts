@@ -100,6 +100,19 @@ const wikiCalls = (calls: string[]) => calls.map((call) => wikiTitle(new URL(cal
 const FAILURE_SECONDS = 10 * 60;
 const MISS_SECONDS = 72 * 3600;
 
+// ── One card per game ──────────────────────────────────────────────────────
+
+test("search shows one card per game across Steam and the offline catalog", async () => {
+  mockFetch((url) => (isSearch(url) ? { items: [{ type: "app", id: 1172470, name: "Apex Legends™", tiny_image: "https://cdn.akamai.steamstatic.com/steam/apps/1172470/capsule_231x87.jpg" }] } : undefined));
+  const results = await games.searchGames("apex");
+  const apex = results.filter((game) => games.gameKey(game.name) === "apex legends");
+  assert.equal(apex.length, 1);
+  assert.equal(apex[0].steamAppId, 1172470);
+  assert.equal(games.gameKey("Counter-Strike 2"), games.gameKey("Counter Strike 2"));
+  assert.equal(games.gameKey("Assassin’s Creed"), games.gameKey("Assassins Creed"));
+  assert.notEqual(games.gameKey("Hollow Knight: Silksong"), games.gameKey("Hollow Knight"));
+});
+
 // ── Failures vs. misses ────────────────────────────────────────────────────
 
 test("steamSearch tells a failed request from an empty answer", async () => {

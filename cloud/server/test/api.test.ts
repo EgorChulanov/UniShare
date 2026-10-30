@@ -267,6 +267,9 @@ test("lists the players of one game by exact name; respects onboarding and block
   assert.deepEqual(await players("Hollow Knight"), ["FinnWants", "ErinPlays"]);
   assert.deepEqual(await players("HOLLOW  knight"), ["FinnWants", "ErinPlays"]);
   assert.deepEqual(await players("Hollow"), []);
+  // Search shows one card for spellings that differ only in symbols and punctuation, so they list the same players.
+  assert.deepEqual(await players("Hollow Knight™"), ["FinnWants", "ErinPlays"]);
+  assert.deepEqual(await players("Hollow-Knight"), ["FinnWants", "ErinPlays"]);
   assert.equal((await call("GET", "/api/players", me.token)).status, 400);
   assert.equal((await call("GET", "/api/players?game=Hollow%20Knight")).status, 401);
 

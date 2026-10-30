@@ -317,8 +317,12 @@ export async function searchGames(input: string): Promise<GameSearchResult[]> {
   return merge(merge(curated, steam), offline(needle));
 }
 
-/** Treats "Counter-Strike 2" and "Counter Strike 2", or "Assassin's Creed" and "Assassins Creed", as one game. */
-function dedupeKey(name: string): string {
+/**
+ * Treats "Counter-Strike 2" and "Counter Strike 2", "Assassin's Creed" and "Assassins Creed", or
+ * "Apex Legends™" and "Apex Legends" as one game. Search shows one card per key, and /api/players
+ * lists everyone whose game has the same key, so either spelling finds the same players.
+ */
+export function gameKey(name: string): string {
   return normalizeGameName(name).replace(/['’`]/g, "").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
 }
 
@@ -327,7 +331,7 @@ function merge(first: GameSearchResult[], second: GameSearchResult[]): GameSearc
   const merged: GameSearchResult[] = [];
   const position = new Map<string, number>();
   for (const game of [...first, ...second]) {
-    const key = dedupeKey(game.name);
+    const key = gameKey(game.name);
     const at = position.get(key);
     if (at === undefined) {
       position.set(key, merged.length);

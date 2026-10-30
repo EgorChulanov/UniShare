@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import {
   PLATFORMS,
   isPlatform,
+  normalizeGameName,
   sanitizeGameName,
   type AirShareResult,
   type GameDetails,
@@ -15,7 +16,7 @@ import { badRequest } from "../lib/errors";
 import { USER_COLUMNS, toProfileCard, type UserRow } from "../lib/profiles";
 import { blockedPair } from "../lib/sql";
 import { SlidingWindowLimit } from "../lib/ratelimit";
-import { gameDetails, popularGames, searchGames } from "../games";
+import { gameDetails, gameKey, popularGames, searchGames } from "../games";
 import { airshareLeave, airsharePing } from "../airshare";
 
 function likePattern(value: string): string {
@@ -78,6 +79,10 @@ export async function discoverRoutes(app: FastifyInstance): Promise<void> {
     playersLimit.assert(session.userId);
     const game = sanitizeGameName(String(request.query.game ?? ""));
     if (!game) throw badRequest("game is required");
+    // Same title as search shows it: case, ™/® and punctuation aside ("Apex Legends™" lists the
+    // players of "Apex Legends"). SQL narrows by the longest word, gameKey() decides.
+    const key = gameKey(game);
+    const word = key.split(" ").reduce((longest, part) => (part.length > longest.length ? part : longest), "");
     const rows = await query<UserRow>(
       `select ${USER_COLUMNS}
        from users u
@@ -85,12 +90,15 @@ export async function discoverRoutes(app: FastifyInstance): Promise<void> {
          and u.onboarding_complete
          and u.account_state = 'active'
          and not ${blockedPair("$1", "u.uid")}
-         and exists (select 1 from unnest(u.games || u.wanted_games) as g where lower(g) = lower($2))
+         and exists (select 1 from unnest(u.games || u.wanted_games) as g where lower(g) = lower($2) or ($3 <> '' and strpos(lower(g), $3) > 0))
        order by u.is_online desc, u.updated_at desc
-       limit 50`,
-      [session.userId, game],
+       limit 500`,
+      [session.userId, game, word],
     );
-    return rows.map(toProfileCard);
+    return rows
+      .filter((row) => [...row.games, ...row.wanted_games].some((name) => (key ? gameKey(name) === key : normalizeGameName(name) === normalizeGameName(game))))
+      .slice(0, 50)
+      .map(toProfileCard);
   });
 
   app.get("/api/games/popular", async (request): Promise<GameSearchResult[]> => {
