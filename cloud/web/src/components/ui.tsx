@@ -178,7 +178,7 @@ export function GameCirclesRow({
     <div
       ref={ref}
       className="games-row"
-      style={{ justifyContent: trailing ? "flex-end" : undefined, padding: `0 ${padding}px` }}
+      style={{ justifyContent: trailing ? "flex-end" : undefined, paddingInline: padding }}
       onPointerDown={() => (touchedAt.current = Date.now())}
       onScroll={() => (touchedAt.current = Math.max(touchedAt.current, Date.now() - 2500))}
     >

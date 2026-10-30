@@ -6,6 +6,7 @@ type Dict = Record<string, string>;
 export const redesignStrings: Record<"ru" | "en" | "uk" | "be", Dict> = {
   ru: {
     "feed.segment.teammates": "Обмен",
+    "transparency.feed.detail": "Откройте Главную, выберите Обмен или Навыки и листайте карточки игроков.",
     "platform.kind.Steam": "Магазин игр для ПК",
     "platform.kind.Epic Games": "Магазин игр для ПК",
     "platform.kind.Nintendo": "Nintendo Switch",
@@ -24,6 +25,7 @@ export const redesignStrings: Record<"ru" | "en" | "uk" | "be", Dict> = {
   },
   en: {
     "feed.segment.teammates": "Exchange",
+    "transparency.feed.detail": "Open Home, choose Exchange or Skills, then swipe player profile cards.",
     "platform.kind.Steam": "PC game store",
     "platform.kind.Epic Games": "PC game store",
     "platform.kind.Nintendo": "Nintendo Switch",
@@ -42,6 +44,7 @@ export const redesignStrings: Record<"ru" | "en" | "uk" | "be", Dict> = {
   },
   uk: {
     "feed.segment.teammates": "Обмін",
+    "transparency.feed.detail": "Відкрийте Головну, виберіть Обмін або Навички та гортайте картки гравців.",
     "platform.kind.Steam": "Магазин ігор для ПК",
     "platform.kind.Epic Games": "Магазин ігор для ПК",
     "platform.kind.Nintendo": "Nintendo Switch",
@@ -60,6 +63,7 @@ export const redesignStrings: Record<"ru" | "en" | "uk" | "be", Dict> = {
   },
   be: {
     "feed.segment.teammates": "Абмен",
+    "transparency.feed.detail": "Адкрыйце Галоўную, выберыце Абмен або Навыкі і гартайце карткі гульцоў.",
     "platform.kind.Steam": "Крама гульняў для ПК",
     "platform.kind.Epic Games": "Крама гульняў для ПК",
     "platform.kind.Nintendo": "Nintendo Switch",

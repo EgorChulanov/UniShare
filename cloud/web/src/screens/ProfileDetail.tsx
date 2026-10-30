@@ -273,7 +273,7 @@ function DetailHero({ card }: { card: ProfileCard }) {
         </span>
         {card.platforms.length > 0 && (
           <span className="hero-platforms">
-            <PlatformBadgeRow platforms={card.platforms.slice(0, 4)} size={26} />
+            <PlatformBadgeRow platforms={card.platforms} size={26} />
           </span>
         )}
       </div>

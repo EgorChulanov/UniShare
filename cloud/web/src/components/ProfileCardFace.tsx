@@ -8,6 +8,9 @@ import { PLATFORM_INFO, type DiscoveryKind, type GameTag, type Platform } from "
 import { useT } from "../i18n/i18n";
 import { Avatar, BrandIcon, GameCirclesRow, PlatformGlyph } from "./ui";
 
+/** Skills shown on the card; the rest are summed up in a "+N" chip so the card never cuts a row in half. */
+const MAX_SKILL_CHIPS = 8;
+
 export interface CardFaceData {
   username: string;
   avatarUrl: string | null;
@@ -69,11 +72,12 @@ export function ProfileCardFace({ card, kind, footer = true }: { card: CardFaceD
             <h4>{t("profile.skills")}</h4>
             {card.skills.length ? (
               <div className="flow" style={{ gap: 9 }}>
-                {card.skills.map((skill) => (
+                {card.skills.slice(0, MAX_SKILL_CHIPS).map((skill) => (
                   <span key={skill} className="skill-chip">
                     {skill}
                   </span>
                 ))}
+                {card.skills.length > MAX_SKILL_CHIPS && <span className="skill-chip more">+{card.skills.length - MAX_SKILL_CHIPS}</span>}
               </div>
             ) : (
               <div className="card-muted">{t("skills.empty")}</div>

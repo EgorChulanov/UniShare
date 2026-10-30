@@ -80,7 +80,7 @@ function ProfileHero({ profile }: { profile: MyProfile }) {
         </span>
         {profile.platforms.length > 0 && (
           <span className="hero-platforms">
-            <PlatformBadgeRow platforms={profile.platforms.slice(0, 4)} size={26} />
+            <PlatformBadgeRow platforms={profile.platforms} size={26} />
           </span>
         )}
       </div>
