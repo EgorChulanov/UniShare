@@ -48,6 +48,10 @@ export function attachRealtime(server: Server): () => void {
       return;
     }
     const token = url.searchParams.get("token");
+    // Node removes its own error listener before "upgrade": a reset while the
+    // session is looked up would otherwise crash the process.
+    const onSocketError = () => socket.destroy();
+    socket.on("error", onSocketError);
     resolveSession(token)
       .then((session) => {
         if (!session) {
@@ -55,6 +59,8 @@ export function attachRealtime(server: Server): () => void {
           socket.destroy();
           return;
         }
+        if (socket.destroyed) return;
+        socket.removeListener("error", onSocketError);
         wss.handleUpgrade(request, socket, head, (ws) => {
           const userId = session.userId;
           const set = sockets.get(userId) ?? new Set();
@@ -71,13 +77,20 @@ export function attachRealtime(server: Server): () => void {
             ws.ping();
           }, 30_000);
 
+          // Protocol errors (a frame above maxPayload, invalid UTF-8) close the socket;
+          // without a listener the "error" event would crash the process.
+          ws.on("error", () => ws.terminate());
+
           ws.on("message", (raw) => {
-            let command: RealtimeCommand;
+            let parsed: unknown;
             try {
-              command = JSON.parse(raw.toString()) as RealtimeCommand;
+              parsed = JSON.parse(raw.toString());
             } catch {
               return;
             }
+            // Only objects are commands: `null`, numbers, strings and arrays are ignored.
+            if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return;
+            const command = parsed as RealtimeCommand;
             if (command.type === "ping") ws.send(JSON.stringify({ type: "pong" }));
             if (command.type === "visibility") {
               if (command.visible) hiddenSockets.delete(ws);

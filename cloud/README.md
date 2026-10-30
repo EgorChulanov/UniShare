@@ -111,4 +111,6 @@ The web client is already a PWA and keeps every platform call behind one adapter
 1. **Capacitor:** wrap `web/dist`, add a `capacitor` adapter (push via APNs/FCM, native share), and set `VITE_API_URL` to the production API.
 2. **Native SwiftUI:** point the existing iOS app at this API instead of Supabase; the contract lives in `shared/src/types.ts`.
 
+The [API reference](docs/API.md) lists every endpoint, the realtime protocol, uploads and rate limits. It also describes what a native sign-in hand-off still needs (Telegram and VK credentials today come only from inside those apps or the Telegram widget on the bot's domain).
+
 Either way, users, chats and matches stay shared across Telegram, VK, the web and mobile.

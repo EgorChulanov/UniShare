@@ -192,7 +192,7 @@ Metadata, localizations, privacy and support pages, and release procedures live 
 
 ## Status
 
-UniShare is under active development. The cloud version (Telegram, VK, web) runs on its own PostgreSQL-backed server, documented in [cloud/README.md](cloud/README.md). The iOS app still uses the Supabase backend in [`supabase/`](supabase) until it is migrated to the shared API.
+UniShare is under active development. The cloud version (Telegram, VK, web) runs on its own PostgreSQL-backed server, documented in [cloud/README.md](cloud/README.md). The iOS app still uses the Supabase backend in [`supabase/`](supabase) until it is migrated to the shared API, described in the [API reference](cloud/docs/API.md).
 
 ## Author
 

@@ -3,6 +3,8 @@
 import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
 import { randomUUID } from "node:crypto";
+import type { AddressInfo } from "node:net";
+import { WebSocket } from "ws";
 
 const BOT_TOKEN = "123456:TEST-token";
 const VK_SECRET = "vk-test-secret";
@@ -329,4 +331,44 @@ test("popular games and game details degrade gracefully offline", { skip: !hasDa
   assert.equal(details.body.name, "Stardew Valley");
   assert.equal(details.body.source, "catalog");
   assert.equal((await call("GET", "/api/games/details?name=x", token)).status, 400);
+});
+
+test("realtime survives null, non-object and oversized frames from a signed-in client", { skip: !hasDatabase }, async () => {
+  const { attachRealtime } = await import("../src/realtime");
+  await app.listen({ port: 0, host: "127.0.0.1" });
+  const detach = attachRealtime(app.server);
+  const base = `ws://127.0.0.1:${(app.server.address() as AddressInfo).port}/api/ws`;
+  const token = (await call("POST", "/api/auth/dev", undefined, { name: "ws_robust" })).body.token as string;
+  const open = () =>
+    new Promise<WebSocket>((resolve, reject) => {
+      const socket = new WebSocket(`${base}?token=${encodeURIComponent(token)}`);
+      socket.once("open", () => resolve(socket));
+      socket.once("error", reject);
+    });
+  const pong = (socket: WebSocket) =>
+    new Promise<void>((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error("no pong")), 3_000);
+      socket.on("message", (data) => {
+        if (JSON.parse(String(data)).type === "pong") {
+          clearTimeout(timer);
+          resolve();
+        }
+      });
+      socket.send(JSON.stringify({ type: "ping" }));
+    });
+  try {
+    const first = await open();
+    for (const frame of ["null", "42", '"text"', "[]", "{}", "not json"]) first.send(frame);
+    await pong(first);
+    // A frame above maxPayload closes only that socket (1009), the process keeps running.
+    const closed = new Promise<number>((resolve) => first.once("close", (code) => resolve(code)));
+    first.on("error", () => undefined);
+    first.send("x".repeat(10_000));
+    assert.equal(await closed, 1009);
+    const second = await open();
+    await pong(second);
+    second.close();
+  } finally {
+    detach();
+  }
 });
