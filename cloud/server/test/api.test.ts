@@ -12,6 +12,13 @@ process.env.VK_APP_ID = "777";
 process.env.VK_APP_SECRET = VK_SECRET;
 process.env.DEV_AUTH = "1";
 process.env.STORAGE_LOCAL_DIR = `/tmp/unishare-test-${process.pid}`;
+process.env.COVER_ENRICHMENT = "0";
+process.env.RAWG_API_KEY = "";
+// Game providers (Steam, Wikipedia) are offline in these tests: deterministic
+// results come from the built-in catalog.
+globalThis.fetch = (async () => {
+  throw new Error("network disabled in tests");
+}) as typeof fetch;
 
 const hasDatabase = Boolean(process.env.DATABASE_URL);
 
@@ -203,4 +210,71 @@ test("rejects forged sign-in payloads and unauthenticated calls", { skip: !hasDa
   assert.equal((await call("GET", "/api/config")).body.vkAppId, 777);
   const games = await call("GET", "/api/games/search?q=elden", (await call("POST", "/api/auth/dev", undefined, { name: "tester" })).body.token);
   assert.equal(games.body[0].name, "Elden Ring");
+});
+
+test("searches people by username, game, platform and skill; respects blocks", { skip: !hasDatabase }, async () => {
+  const me = (await call("POST", "/api/auth/dev", undefined, { name: "searcher" })).body.token as string;
+  await call("PATCH", "/api/me", me, { username: "Searcher", platforms: ["Xbox"], onboardingComplete: true });
+  const dana = (await call("POST", "/api/auth/dev", undefined, { name: "dana_dev" })).body.token as string;
+  await call("PATCH", "/api/me", dana, {
+    username: "DanaPlays",
+    platforms: ["Nintendo"],
+    platformGames: { Nintendo: ["Splatoon 3"] },
+    skills: ["Speedrunner"],
+    subscriptions: [{ id: "s1", name: "Nintendo Switch Online" }],
+    onboardingComplete: true,
+  });
+  const danaUid = (await call("GET", "/api/me", dana)).body.uid as string;
+
+  const names = async (path: string) => ((await call("GET", path, me)).body.users as { username: string }[]).map((user) => user.username);
+  assert.ok((await names("/api/search?q=danap")).includes("DanaPlays"));
+  assert.ok((await names("/api/search?q=splatoon")).includes("DanaPlays"));
+  assert.ok((await names("/api/search?q=nintendo")).includes("DanaPlays"));
+  assert.ok((await names("/api/search?q=speedrun")).includes("DanaPlays"));
+  assert.ok((await names("/api/search?q=switch%20online")).includes("DanaPlays"));
+  assert.ok((await names("/api/search?platform=Nintendo")).includes("DanaPlays"));
+  assert.ok(!(await names("/api/search?platform=Nintendo")).includes("Searcher"));
+  assert.deepEqual(await names("/api/search?q=100%25"), []);
+
+  const mixed = await call("GET", "/api/search?q=play", me);
+  assert.deepEqual(mixed.body.platforms, ["PlayStation"]);
+  assert.ok(Array.isArray(mixed.body.games));
+  assert.deepEqual((await call("GET", "/api/search", me)).body, { users: [], games: [], platforms: [] });
+
+  assert.equal((await call("POST", "/api/blocks", me, { userId: danaUid })).status, 200);
+  assert.ok(!(await names("/api/search?q=danap")).includes("DanaPlays"));
+});
+
+test("AirShare finds people who open it nearby at the same time", { skip: !hasDatabase }, async () => {
+  const one = (await call("POST", "/api/auth/dev", undefined, { name: "air_one" })).body.token as string;
+  await call("PATCH", "/api/me", one, { username: "AirOne", platforms: ["PC"], onboardingComplete: true });
+  const two = (await call("POST", "/api/auth/dev", undefined, { name: "air_two" })).body.token as string;
+  await call("PATCH", "/api/me", two, { username: "AirTwo", platforms: ["PC"], onboardingComplete: true });
+
+  assert.equal((await call("POST", "/api/airshare/ping", one, { lat: 95, lng: 37 })).status, 400);
+  await call("POST", "/api/airshare/ping", one, { lat: 55.7539, lng: 37.6208, accuracy: 20 });
+  const found = await call("POST", "/api/airshare/ping", two, { lat: 55.7545, lng: 37.621, accuracy: 20 });
+  assert.equal(found.status, 200);
+  assert.ok(found.body.profiles.some((profile: { username: string }) => profile.username === "AirOne"));
+
+  assert.equal((await call("DELETE", "/api/airshare", one)).status, 200);
+  await new Promise((resolve) => setTimeout(resolve, 1_050));
+  // Same test client IP, but AirOne left.
+  const after = await call("POST", "/api/airshare/ping", two, {});
+  assert.ok(!after.body.profiles.some((profile: { username: string }) => profile.username === "AirOne"));
+  assert.equal((await call("POST", "/api/airshare/ping", undefined, {})).status, 401);
+});
+
+test("popular games and game details degrade gracefully offline", { skip: !hasDatabase }, async () => {
+  const token = (await call("POST", "/api/auth/dev", undefined, { name: "gamer_x" })).body.token as string;
+  assert.equal((await call("GET", "/api/games/popular")).status, 401);
+  const popular = await call("GET", "/api/games/popular", token);
+  assert.equal(popular.status, 200);
+  assert.ok(Array.isArray(popular.body));
+  assert.ok(popular.body.every((game: { backgroundImage: string | null }) => Boolean(game.backgroundImage)));
+  const details = await call("GET", "/api/games/details?name=Stardew%20Valley", token);
+  assert.equal(details.status, 200);
+  assert.equal(details.body.name, "Stardew Valley");
+  assert.equal(details.body.source, "catalog");
+  assert.equal((await call("GET", "/api/games/details?name=x", token)).status, 400);
 });

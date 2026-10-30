@@ -1,28 +1,28 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { Layers, MessageCircle } from "lucide-react";
+import { MessageCircle, Search } from "lucide-react";
 import { useEffect, type ReactNode } from "react";
 import { resolvedTheme, useApp, useUnreadCount, type Overlay, type Tab } from "./store";
 import { platform } from "../platform/platform";
 import { useT } from "../i18n/i18n";
-import { Avatar, Spinner, Toasts } from "../components/ui";
+import { Avatar, BrandBackground, CardStackIcon, Spinner, Toasts } from "../components/ui";
 import { Landing, AuthErrorScreen } from "../screens/Landing";
 import { Onboarding } from "../screens/Onboarding";
 import { Greeting } from "../screens/Greeting";
 import { FeedScreen } from "../screens/FeedScreen";
 import { ChatsScreen } from "../screens/ChatsScreen";
 import { ProfileScreen } from "../screens/ProfileScreen";
+import { SearchScreen, GameSheet, PlatformSheet } from "../screens/SearchScreen";
 import { ProfileDetailSheet } from "../screens/ProfileDetail";
 import { ChatSheet } from "../screens/ChatView";
 import { StoryViewer } from "../screens/StoryViewer";
 import { SettingsSheet } from "../screens/SettingsSheet";
-import { EditProfileSheet } from "../screens/EditProfileSheet";
+import { EditProfileSheet, SubscriptionEditorSheet } from "../screens/EditProfileSheet";
 import { SkillsSheet } from "../screens/SkillsSheet";
-import { NearbySheet } from "../screens/NearbySheet";
+import { AirShareSheet } from "../screens/AirShareSheet";
 import { LinkAccountsSheet } from "../screens/LinkSheet";
 import { ReportSheet } from "../screens/ReportSheet";
 import { RatingSheet } from "../screens/RatingSheet";
 import { TransparencySheet } from "../screens/TransparencySheet";
-import { MatchOverlay } from "../screens/MatchOverlay";
 
 let booted = false;
 const COLORS = { light: "#F8F7F4", dark: "#0E1117" };
@@ -52,7 +52,7 @@ export function App() {
   if (phase === "booting" || phase === "signing_in") {
     content = (
       <div className="center" style={{ height: "100%" }}>
-        <Spinner size={36} />
+        <Spinner size={30} />
       </div>
     );
   } else if (phase === "signed_out") {
@@ -69,9 +69,7 @@ export function App() {
 
   return (
     <>
-      <div className="aurora">
-        <span />
-      </div>
+      <BrandBackground />
       <div className="app">{content}</div>
       <Toasts />
     </>
@@ -81,34 +79,30 @@ export function App() {
 function MainShell() {
   const tab = useApp((state) => state.tab);
   const overlays = useApp((state) => state.overlays);
-  const match = useApp((state) => state.match);
 
   return (
     <>
-      <Sidebar />
-      <main className="main">
-        <AnimatePresence mode="wait" initial={false}>
-          <motion.div
-            key={tab}
-            style={{ height: "100%", display: "flex", flexDirection: "column", minHeight: 0 }}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.18 }}
-          >
-            {tab === "feed" && <FeedScreen />}
-            {tab === "chats" && <ChatsScreen />}
-            {tab === "profile" && <ProfileScreen />}
-          </motion.div>
-        </AnimatePresence>
-      </main>
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.div
+          key={tab}
+          style={{ position: "absolute", inset: 0 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.16 }}
+        >
+          {tab === "feed" && <FeedScreen />}
+          {tab === "chats" && <ChatsScreen />}
+          {tab === "profile" && <ProfileScreen />}
+          {tab === "search" && <SearchScreen />}
+        </motion.div>
+      </AnimatePresence>
       <TabBar />
       <AnimatePresence>
         {overlays.map((overlay, index) => (
           <OverlayView key={`${overlay.type}-${index}`} overlay={overlay} />
         ))}
       </AnimatePresence>
-      <AnimatePresence>{match && <MatchOverlay key="match" />}</AnimatePresence>
     </>
   );
 }
@@ -116,7 +110,7 @@ function MainShell() {
 function OverlayView({ overlay }: { overlay: Overlay }) {
   switch (overlay.type) {
     case "profile":
-      return <ProfileDetailSheet uid={overlay.uid} card={overlay.card} />;
+      return <ProfileDetailSheet uid={overlay.uid} card={overlay.card} source={overlay.source} />;
     case "chat":
       return <ChatSheet chatId={overlay.chatId} />;
     case "story":
@@ -125,10 +119,16 @@ function OverlayView({ overlay }: { overlay: Overlay }) {
       return <SettingsSheet />;
     case "edit":
       return <EditProfileSheet />;
+    case "subscription":
+      return <SubscriptionEditorSheet name={overlay.name} />;
     case "skills":
       return <SkillsSheet />;
-    case "nearby":
-      return <NearbySheet />;
+    case "airshare":
+      return <AirShareSheet />;
+    case "game":
+      return <GameSheet game={overlay.game} />;
+    case "platform":
+      return <PlatformSheet platformId={overlay.platform} />;
     case "link":
       return <LinkAccountsSheet />;
     case "report":
@@ -140,60 +140,80 @@ function OverlayView({ overlay }: { overlay: Overlay }) {
   }
 }
 
-function FeedIcon({ active }: { active: boolean }) {
-  return active ? <Layers size={23} strokeWidth={2.4} fill="currentColor" fillOpacity={0.25} /> : <Layers size={23} strokeWidth={2.2} />;
-}
-
+/** TabBarView.swift: Liquid Glass capsule with feed / chats / profile, plus the search button. */
 function TabBar() {
   const t = useT();
   const tab = useApp((state) => state.tab);
+  const collapsed = useApp((state) => state.tabBarCollapsed);
+  const lastTab = useApp((state) => state.lastTab);
+  const hidden = useApp((state) => state.overlays.some((overlay) => overlay.type === "chat"));
   const setTab = useApp((state) => state.setTab);
   const profile = useApp((state) => state.profile);
   const unread = useUnreadCount();
-  const items: { id: Tab; label: string; icon: ReactNode }[] = [
-    { id: "feed", label: t("tab.feed"), icon: <FeedIcon active={tab === "feed"} /> },
-    { id: "chats", label: t("tab.chats"), icon: <MessageCircle size={23} strokeWidth={2.3} fill={tab === "chats" ? "currentColor" : "none"} fillOpacity={0.25} /> },
-    { id: "profile", label: t("tab.profile"), icon: <span className="tab-avatar"><Avatar url={profile?.avatarUrl} name={profile?.username} size={25} /></span> },
+  const items: { id: Exclude<Tab, "search">; label: string; icon: ReactNode }[] = [
+    { id: "feed", label: t("tab.feed"), icon: <CardStackIcon active={tab === "feed"} /> },
+    {
+      id: "chats",
+      label: t("tab.chats"),
+      icon: <MessageCircle size={22} strokeWidth={2.2} fill={tab === "chats" ? "currentColor" : "none"} />,
+    },
+    {
+      id: "profile",
+      label: t("tab.profile"),
+      icon: (
+        <span style={{ borderRadius: "50%", boxShadow: tab === "profile" ? "0 0 0 2px var(--primary)" : undefined }}>
+          <Avatar url={profile?.avatarUrl} size={25} />
+        </span>
+      ),
+    },
   ];
-  return (
-    <nav className="tabbar glass glass-strong" aria-label="Navigation">
-      {items.map((item) => (
-        <button key={item.id} className={`tab ${tab === item.id ? "active" : ""}`} onClick={() => setTab(item.id)} aria-current={tab === item.id}>
-          {item.icon}
-          <span>{item.label}</span>
-          {item.id === "chats" && unread > 0 && <span className="badge">{unread > 99 ? "99+" : unread}</span>}
-        </button>
-      ))}
-    </nav>
-  );
-}
+  // iOS 26: while searching, the tabs shrink into one button for the last tab.
+  const searching = tab === "search";
+  const isCollapsed = collapsed || searching;
+  const shown = searching ? lastTab : tab;
 
-function Sidebar() {
-  const t = useT();
-  const tab = useApp((state) => state.tab);
-  const setTab = useApp((state) => state.setTab);
-  const profile = useApp((state) => state.profile);
-  const unread = useUnreadCount();
   return (
-    <aside className="sidebar glass">
-      <div className="brand">
-        <img src="/icons/icon-192.png" alt="" />
-        UniShare
-      </div>
-      <button className={`side-item ${tab === "feed" ? "active" : ""}`} onClick={() => setTab("feed")}>
-        <FeedIcon active={tab === "feed"} /> {t("tab.feed")}
-      </button>
-      <button className={`side-item ${tab === "chats" ? "active" : ""}`} onClick={() => setTab("chats")}>
-        <MessageCircle size={22} /> <span className="grow">{t("tab.chats")}</span>
-        {unread > 0 && <span className="badge">{unread}</span>}
-      </button>
-      <button className={`side-item ${tab === "profile" ? "active" : ""}`} onClick={() => setTab("profile")}>
-        <Avatar url={profile?.avatarUrl} name={profile?.username} size={24} /> {t("tab.profile")}
-      </button>
-      <div className="grow" />
-      <div className="faint" style={{ fontSize: 12, padding: "0 12px" }}>
-        UniShare · {platform.kind === "telegram" ? "Telegram" : platform.kind === "vk" ? "VK" : "Web"}
-      </div>
-    </aside>
+    <AnimatePresence>
+      {!hidden && (
+        <motion.nav
+          className={`tabbar-wrap ${tab === "search" ? "searching" : ""}`}
+          aria-label="Navigation"
+          initial={{ y: 120, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: 120, opacity: 0 }}
+          transition={{ type: "spring", stiffness: 380, damping: 34 }}
+        >
+          <div
+            className={`tabbar liquid ${isCollapsed ? "collapsed" : ""} ${searching ? "searching" : ""}`}
+            onClick={() => {
+              if (searching) setTab(lastTab);
+              else if (isCollapsed) useApp.setState({ tabBarCollapsed: false });
+            }}
+          >
+            {items.map((item) => (
+              <button
+                key={item.id}
+                className={`tab ${shown === item.id ? "active" : ""}`}
+                aria-label={item.label}
+                aria-current={tab === item.id}
+                onClick={(event) => {
+                  if (isCollapsed) return;
+                  event.stopPropagation();
+                  setTab(item.id);
+                }}
+              >
+                {shown === item.id && !searching && <motion.span layoutId="tab-pill" className="tab-pill" transition={{ type: "spring", stiffness: 420, damping: 34 }} />}
+                {item.icon}
+                <span className="label">{item.label}</span>
+                {item.id === "chats" && unread > 0 && <span className="badge red">{unread > 99 ? "99+" : unread}</span>}
+              </button>
+            ))}
+          </div>
+          <button className={`search-fab liquid ${tab === "search" ? "active" : ""}`} aria-label={t("search")} onClick={() => setTab("search")}>
+            <Search size={26} strokeWidth={2.6} />
+          </button>
+        </motion.nav>
+      )}
+    </AnimatePresence>
   );
 }

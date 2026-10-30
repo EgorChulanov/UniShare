@@ -1,13 +1,14 @@
-import { motion } from "framer-motion";
-import { Ban, Check, CheckCheck, ChevronLeft, Clock, EllipsisVertical, Flag, ImagePlus, SendHorizontal, ShieldCheck, Star, Trash2 } from "lucide-react";
-import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState, type ChangeEvent, type KeyboardEvent, type UIEvent } from "react";
+// Port of UniShare/Features/Chat/ChatView.swift.
+import { AnimatePresence, motion } from "framer-motion";
+import { ArrowUp, BadgeCheck, CheckCircle2, ChevronLeft, ChevronRight, Clock, Ellipsis, Flag, Image as ImageIcon, ShieldCheck, UserX } from "lucide-react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ChangeEvent, type KeyboardEvent, type UIEvent } from "react";
 import type { ChatDetails, ChatMessage } from "@unishare/shared";
 import { useApp } from "../app/store";
 import { ApiError, api, compressImage, mediaUrl } from "../lib/api";
 import { realtime } from "../lib/realtime";
 import { platform } from "../platform/platform";
-import { errorMessage, useI18n, useT, type Language } from "../i18n/i18n";
-import { Avatar, PROVIDER_COLORS, ProviderIcon, Spinner } from "../components/ui";
+import { errorMessage, useI18n, useT } from "../i18n/i18n";
+import { ActionSheet, PROVIDER_COLORS, ProviderIcon, Spinner } from "../components/ui";
 
 const PAGE_SIZE = 50;
 const TYPING_INTERVAL = 2500;
@@ -16,35 +17,10 @@ const EMPTY: ChatMessage[] = [];
 export function ChatSheet({ chatId }: { chatId: string }) {
   const pop = useApp((state) => state.pop);
   return (
-    <motion.div
-      className="chat-screen"
-      style={{ position: "fixed", inset: 0, zIndex: 70, background: "var(--bg)" }}
-      initial={{ x: "100%" }}
-      animate={{ x: 0 }}
-      exit={{ x: "100%" }}
-      transition={{ type: "spring", stiffness: 420, damping: 40 }}
-    >
+    <motion.div className="pushed" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", stiffness: 420, damping: 42 }}>
       <ChatView chatId={chatId} onClose={pop} />
     </motion.div>
   );
-}
-
-function sameDay(a: Date, b: Date): boolean {
-  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
-}
-
-function dayLabel(iso: string, language: Language, t: (key: string) => string): string {
-  const date = new Date(iso);
-  const today = new Date();
-  const yesterday = new Date();
-  yesterday.setDate(today.getDate() - 1);
-  if (sameDay(date, today)) return t("chat.today");
-  if (sameDay(date, yesterday)) return t("chat.yesterday");
-  return date.toLocaleDateString(language, {
-    day: "numeric",
-    month: "long",
-    year: date.getFullYear() === today.getFullYear() ? undefined : "numeric",
-  });
 }
 
 function removeLocalMessage(chatId: string, messageId: string) {
@@ -66,6 +42,7 @@ export function ChatView({ chatId, embedded, onClose }: { chatId: string; embedd
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [pending, setPending] = useState<Set<string>>(() => new Set());
   const [menuOpen, setMenuOpen] = useState(false);
+  const [confirmBlock, setConfirmBlock] = useState(false);
   const [lightbox, setLightbox] = useState<string | null>(null);
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
@@ -103,6 +80,15 @@ export function ChatView({ chatId, embedded, onClose }: { chatId: string; embedd
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chatId]);
+
+  // RatingSheet reports a submitted review so the banner disappears.
+  useEffect(() => {
+    const onReviewed = (event: Event) => {
+      if ((event as CustomEvent<string>).detail === chatId) setDetails((current) => (current ? { ...current, canReview: false } : current));
+    };
+    window.addEventListener("unishare:reviewed", onReviewed);
+    return () => window.removeEventListener("unishare:reviewed", onReviewed);
   }, [chatId]);
 
   // Latest messages.
@@ -273,28 +259,13 @@ export function ChatView({ chatId, embedded, onClose }: { chatId: string; embedd
     if (partner) useApp.getState().push({ type: "profile", uid: partner.uid, card: partner });
   };
 
-  const removeChatLocally = () => useApp.setState((state) => ({ chats: state.chats.filter((chat) => chat.id !== chatId) }));
-
   const block = async () => {
-    setMenuOpen(false);
-    if (!partner || !window.confirm(t("chat.block.confirmation"))) return;
+    setConfirmBlock(false);
+    if (!partner) return;
     try {
       await api.block(partner.uid);
-      removeChatLocally();
+      useApp.setState((state) => ({ chats: state.chats.filter((chat) => chat.id !== chatId) }));
       useApp.getState().toast(t("chat.blocked"), "success");
-      close();
-    } catch (error) {
-      useApp.getState().toastError(error);
-    }
-  };
-
-  const remove = async () => {
-    setMenuOpen(false);
-    if (!window.confirm(t("chat.delete.confirm"))) return;
-    try {
-      await api.hideChat(chatId);
-      removeChatLocally();
-      useApp.getState().toast(t("chat.deleted"), "success");
       close();
     } catch (error) {
       useApp.getState().toastError(error);
@@ -304,94 +275,83 @@ export function ChatView({ chatId, embedded, onClose }: { chatId: string; embedd
   const status = isTyping ? t("chat.typing") : partner?.isOnline ? t("chat.online") : t("chat.offline");
 
   return (
-    <div className="chat-screen">
-      <header className="chat-header glass glass-strong" style={{ borderRadius: 0, borderWidth: "0 0 1px 0" }}>
-        {!embedded && (
-          <button className="icon-btn small" onClick={close} aria-label={t("chat.back")}>
-            <ChevronLeft size={22} />
-          </button>
-        )}
-        <button className="who" onClick={openProfile} disabled={!partner}>
-          <Avatar url={partner?.avatarUrl} name={partner?.username} size={40} online={partner?.isOnline} />
-          <div className="grow">
-            <div className="ellipsis" style={{ fontWeight: 800 }}>{partner?.username ?? "…"}</div>
-            <div className={isTyping ? "typing" : "faint"} style={{ fontSize: 12, fontWeight: 700 }}>
-              {status}
-            </div>
-          </div>
-        </button>
-        <div style={{ position: "relative" }}>
-          <button className="icon-btn small" onClick={() => setMenuOpen((open) => !open)} aria-label={t("chat.more")} aria-expanded={menuOpen}>
-            <EllipsisVertical size={20} />
-          </button>
-          {menuOpen && (
-            <>
-              <div style={{ position: "fixed", inset: 0, zIndex: 3 }} onClick={() => setMenuOpen(false)} />
-              <motion.div
-                className="glass glass-strong chat-menu"
-                initial={{ opacity: 0, scale: 0.92, y: -6 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                transition={{ type: "spring", stiffness: 500, damping: 34 }}
-              >
-                {details?.contacts.map((contact) => (
-                  <button
-                    key={contact.provider}
-                    className="settings-row"
-                    onClick={() => {
-                      setMenuOpen(false);
-                      platform.openLink(contact.url);
-                    }}
-                  >
-                    <span className="ico" style={{ background: PROVIDER_COLORS[contact.provider] }}>
-                      <ProviderIcon provider={contact.provider} />
-                    </span>
-                    <span className="grow">
-                      {t(contact.provider === "telegram" ? "chat.contact.telegram" : "chat.contact.vk")}
-                      <div className="faint" style={{ fontSize: 12 }}>{contact.label}</div>
-                    </span>
-                  </button>
-                ))}
-                {details?.canReview && partner && (
-                  <button
-                    className="settings-row"
-                    onClick={() => {
-                      setMenuOpen(false);
-                      useApp.getState().push({ type: "rating", chatId, uid: partner.uid, username: partner.username });
-                    }}
-                  >
-                    <span className="ico" style={{ background: "#FFB020" }}><Star size={18} /></span>
-                    {t("chat.review.title")}
-                  </button>
-                )}
-                {partner && (
-                  <button
-                    className="settings-row"
-                    onClick={() => {
-                      setMenuOpen(false);
-                      useApp.getState().push({ type: "report", uid: partner.uid, username: partner.username });
-                    }}
-                  >
-                    <span className="ico" style={{ background: "#FF9F0A" }}><Flag size={18} /></span>
-                    {t("chat.report")}
-                  </button>
-                )}
-                <button className="settings-row" onClick={block} style={{ color: "var(--danger)" }}>
-                  <span className="ico" style={{ background: "var(--danger)" }}><Ban size={18} /></span>
-                  {t("chat.block")}
-                </button>
-                <button className="settings-row" onClick={remove} style={{ color: "var(--danger)" }}>
-                  <span className="ico" style={{ background: "#8E8E93" }}><Trash2 size={18} /></span>
-                  {t("chat.delete")}
-                </button>
-              </motion.div>
-            </>
+    <div className="col" style={{ flex: 1, minHeight: 0, height: "100%", width: "100%" }}>
+      <header className="nav-header chat-nav">
+        <div className="lead">
+          {!embedded && (
+            <button className="back-btn" onClick={close} aria-label={t("chat.back")}>
+              <ChevronLeft size={26} strokeWidth={2.4} />
+            </button>
           )}
+        </div>
+        <button className="principal" onClick={openProfile} disabled={!partner}>
+          <span className="ellipsis" style={{ fontSize: 16, fontWeight: 600, maxWidth: "100%" }}>
+            {partner?.username ?? ""}
+          </span>
+          <span style={{ fontSize: 12, color: isTyping ? "var(--accent-text)" : partner?.isOnline ? "var(--green)" : "var(--text-2)" }}>{status}</span>
+        </button>
+        <div className="trail" style={{ position: "relative" }}>
+          <button className="back-btn" onClick={() => setMenuOpen((open) => !open)} aria-label={t("chat.more")} aria-expanded={menuOpen}>
+            <span className="ellipsis-circle">
+              <Ellipsis size={15} strokeWidth={2.6} />
+            </span>
+          </button>
+          <AnimatePresence>
+            {menuOpen && (
+              <>
+                <div style={{ position: "fixed", inset: 0, zIndex: 4 }} onClick={() => setMenuOpen(false)} />
+                <motion.div
+                  className="menu-pop material"
+                  style={{ transformOrigin: "top right" }}
+                  initial={{ opacity: 0, scale: 0.6 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  transition={{ type: "spring", stiffness: 520, damping: 34 }}
+                >
+                  {details?.contacts.map((contact) => (
+                    <button
+                      key={contact.provider}
+                      onClick={() => {
+                        setMenuOpen(false);
+                        platform.openLink(contact.url);
+                      }}
+                    >
+                      {t(contact.provider === "telegram" ? "chat.contact.telegram" : "chat.contact.vk")}
+                      <span className="platform-badge" style={{ width: 22, height: 22, background: PROVIDER_COLORS[contact.provider], color: "#fff" }}>
+                        <ProviderIcon provider={contact.provider} size={12} />
+                      </span>
+                    </button>
+                  ))}
+                  {partner && (
+                    <button
+                      className="destructive"
+                      onClick={() => {
+                        setMenuOpen(false);
+                        useApp.getState().push({ type: "report", uid: partner.uid, username: partner.username });
+                      }}
+                    >
+                      {t("chat.report")} <Flag size={18} />
+                    </button>
+                  )}
+                  <button
+                    className="destructive"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      setConfirmBlock(true);
+                    }}
+                  >
+                    {t("chat.block")} <UserX size={18} />
+                  </button>
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
         </div>
       </header>
 
       <div className="messages" ref={listRef} onScroll={onScroll}>
-        <div className="safety-note glass">
-          <ShieldCheck size={18} color="var(--primary)" style={{ flexShrink: 0, marginTop: 1 }} />
+        <div className="safety" style={{ marginBottom: 4 }}>
+          <ShieldCheck size={16} fill="var(--primary)" color="var(--bg)" style={{ flexShrink: 0 }} />
           <span>{t("chat.safety.notice")}</span>
         </div>
         {(loadingOlder || (loading && messages.length === 0)) && (
@@ -399,68 +359,51 @@ export function ChatView({ chatId, embedded, onClose }: { chatId: string; embedd
             <Spinner size={22} />
           </div>
         )}
-        {!loading && messages.length === 0 && (
-          <div className="empty" style={{ padding: "32px 16px" }}>
-            <h3>{t("chat.empty")}</h3>
-            <div>{t("chat.empty.subtitle")}</div>
-          </div>
-        )}
-        {messages.map((message, index) => {
-          const previous = messages[index - 1];
-          const newDay = !previous || !sameDay(new Date(previous.createdAt), new Date(message.createdAt));
+        {messages.map((message) => {
           const mine = message.senderId === me;
           const time = new Date(message.createdAt).toLocaleTimeString(language, { hour: "2-digit", minute: "2-digit" });
-          const ticks = pending.has(message.id) ? <Clock size={12} /> : message.readAt ? <CheckCheck size={13} /> : <Check size={13} />;
           const image = mediaUrl(message.imageUrl);
           return (
-            <Fragment key={message.id}>
-              {newDay && <div className="day-sep">{dayLabel(message.createdAt, language, t)}</div>}
-              {image && (
-                <div className={`bubble photo ${mine ? "mine" : "theirs"}`}>
-                  <img src={image} alt={t("chat.photo")} loading="lazy" onClick={() => setLightbox(image)} />
-                  {!message.text && (
-                    <div className="meta" style={{ color: "var(--text-2)", opacity: 1 }}>
-                      {time} {mine && ticks}
-                    </div>
-                  )}
-                </div>
-              )}
-              {message.text && (
-                <div className={`bubble ${mine ? "mine" : "theirs"}`}>
-                  {message.text}
-                  <div className="meta">
-                    {time} {mine && ticks}
-                  </div>
-                </div>
-              )}
-            </Fragment>
+            <div key={message.id} className={`msg ${mine ? "mine" : "theirs"}`}>
+              {image && <img className="photo" src={image} alt={t("chat.photo")} loading="lazy" onClick={() => setLightbox(image)} />}
+              {message.text && <div className="bubble">{message.text}</div>}
+              <div className="meta">
+                {time}
+                {mine &&
+                  (pending.has(message.id) ? (
+                    <Clock size={11} />
+                  ) : message.readAt ? (
+                    <CheckCircle2 size={12} fill="var(--primary)" color="var(--bg)" />
+                  ) : (
+                    <CheckCircle2 size={12} />
+                  ))}
+              </div>
+            </div>
           );
         })}
       </div>
 
-      <div className="composer glass glass-strong" style={{ borderRadius: 0, borderWidth: "1px 0 0 0" }}>
-        <input ref={fileRef} type="file" accept="image/*" hidden onChange={sendImage} />
-        <button className="icon-btn" onClick={() => fileRef.current?.click()} disabled={sending} aria-label={t("chat.attach")}>
-          {sending ? <Spinner size={20} /> : <ImagePlus size={20} color="var(--primary)" />}
+      {details?.canReview && messages.length > 0 && partner && (
+        <button className="confirm-banner" onClick={() => useApp.getState().push({ type: "rating", chatId, uid: partner.uid, username: partner.username })}>
+          <BadgeCheck size={20} fill="var(--primary)" color="var(--bg)" />
+          <span className="col grow" style={{ gap: 2 }}>
+            <span style={{ fontSize: 13, fontWeight: 600 }}>{t("chat.review.title")}</span>
+            <span className="secondary" style={{ fontSize: 11 }}>
+              {t("chat.review.subtitle")}
+            </span>
+          </span>
+          <ChevronRight size={13} className="secondary" />
         </button>
-        <textarea
-          ref={textareaRef}
-          rows={1}
-          value={text}
-          maxLength={1000}
-          placeholder={t("chat.placeholder")}
-          onChange={onChange}
-          onKeyDown={onKeyDown}
-          enterKeyHint="send"
-        />
-        <button
-          className="icon-btn"
-          onClick={() => void sendText()}
-          disabled={!text.trim()}
-          aria-label={t("chat.send")}
-          style={text.trim() ? { background: "var(--primary)", color: "#fff", border: 0 } : undefined}
-        >
-          <SendHorizontal size={20} />
+      )}
+
+      <div className="input-bar">
+        <input ref={fileRef} type="file" accept="image/*" hidden onChange={sendImage} />
+        <button className="center" style={{ width: 36, height: 38, color: "var(--accent-text)" }} onClick={() => fileRef.current?.click()} disabled={sending} aria-label={t("chat.attach")}>
+          {sending ? <Spinner size={18} /> : <ImageIcon size={22} />}
+        </button>
+        <textarea ref={textareaRef} rows={1} value={text} maxLength={1000} placeholder={t("chat.placeholder")} onChange={onChange} onKeyDown={onKeyDown} enterKeyHint="send" />
+        <button className={`send-btn ${text.trim() ? "ready" : ""}`} onClick={() => void sendText()} disabled={!text.trim()} aria-label={t("chat.send")}>
+          <ArrowUp size={17} strokeWidth={3} />
         </button>
       </div>
 
@@ -469,6 +412,17 @@ export function ChatView({ chatId, embedded, onClose }: { chatId: string; embedd
           <img src={lightbox} alt={t("chat.photo")} />
         </div>
       )}
+
+      <AnimatePresence>
+        {confirmBlock && (
+          <ActionSheet
+            title={t("chat.block.confirmation")}
+            actions={[{ label: t("chat.block"), destructive: true, onSelect: () => void block() }]}
+            cancelLabel={t("cancel")}
+            onCancel={() => setConfirmBlock(false)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

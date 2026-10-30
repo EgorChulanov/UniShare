@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { Camera, Check, ChevronLeft, Plus, X } from "lucide-react";
+import { AtSign, CheckCircle2, ChevronLeft, Circle, Image as ImageIcon, PlusCircle, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   LIMITS,
@@ -30,7 +30,7 @@ const TITLES: Record<Step, string> = {
   subscriptions: "onboarding.title.subscriptions",
 };
 
-/** Six-step profile setup (OnboardingView.swift). */
+/** Port of UniShare/Features/Onboarding/OnboardingView.swift (six steps). */
 export function Onboarding() {
   const t = useT();
   const profile = useApp((state) => state.profile)!;
@@ -154,64 +154,62 @@ export function Onboarding() {
     setSkillInput("");
   };
 
+  const platformTabs = PLATFORMS.filter((id) => platforms.includes(id));
+
   return (
-    <div className="main" style={{ maxWidth: 640, margin: "0 auto", width: "100%" }}>
-      <div style={{ padding: "calc(var(--safe-top) + 14px) 20px 6px" }}>
-        <div className="row" style={{ marginBottom: 14 }}>
-          {stepIndex > 0 ? (
-            <button className="icon-btn small" onClick={() => go(-1)} aria-label={t("back")}>
-              <ChevronLeft size={20} />
-            </button>
-          ) : (
-            <span style={{ width: 36 }} />
-          )}
-          <div className="progress grow">
-            <span style={{ width: `${((stepIndex + 1) / STEPS.length) * 100}%` }} />
-          </div>
-          <span className="faint" style={{ fontWeight: 800, fontSize: 13, width: 36, textAlign: "right" }}>
-            {stepIndex + 1}/{STEPS.length}
-          </span>
-        </div>
-        <h1 className="screen-title" style={{ margin: "4px 0 0" }}>{t(TITLES[step])}</h1>
+    <div className="onboarding">
+      <div className="progress-caps" style={{ padding: "calc(var(--safe-top) + 16px) 24px 8px" }}>
+        {STEPS.map((item, index) => (
+          <span key={item} className={index <= stepIndex ? "on" : ""} />
+        ))}
       </div>
 
-      <div className="screen" style={{ paddingTop: 12, paddingBottom: 24 }}>
-        <AnimatePresence mode="wait" custom={direction}>
+      <div className="onboarding-body">
+        <AnimatePresence mode="wait" custom={direction} initial={false}>
           <motion.div
             key={step}
-            custom={direction}
-            initial={{ opacity: 0, x: direction * 40 }}
+            className="col"
+            style={{ gap: 24, padding: "24px 24px 16px", maxWidth: 560, margin: "0 auto", width: "100%" }}
+            initial={{ opacity: 0, x: direction * 36 }}
             animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: direction * -40 }}
-            transition={{ duration: 0.22 }}
+            exit={{ opacity: 0, x: direction * -36 }}
+            transition={{ duration: 0.3, ease: "easeInOut" }}
           >
+            <h1 style={{ margin: 0, fontSize: 26, fontWeight: 700 }}>{t(TITLES[step])}</h1>
+
             {step === "username" && (
-              <div className="col">
-                <input
-                  className="field"
-                  value={username}
-                  autoFocus
-                  maxLength={LIMITS.usernameMax}
-                  placeholder={t("onboarding.username.placeholder")}
-                  onChange={(event) => {
-                    setUsername(event.target.value);
-                    setUsernameError(null);
-                  }}
-                  onKeyDown={(event) => event.key === "Enter" && canContinue && void next()}
-                  style={{ fontSize: 20, fontWeight: 700 }}
-                />
-                {usernameError ? <div className="error-text">{usernameError}</div> : <div className="hint">{t("onboarding.username.minimum")}</div>}
+              <div className="col" style={{ gap: 16, alignItems: "center" }}>
+                <label className={`field glass ${sanitizeUsername(username) ? "gradient-border" : ""}`} style={{ width: "100%" }}>
+                  <AtSign size={18} className="secondary" />
+                  <input
+                    value={username}
+                    autoFocus
+                    maxLength={LIMITS.usernameMax}
+                    autoCapitalize="off"
+                    autoComplete="off"
+                    spellCheck={false}
+                    placeholder={t("onboarding.username.placeholder")}
+                    onChange={(event) => {
+                      setUsername(event.target.value);
+                      setUsernameError(null);
+                    }}
+                    onKeyDown={(event) => event.key === "Enter" && canContinue && void next()}
+                  />
+                </label>
+                {usernameError ? (
+                  <span style={{ fontSize: 13, color: "var(--red)" }}>{usernameError}</span>
+                ) : (
+                  username.length > 0 &&
+                  username.trim().length < 3 && <span style={{ fontSize: 13, color: "var(--accent-text)" }}>{t("onboarding.username.minimum")}</span>
+                )}
               </div>
             )}
 
             {step === "avatar" && (
-              <div className="col" style={{ alignItems: "center", gap: 18, paddingTop: 12 }}>
-                <button onClick={() => fileInput.current?.click()} style={{ position: "relative" }}>
-                  <Avatar url={avatarPreview ?? avatarUrl} name={username} size={148} ring />
-                  <span className="icon-btn" style={{ position: "absolute", right: 2, bottom: 2, background: "var(--primary)", color: "#fff" }}>
-                    <Camera size={20} />
-                  </span>
-                </button>
+              <div className="col" style={{ alignItems: "center", gap: 24 }}>
+                <span className="gradient-border" style={{ borderRadius: "50%", padding: 3 }}>
+                  <Avatar url={avatarPreview ?? avatarUrl} size={140} />
+                </span>
                 <input
                   ref={fileInput}
                   type="file"
@@ -223,12 +221,13 @@ export function Onboarding() {
                     event.target.value = "";
                   }}
                 />
-                <button className="btn btn-glass" onClick={() => fileInput.current?.click()}>
-                  <Camera size={18} /> {t("onboarding.avatar.upload")}
+                <button className="glass row" style={{ gap: 8, padding: "14px 24px", borderRadius: 14, color: "var(--accent-text)", fontSize: 15, fontWeight: 500 }} onClick={() => fileInput.current?.click()}>
+                  <ImageIcon size={18} /> {t("profile.change.avatar")}
                 </button>
-                {platformPhoto && (
+                {platformPhoto && avatarUrl !== platformPhoto && (
                   <button
-                    className="btn btn-ghost"
+                    className="btn-plain"
+                    style={{ fontSize: 15 }}
                     onClick={() => {
                       setAvatarFile(null);
                       setAvatarPreview(null);
@@ -238,26 +237,31 @@ export function Onboarding() {
                     {t("onboarding.avatar.platform")}
                   </button>
                 )}
-                <div className="hint">{t("onboarding.avatar.hint")}</div>
+                <span className="secondary" style={{ fontSize: 13, textAlign: "center" }}>
+                  {t("onboarding.title.avatar")}
+                </span>
               </div>
             )}
 
             {step === "platform" && (
-              <div className="platform-grid">
+              <div className="col" style={{ gap: 10 }}>
                 {PLATFORMS.map((id) => {
                   const selected = platforms.includes(id);
                   return (
                     <button
                       key={id}
-                      className={`platform-tile glass ${selected ? "selected" : ""}`}
+                      className={`check-row glass ${selected ? "selected-2" : ""}`}
+                      style={{ padding: "14px 16px", borderRadius: 14, gap: 14 }}
                       onClick={() => {
-                        platform.haptic("selection");
+                        platform.haptic("light");
                         setPlatforms(selected ? platforms.filter((p) => p !== id) : [...platforms, id]);
                       }}
                     >
-                      <PlatformBadge platform={id} size={38} />
-                      <span className="grow">{id}</span>
-                      {selected && <Check size={18} color="var(--primary)" />}
+                      <PlatformBadge platform={id} size={32} />
+                      <span className="grow ellipsis" style={{ fontSize: 15, fontWeight: 500 }}>
+                        {id}
+                      </span>
+                      {selected ? <CheckCircle2 size={22} fill="var(--primary)" color="var(--bg)" /> : <Circle size={22} strokeWidth={1.6} className="secondary" />}
                     </button>
                   );
                 })}
@@ -265,61 +269,65 @@ export function Onboarding() {
             )}
 
             {step === "games" && activePlatform && (
-              <div className="col" style={{ gap: 14 }}>
-                <div className="row" style={{ overflowX: "auto", paddingBottom: 4 }}>
-                  {platforms.map((id) => (
-                    <button key={id} className={`chip ${id === activePlatform ? "selected" : ""}`} onClick={() => setActivePlatform(id)}>
-                      <PlatformBadge platform={id} size={20} /> {id}
-                      {(games[id]?.length ?? 0) > 0 && <span className="badge" style={{ background: "var(--primary)" }}>{games[id]!.length}</span>}
+              <div className="col" style={{ gap: 16 }}>
+                <div className="h-scroll" style={{ margin: 0, padding: "0 2px", gap: 8 }}>
+                  {platformTabs.map((id) => (
+                    <button key={id} className={`platform-tab ${id === activePlatform ? "active" : ""}`} style={{ padding: "9px 14px" }} onClick={() => setActivePlatform(id)}>
+                      <PlatformBadge platform={id} size={16} /> {id}
+                      {(games[id]?.length ?? 0) > 0 && <span className="count">{games[id]!.length}</span>}
                     </button>
                   ))}
                 </div>
-                <div className="muted" style={{ fontWeight: 700 }}>{t("onboarding.games.for", activePlatform)}</div>
                 <GamePicker key={activePlatform} selected={games[activePlatform] ?? []} onToggle={toggleGame} limit={LIMITS.gamesPerPlatform} />
               </div>
             )}
 
             {step === "skills" && (
-              <div className="col">
+              <div className="col" style={{ gap: 16 }}>
                 <form
-                  className="row"
+                  className="field glass"
                   onSubmit={(event) => {
                     event.preventDefault();
                     addSkill();
                   }}
                 >
-                  <input className="field grow" value={skillInput} onChange={(event) => setSkillInput(event.target.value)} placeholder={t("onboarding.skills.placeholder")} maxLength={40} />
-                  <button className="icon-btn" type="submit" aria-label="add" style={{ width: 52, height: 52 }}>
-                    <Plus size={22} />
+                  <input value={skillInput} onChange={(event) => setSkillInput(event.target.value)} placeholder={t("onboarding.skills.placeholder")} maxLength={40} />
+                  <button type="submit" aria-label="add" style={{ display: "flex", color: "var(--primary)" }}>
+                    <PlusCircle size={24} fill="currentColor" color="var(--bg)" />
                   </button>
                 </form>
-                <div className="chips">
+                <div className="flow">
                   {skills.map((skill) => (
-                    <button key={skill} className="chip selected" onClick={() => setSkills(skills.filter((item) => item !== skill))}>
-                      {skill} <X size={14} />
-                    </button>
+                    <span key={skill} className="chip" style={{ background: "color-mix(in srgb, var(--primary) 20%, transparent)", fontSize: 14 }}>
+                      {skill}
+                      <button onClick={() => setSkills(skills.filter((item) => item !== skill))} aria-label={t("delete")} style={{ display: "flex" }} className="secondary">
+                        <X size={12} strokeWidth={3} />
+                      </button>
+                    </span>
                   ))}
                 </div>
               </div>
             )}
 
             {step === "subscriptions" && (
-              <div className="col">
-                <div className="hint" style={{ marginTop: 0 }}>{t("onboarding.subscriptions.hint")}</div>
+              <div className="col" style={{ gap: 10 }}>
                 {SUBSCRIPTION_SERVICES.map((service) => {
                   const selected = subscriptions.includes(service.name);
                   return (
                     <button
                       key={service.name}
-                      className={`platform-tile glass ${selected ? "selected" : ""}`}
+                      className={`check-row glass ${selected ? "selected" : ""}`}
+                      style={{ padding: 16, borderRadius: 14 }}
                       onClick={() => {
-                        platform.haptic("selection");
+                        platform.haptic("light");
                         setSubscriptions(selected ? subscriptions.filter((name) => name !== service.name) : [...subscriptions, service.name]);
                       }}
                     >
-                      {service.brand && <BrandIcon file={service.brand} size={24} />}
-                      <span className="grow">{service.name}</span>
-                      {selected && <Check size={18} color="var(--primary)" />}
+                      <span style={{ width: 28, display: "flex", justifyContent: "center", color: "var(--accent-text)" }}>{service.brand && <BrandIcon file={service.brand} size={22} />}</span>
+                      <span className="grow ellipsis" style={{ fontSize: 15 }}>
+                        {service.name}
+                      </span>
+                      {selected ? <CheckCircle2 size={22} fill="var(--primary)" color="var(--bg)" /> : <Circle size={22} strokeWidth={1.6} className="secondary" />}
                     </button>
                   );
                 })}
@@ -329,12 +337,17 @@ export function Onboarding() {
         </AnimatePresence>
       </div>
 
-      <div style={{ padding: "8px 20px calc(var(--safe-bottom) + 16px)" }} className="col">
-        <button className="btn btn-primary btn-block" disabled={!canContinue || saving} onClick={() => void next()}>
+      <div className="row onboarding-nav">
+        {stepIndex > 0 && (
+          <button className="glass center" style={{ width: 52, height: 52, borderRadius: 14, flexShrink: 0 }} onClick={() => go(-1)} aria-label={t("back")}>
+            <ChevronLeft size={22} strokeWidth={2.6} />
+          </button>
+        )}
+        <button className="btn-primary" disabled={!canContinue || saving} onClick={() => void next()}>
           {saving ? <Spinner size={20} /> : isLast ? t("onboarding.complete") : t("next")}
         </button>
-        {(step === "avatar" || step === "games" || step === "skills" || step === "subscriptions") && !isLast && (
-          <button className="btn btn-ghost" onClick={() => go(1)}>
+        {step === "games" && (
+          <button className="btn-plain secondary" style={{ fontSize: 14, flexShrink: 0 }} onClick={() => go(1)}>
             {t("skip")}
           </button>
         )}

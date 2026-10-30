@@ -1,3 +1,5 @@
+// Port of CommunityStoryViewer in UniShare/Features/Chat/CommunityStoriesView.swift.
+// Tapping the right / left side moves between the stories of the rail.
 import { motion } from "framer-motion";
 import { Gamepad2, Heart, Link2, ShieldCheck, Sparkles, User, X } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -9,19 +11,14 @@ import { useStories } from "./FeedScreen";
 
 const STORY_MS = 7000;
 
-export function storyBackground(accentHex: string): string {
-  const accent = `#${accentHex}`;
-  return `radial-gradient(120% 90% at 0% 0%, ${accent}, transparent 60%), linear-gradient(160deg, ${accent}cc, #1b1f2b 85%)`;
-}
-
 export function StoryGlyph({ symbol, size = 22 }: { symbol: string; size?: number }) {
   const value = symbol.toLowerCase();
-  if (value.includes("shield")) return <ShieldCheck size={size} />;
-  if (value.includes("heart")) return <Heart size={size} />;
-  if (value.includes("person") || value.includes("user")) return <User size={size} />;
-  if (value.includes("link")) return <Link2 size={size} />;
-  if (value.includes("game")) return <Gamepad2 size={size} />;
-  return <Sparkles size={size} />;
+  if (value.includes("shield")) return <ShieldCheck size={size} strokeWidth={2.4} />;
+  if (value.includes("heart")) return <Heart size={size} strokeWidth={2.4} fill="currentColor" />;
+  if (value.includes("person") || value.includes("user")) return <User size={size} strokeWidth={2.4} fill="currentColor" />;
+  if (value.includes("link")) return <Link2 size={size} strokeWidth={2.4} />;
+  if (value.includes("game")) return <Gamepad2 size={size} strokeWidth={2.4} />;
+  return <Sparkles size={size} strokeWidth={2.4} fill="currentColor" />;
 }
 
 export function StoryViewer({ index: initial }: { index: number }) {
@@ -57,6 +54,8 @@ export function StoryViewer({ index: initial }: { index: number }) {
   }, [paused, index]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!story) return null;
+  const accent = `#${story.accentHex}`;
+  const image = mediaUrl(story.imageUrl);
 
   const go = (delta: number) => {
     platform.haptic("selection");
@@ -77,51 +76,57 @@ export function StoryViewer({ index: initial }: { index: number }) {
   return (
     <motion.div
       className="story-viewer"
-      style={{ background: storyBackground(story.accentHex) }}
-      initial={{ opacity: 0, scale: 0.96 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.96 }}
+      style={{ background: `linear-gradient(135deg, ${accent}, color-mix(in srgb, ${accent} 58%, transparent) 50%, #000), #000` }}
+      initial={{ y: "100%" }}
+      animate={{ y: 0 }}
+      exit={{ y: "100%" }}
+      transition={{ type: "spring", stiffness: 380, damping: 40 }}
       onPointerDown={() => setPaused(true)}
       onPointerUp={() => setPaused(false)}
       onPointerCancel={() => setPaused(false)}
     >
-      <div className="story-progress">
-        {stories.map((item, i) => (
-          <div key={item.id}>
-            <span style={{ width: i < index ? "100%" : i === index ? `${(elapsed / STORY_MS) * 100}%` : "0%" }} />
-          </div>
-        ))}
-      </div>
-      <div className="row" style={{ marginTop: 14 }}>
-        <span className="row" style={{ gap: 8, fontWeight: 800 }}>
-          <img src="/icons/icon-192.png" alt="" style={{ width: 28, height: 28, borderRadius: 8 }} /> UniShare
-        </span>
-        <span className="grow" />
-        <button className="icon-btn small" style={{ color: "#fff", background: "rgba(255,255,255,0.15)" }} onClick={pop} aria-label="close">
-          <X size={18} />
-        </button>
-      </div>
-
-      <div style={{ position: "relative", flex: 1, display: "flex", flexDirection: "column", justifyContent: "flex-end", gap: 14, maxWidth: 560, width: "100%", margin: "0 auto" }}>
-        <button style={{ position: "absolute", left: 0, top: 0, bottom: 120, width: "35%" }} onClick={() => go(-1)} aria-label="previous" />
-        <button style={{ position: "absolute", right: 0, top: 0, bottom: 120, width: "65%" }} onClick={() => go(1)} aria-label="next" />
-        {story.imageUrl ? (
-          <img src={mediaUrl(story.imageUrl)!} alt="" style={{ borderRadius: 24, maxHeight: "40vh", objectFit: "cover" }} />
-        ) : (
-          <motion.div key={story.id} initial={{ scale: 0.7, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="center glass" style={{ width: 96, height: 96, borderRadius: 30, color: "#fff" }}>
-            <StoryGlyph symbol={story.symbol} size={46} />
-          </motion.div>
-        )}
-        <motion.div key={`${story.id}-text`} initial={{ y: 16, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>
-          <h1 style={{ fontSize: 34, margin: "0 0 6px", letterSpacing: "-0.02em" }}>{story.title}</h1>
-          <div style={{ fontSize: 17, fontWeight: 700, opacity: 0.85, marginBottom: 12 }}>{story.subtitle}</div>
-          <p style={{ fontSize: 16, lineHeight: 1.5, opacity: 0.9, margin: 0 }}>{story.body}</p>
-        </motion.div>
-        {story.ctaTitle && story.ctaUrl && (
-          <button className="btn btn-block" style={{ background: "#fff", color: "#0e1117", position: "relative", zIndex: 2 }} onClick={cta}>
-            {story.ctaTitle}
+      {image && (
+        <>
+          <img src={image} alt="" className="story-image" />
+          <div className="story-image-shade" />
+        </>
+      )}
+      <div className="story-inner">
+        <div className="story-progress">
+          {stories.map((item, i) => (
+            <div key={item.id}>
+              <span style={{ width: i < index ? "100%" : i === index ? `${(elapsed / STORY_MS) * 100}%` : "0%" }} />
+            </div>
+          ))}
+        </div>
+        <div className="row" style={{ marginTop: 12, position: "relative", zIndex: 2 }}>
+          <span className="row" style={{ gap: 6, fontSize: 14, fontWeight: 700 }}>
+            <StoryGlyph symbol={story.symbol} size={15} /> UniShare
+          </span>
+          <span className="grow" />
+          <button className="story-close" onClick={pop} aria-label="close">
+            <X size={15} strokeWidth={3} />
           </button>
-        )}
+        </div>
+
+        <div style={{ position: "relative", flex: 1 }}>
+          <button style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: "35%" }} onClick={() => go(-1)} aria-label="previous" />
+          <button style={{ position: "absolute", right: 0, top: 0, bottom: 0, width: "65%" }} onClick={() => go(1)} aria-label="next" />
+        </div>
+
+        <motion.div key={story.id} initial={{ y: 18, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ type: "spring", stiffness: 260, damping: 28 }}>
+          <div className="story-symbol">
+            <StoryGlyph symbol={story.symbol} size={30} />
+          </div>
+          <h1 style={{ fontSize: 34, fontWeight: 800, margin: 0, lineHeight: 1.1 }}>{story.title}</h1>
+          <div style={{ fontSize: 17, fontWeight: 600, color: "rgba(255,255,255,0.82)", marginTop: 10 }}>{story.subtitle}</div>
+          <p style={{ fontSize: 15, fontWeight: 500, color: "rgba(255,255,255,0.78)", lineHeight: 1.6, margin: "18px 0 0" }}>{story.body}</p>
+          {story.ctaTitle && story.ctaUrl && (
+            <button className="story-cta" style={{ color: accent }} onClick={cta}>
+              {story.ctaTitle}
+            </button>
+          )}
+        </motion.div>
       </div>
     </motion.div>
   );

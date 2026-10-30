@@ -1,5 +1,7 @@
-import { Camera, Check, ChevronDown, Trash2 } from "lucide-react";
-import { useMemo, useRef, useState, type ChangeEvent } from "react";
+// Port of UniShare/Features/Profile/EditProfileSheet.swift (+ SubscriptionEditorSheet).
+import { AtSign, Camera, CheckCircle2, Circle, Hash, Sparkles } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
+import { create } from "zustand";
 import {
   CYCLES,
   LIMITS,
@@ -8,115 +10,152 @@ import {
   normalizeGameName,
   sanitizeUsername,
   subscriptionService,
+  type BillingCycle,
   type GameTag,
   type Platform,
   type Subscription,
 } from "@unishare/shared";
 import { useApp } from "../app/store";
 import { api, compressImage } from "../lib/api";
-import { errorMessage, useT } from "../i18n/i18n";
+import { errorMessage, useI18n, useT } from "../i18n/i18n";
 import { platform } from "../platform/platform";
 import { GamePicker } from "../components/GamePicker";
-import { Avatar, BrandIcon, PlatformBadge, Sheet, Spinner, Toggle } from "../components/ui";
-import { tagFor } from "./ProfileScreen";
+import { Avatar, BrandIcon, PlatformBadge, Sheet, Spinner, Toggle, platformColor } from "../components/ui";
+import { subscriptionProgress, tagFor } from "./ProfileScreen";
 
-function toggleTag(list: GameTag[], tag: GameTag, limit: number): GameTag[] {
-  const key = normalizeGameName(tag.name);
-  if (list.some((item) => normalizeGameName(item.name) === key)) return list.filter((item) => normalizeGameName(item.name) !== key);
-  return list.length >= limit ? list : [...list, tag];
+interface EditDraft {
+  username: string;
+  status: string;
+  platforms: Platform[];
+  games: Partial<Record<Platform, GameTag[]>>;
+  active: Platform | null;
+  subscriptions: Subscription[];
 }
 
-function dateInputValue(iso: string | null | undefined): string {
-  return iso ? iso.slice(0, 10) : "";
+/** Shared between the edit sheet and the subscription editor pushed on top of it. */
+const useEditDraft = create<EditDraft>(() => ({ username: "", status: "", platforms: [], games: {}, active: null, subscriptions: [] }));
+
+const DAY_MS = 86_400_000;
+
+/** SubscriptionEditorSheet.normalizeDraft: valid plan / cycle, start date and expiry. */
+function normalizeSubscription(subscription: Subscription, recalculateExpiry: boolean): Subscription {
+  const service = subscriptionService(subscription.name);
+  if (!service) return subscription;
+  const plan = service.plans.find((item) => item.name === subscription.planName) ?? service.plans[0];
+  const cycle = (plan.cycles as string[]).includes(subscription.billingCycleId ?? "") ? (subscription.billingCycleId as BillingCycle["id"]) : plan.cycles[0];
+  const startedAt = subscription.startedAt ?? new Date().toISOString();
+  const next: Subscription = { ...subscription, planName: plan.name, billingCycleId: cycle, startedAt, autoRenew: subscription.autoRenew ?? false };
+  if (recalculateExpiry || !next.expiresAt) next.expiresAt = new Date(new Date(startedAt).getTime() + CYCLES[cycle].days * DAY_MS).toISOString();
+  return next;
 }
 
 export function EditProfileSheet() {
   const t = useT();
   const profile = useApp((state) => state.profile)!;
   const setProfile = useApp((state) => state.setProfile);
-  const toast = useApp((state) => state.toast);
-  const toastError = useApp((state) => state.toastError);
+  const push = useApp((state) => state.push);
   const pop = useApp((state) => state.pop);
-
-  const [username, setUsername] = useState(profile.username ?? "");
-  const [status, setStatus] = useState(profile.status ?? "");
-  const [platforms, setPlatforms] = useState<Platform[]>(profile.platforms);
-  const [platformGames, setPlatformGames] = useState<Partial<Record<Platform, GameTag[]>>>(() => {
-    const result: Partial<Record<Platform, GameTag[]>> = {};
+  const toast = useApp((state) => state.toast);
+  // ProfileViewModel.startEditing — seeds the draft before this component subscribes to it.
+  useState(() => {
+    const games: Partial<Record<Platform, GameTag[]>> = {};
     for (const id of PLATFORMS) {
       const names = profile.platformGames[id];
-      if (names?.length) result[id] = names.map((name) => tagFor(profile, name));
+      if (names?.length) games[id] = names.map((name) => tagFor(profile, name));
     }
-    return result;
+    useEditDraft.setState({
+      username: profile.username ?? "",
+      status: profile.status ?? "",
+      platforms: PLATFORMS.filter((id) => profile.platforms.includes(id)),
+      games,
+      active: PLATFORMS.find((id) => profile.platforms.includes(id)) ?? null,
+      subscriptions: profile.subscriptions,
+    });
+    return null;
   });
-  const [wanted, setWanted] = useState<GameTag[]>(profile.wantedGames.map((name) => tagFor(profile, name)));
-  const [subscriptions, setSubscriptions] = useState<Subscription[]>(profile.subscriptions);
-  const [openPlatform, setOpenPlatform] = useState<Platform | "wanted" | null>(null);
+  const draft = useEditDraft();
   const [saving, setSaving] = useState(false);
-  const [usernameError, setUsernameError] = useState<string | null>(null);
-  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [avatar, setAvatar] = useState<{ blob: Blob; url: string } | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
 
-  const validUsername = useMemo(() => sanitizeUsername(username), [username]);
+  useEffect(() => () => {
+    if (avatar) URL.revokeObjectURL(avatar.url);
+  }, [avatar]);
+
+  const username = useMemo(() => sanitizeUsername(draft.username), [draft.username]);
+  const canSave = Boolean(username) && draft.platforms.length > 0 && draft.status.length <= LIMITS.statusMax;
 
   const togglePlatform = (id: Platform) => {
-    platform.haptic("selection");
-    setPlatforms((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
+    platform.haptic("light");
+    const selected = draft.platforms.includes(id);
+    const platforms = selected ? draft.platforms.filter((item) => item !== id) : PLATFORMS.filter((item) => item === id || draft.platforms.includes(item));
+    let active = draft.active;
+    if (selected && active === id) active = platforms[0] ?? null;
+    if (!selected && !active) active = id;
+    useEditDraft.setState({ platforms, active });
+  };
+
+  const toggleGame = (tag: GameTag, id: Platform) => {
+    const list = draft.games[id] ?? [];
+    const key = normalizeGameName(tag.name);
+    const next = list.some((item) => normalizeGameName(item.name) === key) ? list.filter((item) => normalizeGameName(item.name) !== key) : [...list, tag];
+    useEditDraft.setState({ games: { ...draft.games, [id]: next } });
   };
 
   const onAvatar = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file) return;
-    setAvatarUploading(true);
-    try {
-      await api.uploadAvatar(await compressImage(file, 800));
-      const fresh = await api.me();
-      setProfile(fresh);
-    } catch (error) {
-      toastError(error);
-    } finally {
-      setAvatarUploading(false);
+    const blob = await compressImage(file, 800);
+    setAvatar({ blob, url: URL.createObjectURL(blob) });
+  };
+
+  const openSubscription = (name: string) => {
+    platform.haptic("light");
+    if (!draft.subscriptions.some((item) => item.name === name)) {
+      if (draft.subscriptions.length >= LIMITS.subscriptions) return;
+      const added = normalizeSubscription({ id: crypto.randomUUID(), name }, true);
+      useEditDraft.setState({ subscriptions: [...draft.subscriptions, added] });
     }
+    push({ type: "subscription", name });
   };
 
   const save = async () => {
-    if (!validUsername) {
-      setUsernameError(t("error.invalid_username"));
-      return;
-    }
+    if (!username) return toast(t("profile.error.username"), "error");
+    if (!draft.platforms.length) return toast(t("profile.error.platform.required"), "error");
+    if (draft.status.length > LIMITS.statusMax) return toast(t("profile.error.status.length"), "error");
     setSaving(true);
-    setUsernameError(null);
-    const gameMetadata = { ...profile.gameMetadata };
-    const remember = (tag: GameTag) => {
-      const key = normalizeGameName(tag.name);
-      const known = gameMetadata[key];
-      gameMetadata[key] = { name: tag.name, coverUrl: tag.coverUrl ?? known?.coverUrl ?? null, rawgId: tag.rawgId ?? known?.rawgId ?? null };
-    };
-    const names: Partial<Record<Platform, string[]>> = {};
-    for (const id of platforms) {
-      const tags = platformGames[id] ?? [];
-      tags.forEach(remember);
-      if (tags.length) names[id] = tags.map((tag) => tag.name);
-    }
-    wanted.forEach(remember);
     try {
+      if (avatar) await api.uploadAvatar(avatar.blob);
+      const gameMetadata = { ...profile.gameMetadata };
+      const platformGames: Partial<Record<Platform, string[]>> = {};
+      for (const id of draft.platforms) {
+        const tags = draft.games[id] ?? [];
+        for (const tag of tags) {
+          const key = normalizeGameName(tag.name);
+          const known = gameMetadata[key];
+          gameMetadata[key] = {
+            name: tag.name,
+            coverUrl: tag.coverUrl ?? known?.coverUrl ?? null,
+            rawgId: tag.rawgId ?? known?.rawgId ?? null,
+            steamAppId: tag.steamAppId ?? known?.steamAppId ?? null,
+          };
+        }
+        if (tags.length) platformGames[id] = tags.map((tag) => tag.name);
+      }
       const updated = await api.updateMe({
-        username: validUsername,
-        status: status.trim() || null,
-        platforms,
-        platformGames: names,
-        wantedGames: wanted.map((tag) => tag.name),
+        username,
+        status: draft.status.trim() || null,
+        platforms: draft.platforms,
+        platformGames,
         gameMetadata,
-        subscriptions,
+        subscriptions: draft.subscriptions,
       });
       setProfile(updated);
-      toast(t("common.saved"), "success");
+      platform.haptic("success");
       pop();
     } catch (error) {
-      const code = (error as { code?: string }).code;
-      if (code === "username_taken" || code === "invalid_username") setUsernameError(errorMessage(error));
-      else toastError(error);
+      toast(errorMessage(error), "error");
     } finally {
       setSaving(false);
     }
@@ -124,232 +163,283 @@ export function EditProfileSheet() {
 
   return (
     <Sheet
-      full
-      wide
       title={t("profile.edit")}
-      footer={
-        <button className="btn btn-primary btn-block" disabled={saving || platforms.length === 0 || !validUsername} onClick={save}>
-          {saving ? <Spinner size={20} /> : <Check size={18} />} {t("save")}
+      lead={
+        <button className="btn-plain secondary" onClick={pop}>
+          {t("cancel")}
+        </button>
+      }
+      trail={
+        <button className="btn-plain" style={{ fontWeight: 600 }} disabled={saving || !canSave} onClick={save}>
+          {saving ? <Spinner size={18} /> : t("save")}
         </button>
       }
     >
-      <div className="col" style={{ gap: 18 }}>
-        <div className="center" style={{ flexDirection: "column", gap: 10 }}>
-          <button style={{ position: "relative" }} onClick={() => fileInput.current?.click()}>
-            <Avatar url={profile.avatarUrl} name={username || profile.username} size={96} ring />
-            <span
-              className="center"
-              style={{ position: "absolute", right: -2, bottom: -2, width: 32, height: 32, borderRadius: "50%", background: "var(--primary)", color: "#fff", border: "3px solid var(--bg)" }}
-            >
-              {avatarUploading ? <Spinner size={14} /> : <Camera size={15} />}
+      <div className="container col" style={{ gap: 24, padding: "8px 16px 32px" }}>
+        <div className="col" style={{ alignItems: "center", gap: 10 }}>
+          <button style={{ position: "relative" }} onClick={() => fileInput.current?.click()} aria-label={t("profile.change.avatar")}>
+            {avatar ? <img src={avatar.url} alt="" style={{ width: 90, height: 90, borderRadius: "50%", objectFit: "cover" }} /> : <Avatar url={profile.avatarUrl} size={90} />}
+            <span className="center" style={{ position: "absolute", right: 0, bottom: 0, width: 26, height: 26, borderRadius: "50%", background: "var(--primary)" }}>
+              <Camera size={11} fill="#fff" color="var(--primary)" />
             </span>
           </button>
-          <button className="btn-ghost btn" onClick={() => fileInput.current?.click()}>
+          <button className="btn-plain" style={{ fontSize: 14, padding: 0 }} onClick={() => fileInput.current?.click()}>
             {t("profile.change.avatar")}
           </button>
           <input ref={fileInput} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={onAvatar} />
         </div>
 
-        <div>
-          <label className="label" htmlFor="edit-username">{t("profile.username")}</label>
-          <input
-            id="edit-username"
-            className="field"
-            value={username}
-            maxLength={LIMITS.usernameMax}
-            autoComplete="off"
-            autoCapitalize="off"
-            onChange={(event) => {
-              setUsername(event.target.value);
-              setUsernameError(null);
-            }}
-            placeholder={t("onboarding.username.placeholder")}
-          />
-          {usernameError ? <div className="error-text">{usernameError}</div> : !validUsername && username && <div className="error-text">{t("error.invalid_username")}</div>}
-        </div>
+        <EditField title={t("profile.username")}>
+          <label className="field glass">
+            <AtSign size={18} className="secondary" />
+            <input
+              value={draft.username}
+              maxLength={LIMITS.usernameMax}
+              autoComplete="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              placeholder={t("profile.username")}
+              onChange={(event) => useEditDraft.setState({ username: event.target.value })}
+            />
+          </label>
+        </EditField>
 
-        <div>
-          <label className="label" htmlFor="edit-status">{t("profile.status")}</label>
-          <textarea
-            id="edit-status"
-            className="field"
-            rows={2}
-            maxLength={LIMITS.statusMax}
-            value={status}
-            onChange={(event) => setStatus(event.target.value)}
-            placeholder={t("profile.status.placeholder")}
-          />
-          <div className="hint" style={{ textAlign: "right" }}>{status.length}/{LIMITS.statusMax}</div>
-        </div>
+        <EditField title={t("profile.status")}>
+          <label className="field glass">
+            <Hash size={18} className="secondary" />
+            <input value={draft.status} maxLength={LIMITS.statusMax} placeholder={t("profile.status.placeholder")} onChange={(event) => useEditDraft.setState({ status: event.target.value })} />
+          </label>
+        </EditField>
 
-        <div>
-          <span className="label">{t("profile.platforms")}</span>
-          <div className="platform-grid">
-            {PLATFORMS.map((id) => (
-              <button key={id} className={`platform-tile glass ${platforms.includes(id) ? "selected" : ""}`} onClick={() => togglePlatform(id)} aria-pressed={platforms.includes(id)}>
-                <PlatformBadge platform={id} size={34} />
-                <span className="grow">{id}</span>
-                {platforms.includes(id) && <Check size={18} color="var(--primary)" />}
-              </button>
-            ))}
-          </div>
-          {platforms.length === 0 && <div className="error-text">{t("error.platform_required")}</div>}
-        </div>
-
-        <div className="col" style={{ gap: 8 }}>
-          <span className="label">{t("profile.games")}</span>
-          {platforms.map((id) => {
-            const tags = platformGames[id] ?? [];
-            const open = openPlatform === id;
-            return (
-              <div key={id} className="glass" style={{ borderRadius: 20, padding: 12 }}>
-                <button className="row" style={{ width: "100%", textAlign: "left" }} onClick={() => setOpenPlatform(open ? null : id)}>
-                  <PlatformBadge platform={id} size={30} />
-                  <b className="grow">{t("onboarding.games.for", id)}</b>
-                  <span className="pill">{tags.length}</span>
-                  <ChevronDown size={18} style={{ transform: open ? "rotate(180deg)" : undefined, transition: "transform 0.2s" }} />
+        <EditField title={t("profile.platforms")}>
+          <div className="col" style={{ gap: 8 }}>
+            {PLATFORMS.map((id) => {
+              const selected = draft.platforms.includes(id);
+              return (
+                <button key={id} className={`check-row glass ${selected ? "selected" : ""}`} style={{ padding: 12, borderRadius: 12 }} onClick={() => togglePlatform(id)} aria-pressed={selected}>
+                  <PlatformBadge platform={id} size={28} />
+                  <span className="grow ellipsis" style={{ fontSize: 14 }}>
+                    {id}
+                  </span>
+                  <CheckMark on={selected} />
                 </button>
-                {open && (
-                  <div style={{ marginTop: 12 }}>
-                    <GamePicker
-                      selected={tags}
-                      limit={LIMITS.gamesPerPlatform}
-                      onToggle={(tag) => setPlatformGames((current) => ({ ...current, [id]: toggleTag(current[id] ?? [], tag, LIMITS.gamesPerPlatform) }))}
-                    />
-                  </div>
-                )}
-              </div>
-            );
-          })}
-          <div className="glass" style={{ borderRadius: 20, padding: 12 }}>
-            <button className="row" style={{ width: "100%", textAlign: "left" }} onClick={() => setOpenPlatform(openPlatform === "wanted" ? null : "wanted")}>
-              <b className="grow">{t("profile.wanted")}</b>
-              <span className="pill">{wanted.length}</span>
-              <ChevronDown size={18} style={{ transform: openPlatform === "wanted" ? "rotate(180deg)" : undefined, transition: "transform 0.2s" }} />
-            </button>
-            {openPlatform === "wanted" && (
-              <div style={{ marginTop: 12 }}>
-                <GamePicker selected={wanted} limit={LIMITS.wantedGames} onToggle={(tag) => setWanted((current) => toggleTag(current, tag, LIMITS.wantedGames))} />
-              </div>
-            )}
+              );
+            })}
           </div>
-        </div>
+        </EditField>
 
-        <SubscriptionsEditor value={subscriptions} onChange={setSubscriptions} />
+        {draft.platforms.length > 0 && (
+          <EditField title={t("profile.games")}>
+            <div className="col" style={{ gap: 12 }}>
+              <div className="h-scroll" style={{ margin: 0, padding: 0, gap: 8 }}>
+                {draft.platforms.map((id) => (
+                  <button key={id} className={`platform-tab ${draft.active === id ? "active" : ""}`} onClick={() => useEditDraft.setState({ active: id })}>
+                    <PlatformBadge platform={id} size={18} />
+                    {id}
+                  </button>
+                ))}
+              </div>
+              {draft.active && (
+                <GamePicker
+                  key={draft.active}
+                  selected={draft.games[draft.active] ?? []}
+                  limit={LIMITS.gamesPerPlatform}
+                  chipColor={platformColor(draft.active)}
+                  onToggle={(tag) => toggleGame(tag, draft.active!)}
+                />
+              )}
+            </div>
+          </EditField>
+        )}
+
+        <EditField title={t("profile.subscriptions")}>
+          <div className="col" style={{ gap: 8 }}>
+            {SUBSCRIPTION_SERVICES.map((service) => {
+              const existing = draft.subscriptions.find((item) => item.name === service.name);
+              return (
+                <button key={service.name} className={`check-row sub-row ${existing ? "selected" : ""}`} onClick={() => openSubscription(service.name)}>
+                  <span style={{ width: 26, display: "flex", justifyContent: "center", color: "var(--accent-text)" }}>
+                    {service.brand ? <BrandIcon file={service.brand} size={22} /> : <Sparkles size={20} />}
+                  </span>
+                  <span className="grow col" style={{ gap: 2, minWidth: 0 }}>
+                    <span className="ellipsis" style={{ fontSize: 14, fontWeight: 500 }}>
+                      {service.name}
+                    </span>
+                    {existing && <SubscriptionSummary subscription={existing} />}
+                  </span>
+                  <CheckMark on={Boolean(existing)} />
+                </button>
+              );
+            })}
+          </div>
+        </EditField>
       </div>
     </Sheet>
   );
 }
 
-function SubscriptionsEditor({ value, onChange }: { value: Subscription[]; onChange(value: Subscription[]): void }) {
+function SubscriptionSummary({ subscription }: { subscription: Subscription }) {
   const t = useT();
-  const enabled = new Map(value.map((item) => [item.name, item]));
+  const language = useI18n((state) => state.language);
+  const text = subscription.planName
+    ? subscription.planName
+    : subscription.expiresAt
+      ? t("subscription.expires", new Date(subscription.expiresAt).toLocaleDateString(language, { day: "numeric", month: "short", year: "numeric" }))
+      : null;
+  if (!text) return null;
+  return (
+    <span className="secondary ellipsis" style={{ fontSize: 11 }}>
+      {text}
+    </span>
+  );
+}
 
-  const toggleService = (name: string) => {
-    platform.haptic("selection");
-    if (enabled.has(name)) {
-      onChange(value.filter((item) => item.name !== name));
-      return;
-    }
-    if (value.length >= LIMITS.subscriptions) return;
-    const service = subscriptionService(name);
-    const plan = service?.plans[0];
-    onChange([
-      ...value,
-      {
-        id: crypto.randomUUID(),
-        name,
-        planName: plan?.name ?? null,
-        billingCycleId: plan?.cycles[0] ?? null,
-        startedAt: new Date().toISOString(),
-        expiresAt: null,
-        autoRenew: true,
-      },
-    ]);
+function EditField({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="col" style={{ gap: 8 }}>
+      <span className="caption">{title}</span>
+      {children}
+    </div>
+  );
+}
+
+function CheckMark({ on }: { on: boolean }) {
+  return on ? <CheckCircle2 size={22} fill="var(--primary)" color="var(--bg)" strokeWidth={2.2} /> : <Circle size={22} className="secondary" strokeWidth={1.6} />;
+}
+
+// ── SubscriptionEditorSheet (Form) ─────────────────────────────────────────
+
+function toDateInput(iso: string | null | undefined): string {
+  const date = iso ? new Date(iso) : new Date();
+  const offset = date.getTimezoneOffset() * 60_000;
+  return new Date(date.getTime() - offset).toISOString().slice(0, 10);
+}
+
+function fromDateInput(value: string): string {
+  return new Date(`${value}T12:00:00`).toISOString();
+}
+
+export function SubscriptionEditorSheet({ name }: { name: string }) {
+  const t = useT();
+  const pop = useApp((state) => state.pop);
+  const stored = useEditDraft((state) => state.subscriptions.find((item) => item.name === name));
+  const [draft, setDraft] = useState<Subscription>(() => normalizeSubscription(stored ?? { id: crypto.randomUUID(), name }, !stored?.expiresAt));
+  const service = subscriptionService(name);
+  const plan = service?.plans.find((item) => item.name === draft.planName) ?? service?.plans[0];
+  const cycles = plan?.cycles ?? ["1m"];
+  const progress = subscriptionProgress(draft);
+
+  const recalc = (next: Subscription) => {
+    const cycle = (next.billingCycleId as BillingCycle["id"]) ?? cycles[0];
+    const start = next.startedAt ?? new Date().toISOString();
+    return { ...next, startedAt: start, expiresAt: new Date(new Date(start).getTime() + CYCLES[cycle].days * DAY_MS).toISOString() };
   };
 
-  const update = (name: string, patch: Partial<Subscription>) => {
-    onChange(value.map((item) => (item.name === name ? { ...item, ...patch } : item)));
+  const save = () => {
+    const subscriptions = useEditDraft.getState().subscriptions;
+    useEditDraft.setState({ subscriptions: subscriptions.some((item) => item.name === name) ? subscriptions.map((item) => (item.name === name ? draft : item)) : [...subscriptions, draft] });
+    pop();
+  };
+
+  const remove = () => {
+    useEditDraft.setState({ subscriptions: useEditDraft.getState().subscriptions.filter((item) => item.name !== name) });
+    pop();
   };
 
   return (
-    <div className="col" style={{ gap: 8 }}>
-      <span className="label">{t("profile.subscriptions")}</span>
-      <div className="hint" style={{ marginTop: -4, marginBottom: 4 }}>{t("onboarding.subscriptions.hint")}</div>
-      <div className="chips">
-        {SUBSCRIPTION_SERVICES.map((service) => (
-          <button key={service.name} className={`chip ${enabled.has(service.name) ? "selected" : ""}`} onClick={() => toggleService(service.name)}>
-            {service.brand && <BrandIcon file={service.brand} size={15} />}
-            {service.name}
-          </button>
-        ))}
-      </div>
-      {value.map((subscription) => {
-        const service = subscriptionService(subscription.name);
-        const plan = service?.plans.find((item) => item.name === subscription.planName) ?? service?.plans[0];
-        return (
-          <div key={subscription.id} className="glass col" style={{ borderRadius: 20, padding: 14, gap: 12 }}>
-            <div className="row">
-              {service?.brand && <BrandIcon file={service.brand} size={20} />}
-              <b className="grow">{subscription.name}</b>
-              <button className="icon-btn small" aria-label={t("subscription.remove")} onClick={() => toggleService(subscription.name)}>
-                <Trash2 size={16} color="var(--danger)" />
-              </button>
-            </div>
-            {service && (
-              <div>
-                <span className="label">{t("subscription.plan")}</span>
-                <div className="chips">
-                  {service.plans.map((item) => (
-                    <button
-                      key={item.name}
-                      className={`chip ${plan?.name === item.name ? "selected" : ""}`}
-                      onClick={() => update(subscription.name, { planName: item.name, billingCycleId: (item.cycles as string[]).includes(subscription.billingCycleId ?? "") ? subscription.billingCycleId : item.cycles[0] })}
-                    >
-                      {item.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-            {plan && (
-              <div>
-                <span className="label">{t("subscription.period")}</span>
-                <div className="chips">
-                  {plan.cycles.map((cycle) => (
-                    <button
-                      key={cycle}
-                      className={`chip ${subscription.billingCycleId === cycle ? "selected" : ""}`}
-                      onClick={() => {
-                        const started = subscription.startedAt ? new Date(subscription.startedAt) : new Date();
-                        const expires = new Date(started.getTime() + CYCLES[cycle].days * 86_400_000);
-                        update(subscription.name, { billingCycleId: cycle, startedAt: started.toISOString(), expiresAt: expires.toISOString() });
-                      }}
-                    >
-                      {t(`subscription.period.${cycle}`)}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-            <div className="row" style={{ gap: 12, flexWrap: "wrap" }}>
-              <div className="grow" style={{ minWidth: 160 }}>
-                <span className="label">{t("subscription.expiry")}</span>
-                <input
-                  type="date"
-                  className="field"
-                  value={dateInputValue(subscription.expiresAt)}
-                  onChange={(event) => update(subscription.name, { expiresAt: event.target.value ? new Date(`${event.target.value}T12:00:00`).toISOString() : null })}
-                />
-              </div>
-              <div className="row" style={{ gap: 10, paddingTop: 18 }}>
-                <span style={{ fontWeight: 700 }}>{t("subscription.auto.renew")}</span>
-                <Toggle on={Boolean(subscription.autoRenew)} onChange={(on) => update(subscription.name, { autoRenew: on })} label={t("subscription.auto.renew")} />
-              </div>
-            </div>
+    <Sheet
+      title={t("subscription.edit")}
+      lead={
+        <button className="btn-plain" onClick={pop}>
+          {t("cancel")}
+        </button>
+      }
+      trail={
+        <button className="btn-plain" style={{ fontWeight: 600 }} onClick={save}>
+          {t("save")}
+        </button>
+      }
+    >
+      <div className="container form">
+        <div className="group" style={{ marginTop: 20 }}>
+          <div className="group-row" style={{ gap: 12 }}>
+            <span style={{ color: "var(--accent-text)", display: "flex" }}>{service?.brand ? <BrandIcon file={service.brand} size={28} /> : <Sparkles size={26} />}</span>
+            <span style={{ fontSize: 17, fontWeight: 600 }}>{name}</span>
           </div>
-        );
-      })}
-    </div>
+        </div>
+
+        {service && plan && (
+          <>
+            <div className="group-title">{t("subscription.details")}</div>
+            <div className="group">
+              <label className="group-row">
+                <span className="grow">{t("subscription.plan")}</span>
+                <select className="form-select" value={plan.name} onChange={(event) => setDraft((current) => recalc(normalizeSubscription({ ...current, planName: event.target.value }, false)))}>
+                  {service.plans.map((item) => (
+                    <option key={item.name} value={item.name}>
+                      {item.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="group-row">
+                <span className="grow">{t("subscription.period")}</span>
+                <select className="form-select" value={draft.billingCycleId ?? cycles[0]} onChange={(event) => setDraft((current) => recalc({ ...current, billingCycleId: event.target.value }))}>
+                  {cycles.map((cycle) => (
+                    <option key={cycle} value={cycle}>
+                      {t(`subscription.period.${cycle}`)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          </>
+        )}
+
+        <div className="group-title">{t("subscription.duration")}</div>
+        <div className="group">
+          <label className="group-row">
+            <span className="grow">{t("subscription.started")}</span>
+            <input type="date" className="date-pill" value={toDateInput(draft.startedAt)} onChange={(event) => event.target.value && setDraft((current) => recalc({ ...current, startedAt: fromDateInput(event.target.value) }))} />
+          </label>
+          <label className="group-row">
+            <span className="grow">{t("subscription.expiry")}</span>
+            <input
+              type="date"
+              className="date-pill"
+              min={toDateInput(draft.startedAt)}
+              value={toDateInput(draft.expiresAt)}
+              onChange={(event) => event.target.value && setDraft((current) => ({ ...current, expiresAt: fromDateInput(event.target.value) }))}
+            />
+          </label>
+          <div className="group-row">
+            <span className="grow">{t("subscription.auto.renew")}</span>
+            <Toggle on={Boolean(draft.autoRenew)} onChange={(on) => setDraft((current) => ({ ...current, autoRenew: on }))} label={t("subscription.auto.renew")} />
+          </div>
+        </div>
+
+        {progress && (
+          <>
+            <div className="group-title">{t("subscription.remaining")}</div>
+            <div className="group">
+              <div className="group-row col" style={{ alignItems: "stretch", gap: 8 }}>
+                <div className="progress-bar">
+                  <span style={{ width: `${progress.fraction * 100}%` }} />
+                </div>
+                <span className="secondary" style={{ fontSize: 13 }}>
+                  {t("subscription.days.remaining", progress.days)}
+                </span>
+              </div>
+            </div>
+          </>
+        )}
+
+        <div className="group" style={{ marginTop: 34 }}>
+          <button className="group-row destructive" onClick={remove}>
+            {t("subscription.remove")}
+          </button>
+        </div>
+      </div>
+    </Sheet>
   );
 }

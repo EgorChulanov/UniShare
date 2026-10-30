@@ -8,6 +8,8 @@ export interface GameTag {
   name: string;
   coverUrl?: string | null;
   rawgId?: number | null;
+  /** Steam app id when the cover/details come from the Steam store. */
+  steamAppId?: number | null;
 }
 
 export interface Subscription {
@@ -169,10 +171,38 @@ export interface Review {
 }
 
 export interface GameSearchResult {
+  /** RAWG id (positive), Steam app id when source is "steam", or a negative catalog id. */
   id: number;
   name: string;
   backgroundImage: string | null;
   released: string | null;
+  source?: "rawg" | "steam" | "catalog";
+  steamAppId?: number | null;
+}
+
+/** Full game card (search → game sheet), see docs/assets/store-mockups/iphone-5.jpg. */
+export interface GameDetails {
+  name: string;
+  image: string | null;
+  rating: number | null;
+  playtimeHours: number | null;
+  platforms: string[];
+  genres: string[];
+  released: string | null;
+  about: string | null;
+  source: "rawg" | "steam" | "wikipedia" | "catalog";
+}
+
+/** In-app search: users, games and platforms (iphone-4.jpg). */
+export interface SearchResults {
+  users: ProfileCard[];
+  games: GameSearchResult[];
+  platforms: Platform[];
+}
+
+/** AirShare: people who opened AirShare nearby at the same time. */
+export interface AirShareResult {
+  profiles: ProfileCard[];
 }
 
 export interface PublicConfig {

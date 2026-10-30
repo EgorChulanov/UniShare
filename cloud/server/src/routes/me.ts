@@ -8,6 +8,7 @@ import { assertContentAllowed } from "../lib/moderation";
 import { USER_COLUMNS, profileUpdateToColumns, toMyProfile, toProfileCard, type IdentityRow, type UserRow } from "../lib/profiles";
 import { detectImage, storage } from "../lib/storage";
 import { prepareProfileShare } from "../bot/telegram";
+import { enrichUserCovers } from "../enrich";
 
 export async function loadMyProfile(userId: string): Promise<MyProfile> {
   const row = await queryOne<UserRow>(`select ${USER_COLUMNS} from users u where u.uid = $1`, [userId]);
@@ -56,6 +57,8 @@ export async function meRoutes(app: FastifyInstance): Promise<void> {
         if ((error as { code?: string }).code === "23505") throw conflict("This username is already taken", "username_taken");
         throw error;
       }
+      // Artwork for newly added games is looked up in the background.
+      if ("platform_games" in columns || "wanted_games" in columns) void enrichUserCovers(session.userId);
     }
     return loadMyProfile(session.userId);
   });

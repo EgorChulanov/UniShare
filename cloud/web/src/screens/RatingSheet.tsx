@@ -1,4 +1,5 @@
-import { Star } from "lucide-react";
+// Port of UniShare/Features/Chat/RatingSheet.swift.
+import { Check, Star } from "lucide-react";
 import { useState } from "react";
 import { LIMITS } from "@unishare/shared";
 import { useApp } from "../app/store";
@@ -13,14 +14,17 @@ export function RatingSheet({ chatId, uid, username }: { chatId: string; uid: st
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
   const [busy, setBusy] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
 
   const submit = async () => {
-    if (!rating) return;
+    if (!rating || busy || submitted) return;
     setBusy(true);
     try {
       await api.review(uid, chatId, rating, comment.trim());
-      useApp.getState().toast(t("rating.sent"), "success");
-      pop();
+      setSubmitted(true);
+      platform.haptic("success");
+      window.dispatchEvent(new CustomEvent("unishare:reviewed", { detail: chatId }));
+      setTimeout(pop, 800);
     } catch (error) {
       useApp.getState().toastError(error);
     } finally {
@@ -30,45 +34,56 @@ export function RatingSheet({ chatId, uid, username }: { chatId: string; uid: st
 
   return (
     <Sheet
-      title={t("chat.review.title")}
-      footer={
-        <button className="btn btn-primary btn-block" disabled={!rating || busy} onClick={() => void submit()}>
-          {busy ? <Spinner size={20} /> : t("rating.submit")}
+      detent="medium"
+      lead={
+        <button className="btn-plain secondary" onClick={pop}>
+          {t("skip")}
         </button>
       }
+      trail={null}
     >
-      <div className="col" style={{ alignItems: "center", textAlign: "center", gap: 6, padding: "8px 0 18px" }}>
-        <h3 style={{ margin: 0, fontSize: 20, fontWeight: 800 }}>{t("rating.title", username)}</h3>
-        <div className="muted">{t("rating.subtitle")}</div>
-        <div className="row" style={{ gap: 8, marginTop: 14 }} role="radiogroup">
-          {[1, 2, 3, 4, 5].map((value) => (
-            <button
-              key={value}
-              role="radio"
-              aria-checked={rating === value}
-              aria-label={`${value}`}
-              onClick={() => {
-                platform.haptic("selection");
-                setRating(value);
-              }}
-              style={{ transition: "transform 0.18s var(--ease-spring)", transform: value <= rating ? "scale(1.08)" : undefined }}
-            >
-              <Star size={40} color="#FFB020" fill={value <= rating ? "#FFB020" : "none"} strokeWidth={1.8} />
-            </button>
-          ))}
+      <div className="brand-bg" style={{ position: "absolute", zIndex: -1 }} aria-hidden />
+      <div className="container col" style={{ gap: 28, padding: "20px 24px" }}>
+        <div className="col" style={{ gap: 12, alignItems: "center", textAlign: "center" }}>
+          <h3 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>{t("rating.title", username)}</h3>
+          <span className="secondary" style={{ fontSize: 14 }}>
+            {t("rating.subtitle")}
+          </span>
+          <div className="row" style={{ gap: 14, marginTop: 4 }} role="radiogroup">
+            {[1, 2, 3, 4, 5].map((value) => (
+              <button
+                key={value}
+                role="radio"
+                aria-checked={rating === value}
+                aria-label={`${value}`}
+                className="rating-star"
+                style={{ transform: value <= rating ? "scale(1.15)" : undefined }}
+                onClick={() => {
+                  platform.haptic("light");
+                  setRating(value);
+                }}
+              >
+                <Star size={36} color={value <= rating ? "var(--yellow)" : "color-mix(in srgb, var(--text-2) 40%, transparent)"} fill={value <= rating ? "var(--yellow)" : "none"} strokeWidth={1.6} />
+              </button>
+            ))}
+          </div>
         </div>
+        <div className="col" style={{ gap: 8 }}>
+          <label className="secondary" style={{ fontSize: 13, fontWeight: 500 }} htmlFor="rating-comment">
+            {t("rating.comment")}
+          </label>
+          <textarea id="rating-comment" className="textarea" style={{ height: 110 }} maxLength={LIMITS.reviewMax} value={comment} onChange={(event) => setComment(event.target.value)} />
+        </div>
+        <button className="btn-primary" style={{ borderRadius: 16 }} disabled={!rating || submitted} onClick={() => void submit()}>
+          {busy ? <Spinner size={20} /> : submitted ? (
+            <>
+              <Check size={18} strokeWidth={3} /> {t("rating.sent")}
+            </>
+          ) : (
+            t("rating.submit")
+          )}
+        </button>
       </div>
-      <label className="label" htmlFor="rating-comment">
-        {t("rating.comment")}
-      </label>
-      <textarea
-        id="rating-comment"
-        className="field"
-        rows={3}
-        maxLength={LIMITS.reviewMax}
-        value={comment}
-        onChange={(event) => setComment(event.target.value)}
-      />
     </Sheet>
   );
 }

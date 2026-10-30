@@ -90,7 +90,8 @@ supabase/
 - TypeScript end to end: React 19, Vite and Framer Motion on the client; Fastify, WebSockets and grammY on the server.
 - PostgreSQL 14+ with plain SQL migrations, hosted in Russia (Yandex Cloud recommended).
 - Storage on the local disk or any S3-compatible bucket (Yandex Object Storage).
-- Telegram Mini Apps (full-screen mode, safe areas, haptics, QR scanner, `shareMessage`), VK Bridge, PWA.
+- Telegram Mini Apps (full-screen mode, safe areas, haptics, LocationManager for AirShare, `shareMessage`), VK Bridge, PWA.
+- The web client repeats the iOS design: Liquid Glass tab bar, stories, swipe cards, in-app search, game pages and AirShare.
 
 **iOS:**
 

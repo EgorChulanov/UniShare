@@ -6,6 +6,7 @@ import iosBe from "../../../shared/src/i18n/ios.be.json";
 import { webStrings } from "./web-strings";
 import { chatsStrings } from "./extra-chats";
 import { profileStrings } from "./extra-profile";
+import { searchStrings } from "./extra-search";
 
 export type Language = "ru" | "en" | "uk" | "be";
 export const LANGUAGES: { id: Language; name: string }[] = [
@@ -16,10 +17,10 @@ export const LANGUAGES: { id: Language; name: string }[] = [
 ];
 
 const dictionaries: Record<Language, Record<string, string>> = {
-  ru: { ...iosRu, ...webStrings.ru, ...chatsStrings.ru, ...profileStrings.ru },
-  en: { ...iosEn, ...webStrings.en, ...chatsStrings.en, ...profileStrings.en },
-  uk: { ...iosUk, ...webStrings.uk, ...chatsStrings.uk, ...profileStrings.uk },
-  be: { ...iosBe, ...webStrings.be, ...chatsStrings.be, ...profileStrings.be },
+  ru: { ...iosRu, ...webStrings.ru, ...chatsStrings.ru, ...profileStrings.ru, ...searchStrings.ru },
+  en: { ...iosEn, ...webStrings.en, ...chatsStrings.en, ...profileStrings.en, ...searchStrings.en },
+  uk: { ...iosUk, ...webStrings.uk, ...chatsStrings.uk, ...profileStrings.uk, ...searchStrings.uk },
+  be: { ...iosBe, ...webStrings.be, ...chatsStrings.be, ...profileStrings.be, ...searchStrings.be },
 };
 
 export function detectLanguage(code: string | null | undefined): Language {

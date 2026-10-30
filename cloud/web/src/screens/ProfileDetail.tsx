@@ -1,27 +1,22 @@
-import { Flag, Heart, MessageCircle, Search, Share2, ShieldOff, Sparkles, Star } from "lucide-react";
+// Port of ProfileDetailSheet in UniShare/Features/Feed/FeedCardsOverlay.swift.
+// Opened from search, chats or AirShare it also gets a Like / Message button.
+import { Heart, MessageCircle, Search } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { PLATFORM_INFO, subscriptionService, telegramAppLink, vkAppLink, webLink, type DiscoveryKind, type ProfileCard, type Review } from "@unishare/shared";
+import type { DiscoveryKind, GameTag, Platform, ProfileCard } from "@unishare/shared";
 import { useApp } from "../app/store";
 import { api } from "../lib/api";
-import { useT, useI18n } from "../i18n/i18n";
+import { useT } from "../i18n/i18n";
 import { platform } from "../platform/platform";
-import { Avatar, BrandIcon, GameCircle, PlatformBadge, PROVIDER_COLORS, ProviderIcon, Sheet, Spinner, Stars, relativeTime } from "../components/ui";
+import { Avatar, GameCircle, PlatformBadgeRow, PlatformGlyph, Sheet, Spinner, platformColor } from "../components/ui";
 import { useFeed } from "./FeedScreen";
 
-/** Full profile of another player (ProfileDetailSheet.swift + actions). */
-export function ProfileDetailSheet({ uid, card: initial }: { uid: string; card?: ProfileCard }) {
+export function ProfileDetailSheet({ uid, card: initial, source }: { uid: string; card?: ProfileCard; source?: "feed" }) {
   const t = useT();
-  const language = useI18n((state) => state.language);
   const me = useApp((state) => state.profile);
-  const config = useApp((state) => state.config);
   const chats = useApp((state) => state.chats);
-  const push = useApp((state) => state.push);
   const pop = useApp((state) => state.pop);
-  const toast = useApp((state) => state.toast);
-  const toastError = useApp((state) => state.toastError);
   const [card, setCard] = useState<ProfileCard | null>(initial ?? null);
   const [liked, setLiked] = useState<DiscoveryKind[]>([]);
-  const [reviews, setReviews] = useState<Review[] | null>(null);
   const [query, setQuery] = useState("");
   const [busy, setBusy] = useState(false);
   const [missing, setMissing] = useState(false);
@@ -34,252 +29,148 @@ export function ProfileDetailSheet({ uid, card: initial }: { uid: string; card?:
         setLiked(result.likedKinds);
       })
       .catch(() => setMissing(true));
-    api.reviews(uid).then(setReviews).catch(() => setReviews([]));
   }, [uid]);
 
-  const existingChat = chats.find((chat) => chat.partner.uid === uid);
-  const isMe = me?.uid === uid;
-
   const filter = useMemo(() => {
-    const needle = query.trim().toLowerCase();
-    return <T extends { name: string }>(items: T[]) => (needle ? items.filter((item) => item.name.toLowerCase().includes(needle)) : items);
+    const needle = query.trim().toLocaleLowerCase();
+    return (tags: GameTag[]) => (needle ? tags.filter((tag) => tag.name.toLocaleLowerCase().includes(needle)) : tags);
   }, [query]);
 
-  if (missing && !card) {
-    return (
-      <Sheet title="UniShare">
-        <div className="empty">
-          <h3>{t("error.generic")}</h3>
-        </div>
-      </Sheet>
-    );
-  }
-  if (!card) {
-    return (
-      <Sheet title="">
-        <div className="center" style={{ padding: 60 }}>
-          <Spinner />
-        </div>
-      </Sheet>
-    );
-  }
+  const existingChat = chats.find((chat) => chat.partner.uid === uid);
+  const showActions = source !== "feed" && me?.uid !== uid;
 
-  const like = async (kind: DiscoveryKind) => {
+  const like = async () => {
+    if (!card) return;
     setBusy(true);
     try {
-      platform.haptic("medium");
-      const result = await api.swipe(card.uid, kind, "like");
-      useFeed.getState().remove(kind, card.uid);
-      setLiked((current) => [...current, kind]);
+      const result = await api.swipe(card.uid, "teammates", "like");
+      useFeed.getState().remove("teammates", card.uid);
+      setLiked((current) => [...current, "teammates"]);
       if (result.matched && result.chatId) {
-        pop();
-        useApp.getState().showMatch(result.chatId, card);
-        void useApp.getState().loadChats();
+        platform.haptic("success");
+        useApp.getState().toast(`${t("feed.swipe.match")} · ${card.username}`, "success");
+        await useApp.getState().loadChats();
+        useApp.getState().closeOverlay();
+        useApp.getState().push({ type: "chat", chatId: result.chatId });
       } else {
-        toast(t("profile.liked"), "success");
+        platform.haptic("medium");
+        useApp.getState().toast(t("profile.liked"), "success");
       }
     } catch (error) {
-      toastError(error);
+      useApp.getState().toastError(error);
     } finally {
       setBusy(false);
     }
   };
 
-  const share = async () => {
-    const link = { kind: "profile" as const, uid: card.uid };
-    const url =
-      platform.kind === "telegram" && config?.telegramBotUsername
-        ? telegramAppLink(config.telegramBotUsername, config.telegramAppShortName, link)
-        : platform.kind === "vk" && config?.vkAppId
-          ? vkAppLink(config.vkAppId, link)
-          : webLink(config?.publicUrl ?? location.origin, link);
-    await platform.share({ url, text: `${card.username} — UniShare` });
-  };
-
-  const block = async () => {
-    if (!window.confirm(t("chat.block.confirmation"))) return;
-    try {
-      await api.block(card.uid);
-      useFeed.getState().remove("teammates", card.uid);
-      useFeed.getState().remove("skills", card.uid);
-      toast(t("chat.blocked"));
-      pop();
-    } catch (error) {
-      toastError(error);
-    }
-  };
-
-  const ownedTotal = Object.values(card.platformGames).reduce((sum, games) => sum + (games?.length ?? 0), 0);
-
-  return (
-    <Sheet title={card.username} full wide>
-      <div className="col" style={{ gap: 18, maxWidth: 680, margin: "0 auto" }}>
-        <div className="profile-hero glass">
-          <div className="bg" />
-          <div className="row" style={{ position: "relative", gap: 16 }}>
-            <Avatar url={card.avatarUrl} name={card.username} size={84} online={card.isOnline} ring />
-            <div className="grow">
-              <div style={{ fontSize: 24, fontWeight: 800 }} className="ellipsis">{card.username}</div>
-              {card.status && <div className="muted" style={{ fontWeight: 600 }}>{card.status}</div>}
-              <div className="row" style={{ marginTop: 8, gap: 12, flexWrap: "wrap" }}>
-                <span className="stat">
-                  <Star size={14} fill="#FFB020" color="#FFB020" /> {card.rating > 0 ? `${card.rating.toFixed(1)} · ${card.reviewCount}` : t("profile.reviews.empty")}
-                </span>
-                {card.providers.map((provider) => (
-                  <span key={provider} style={{ color: PROVIDER_COLORS[provider] }} title={provider}>
-                    <ProviderIcon provider={provider} size={18} />
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
-          <div className="row" style={{ position: "relative", marginTop: 14, gap: 8, flexWrap: "wrap" }}>
-            {card.platforms.map((id) => (
-              <PlatformBadge key={id} platform={id} size={34} />
-            ))}
-          </div>
-        </div>
-
-        {!isMe && (
-          <div className="row" style={{ gap: 10 }}>
-            {existingChat ? (
-              <button
-                className="btn btn-primary grow"
-                onClick={() => {
-                  pop();
-                  useApp.getState().setTab("chats");
-                  setTimeout(() => push({ type: "chat", chatId: existingChat.id }), 30);
-                }}
-              >
-                <MessageCircle size={18} /> {t("profile.write")}
-              </button>
-            ) : (
-              <>
-                <button className="btn btn-primary grow" disabled={busy || liked.includes("teammates")} onClick={() => void like("teammates")}>
-                  <Heart size={18} fill={liked.includes("teammates") ? "#fff" : "none"} />
-                  {liked.includes("teammates") ? t("profile.liked") : t("profile.like")}
-                </button>
-                {card.skills.length > 0 && (
-                  <button className="btn btn-glass" disabled={busy || liked.includes("skills")} onClick={() => void like("skills")} title={t("feed.segment.skills")}>
-                    <Sparkles size={18} />
-                  </button>
-                )}
-              </>
-            )}
-            <button className="icon-btn" style={{ width: 50, height: 50 }} onClick={() => void share()} aria-label={t("profile.share")}>
-              <Share2 size={19} />
-            </button>
-          </div>
-        )}
-
-        {ownedTotal > 6 && (
-          <label className="search">
-            <Search size={18} className="faint" />
-            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t("feed.search.placeholder")} />
-          </label>
-        )}
-
-        {card.platforms.map((id) => {
-          const games = filter(card.platformGames[id] ?? []);
-          if (!games.length) return null;
-          return (
-            <section key={id}>
-              <div className="section-title" style={{ marginTop: 0 }}>
-                <span style={{ color: PLATFORM_INFO[id].color === "#1B2838" || PLATFORM_INFO[id].color === "#313131" ? "var(--text)" : PLATFORM_INFO[id].color }}>
-                  <PlatformBadge platform={id} size={28} />
-                </span>
-                {id}
-                <span className="pill">{games.length}</span>
-              </div>
-              <div className="col" style={{ gap: 8 }}>
-                {games.map((game) => (
-                  <div key={game.name} className="list-item glass" style={{ borderRadius: 20 }}>
-                    <GameCircle game={game} size={52} />
-                    <span className="title grow">{game.name}</span>
-                  </div>
-                ))}
-              </div>
-            </section>
-          );
-        })}
-
-        {filter(card.wantedGames).length > 0 && (
-          <section>
-            <div className="section-title" style={{ marginTop: 0 }}>{t("profile.wanted")}</div>
-            <div className="chips">
-              {filter(card.wantedGames).map((game) => (
-                <span key={game.name} className="chip">
-                  <GameCircle game={game} size={24} /> {game.name}
-                </span>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {card.skills.length > 0 && (
-          <section>
-            <div className="section-title" style={{ marginTop: 0 }}>
-              <Sparkles size={18} /> {t("profile.skills")}
-            </div>
-            <div className="chips">
-              {card.skills.map((skill) => (
-                <span key={skill} className="chip">{skill}</span>
-              ))}
-            </div>
-            {card.skillsDescription && <p className="muted" style={{ margin: "12px 4px 0", lineHeight: 1.5 }}>{card.skillsDescription}</p>}
-          </section>
-        )}
-
-        {card.subscriptions.length > 0 && (
-          <section>
-            <div className="section-title" style={{ marginTop: 0 }}>{t("profile.subscriptions")}</div>
-            <div className="chips">
-              {card.subscriptions.map((sub) => {
-                const brand = subscriptionService(sub.name)?.brand;
-                return (
-                  <span key={sub.id} className="chip">
-                    {brand && <BrandIcon file={brand} size={16} />} {sub.name}
-                    {sub.planName ? <span className="faint">· {sub.planName}</span> : null}
-                  </span>
-                );
-              })}
-            </div>
-          </section>
-        )}
-
-        <section>
-          <div className="section-title" style={{ marginTop: 0 }}>{t("profile.reviews")}</div>
-          {reviews === null ? (
-            <Spinner />
-          ) : reviews.length === 0 ? (
-            <div className="faint" style={{ padding: "0 4px" }}>{t("profile.reviews.empty")}</div>
-          ) : (
-            <div className="col" style={{ gap: 8 }}>
-              {reviews.map((review) => (
-                <div key={review.id} className="glass card" style={{ padding: 14, borderRadius: 20 }}>
-                  <div className="row">
-                    <span className="grow" style={{ fontWeight: 800 }}>{review.fromUsername ?? "—"}</span>
-                    <Stars value={review.rating} />
-                  </div>
-                  {review.text && <div style={{ marginTop: 6 }}>{review.text}</div>}
-                  <div className="faint" style={{ fontSize: 12, marginTop: 4 }}>{relativeTime(review.createdAt, language)}</div>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-
-        {!isMe && (
-          <div className="row" style={{ justifyContent: "center", gap: 8, paddingBottom: 12 }}>
-            <button className="btn btn-ghost" onClick={() => push({ type: "report", uid: card.uid, username: card.username })}>
-              <Flag size={16} /> {t("chat.report")}
-            </button>
-            <button className="btn btn-ghost" style={{ color: "var(--danger)" }} onClick={() => void block()}>
-              <ShieldOff size={16} /> {t("chat.block")}
-            </button>
-          </div>
+  const footer =
+    showActions && card ? (
+      <div className="sheet-footer">
+        {existingChat ? (
+          <button
+            className="btn-primary"
+            style={{ borderRadius: 16 }}
+            onClick={() => {
+              useApp.getState().closeOverlay();
+              useApp.getState().push({ type: "chat", chatId: existingChat.id });
+            }}
+          >
+            <MessageCircle size={18} fill="currentColor" /> {t("profile.write")}
+          </button>
+        ) : (
+          <button className="btn-primary" style={{ borderRadius: 16 }} disabled={busy || liked.includes("teammates")} onClick={() => void like()}>
+            {busy ? <Spinner size={18} /> : <Heart size={18} fill="currentColor" />} {liked.includes("teammates") ? t("profile.liked") : t("airshare.like")}
+          </button>
         )}
       </div>
+    ) : undefined;
+
+  return (
+    <Sheet title={card?.username ?? ""} footer={footer}>
+      <div className="brand-bg" style={{ position: "absolute", zIndex: -1 }} aria-hidden />
+      {!card ? (
+        <div className="center" style={{ padding: 60 }}>
+          {missing ? <span className="secondary">{t("error.generic")}</span> : <Spinner />}
+        </div>
+      ) : (
+        <div className="container col" style={{ gap: 20, padding: "4px 20px 20px" }}>
+          <label className="search-bar">
+            <Search size={17} />
+            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t("feed.search.placeholder")} enterKeyHint="search" />
+          </label>
+
+          <div className="row" style={{ gap: 16 }}>
+            <Avatar url={card.avatarUrl} size={76} ring online={card.isOnline} />
+            <div className="col grow" style={{ gap: 6, minWidth: 0 }}>
+              <span className="ellipsis" style={{ fontSize: 24, fontWeight: 700 }}>
+                {card.username}
+              </span>
+              {card.status && (
+                <span className="secondary" style={{ fontSize: 14, fontWeight: 500 }}>
+                  {card.status}
+                </span>
+              )}
+              <PlatformBadgeRow platforms={card.platforms} size={28} />
+            </div>
+          </div>
+
+          {card.platforms.map((id) => {
+            const tags = filter(card.platformGames[id] ?? []);
+            return tags.length ? <GameList key={id} title={id} platform={id} tags={tags} /> : null;
+          })}
+          {filter(card.wantedGames).length > 0 && <GameList title={t("profile.wanted")} tags={filter(card.wantedGames)} />}
+
+          {card.skills.length > 0 && (
+            <div className="col" style={{ gap: 10 }}>
+              <span style={{ fontSize: 18, fontWeight: 700 }}>{t("profile.skills")}</span>
+              <div className="flow">
+                {card.skills.map((skill) => (
+                  <span key={skill} className="chip" style={{ background: "var(--card)", fontWeight: 600, padding: "8px 12px" }}>
+                    {skill}
+                  </span>
+                ))}
+              </div>
+              {card.skillsDescription && (
+                <span className="secondary" style={{ fontSize: 14 }}>
+                  {card.skillsDescription}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+      {missing && !card && (
+        <div className="center">
+          <button className="btn-plain" onClick={pop}>
+            {t("common.close")}
+          </button>
+        </div>
+      )}
     </Sheet>
+  );
+}
+
+function GameList({ title, platform: id, tags }: { title: string; platform?: Platform; tags: GameTag[] }) {
+  const push = useApp((state) => state.push);
+  const color = id ? platformColor(id) : "var(--primary)";
+  return (
+    <div className="col" style={{ gap: 12 }}>
+      <div className="row" style={{ gap: 8 }}>
+        {id && (
+          <span style={{ color, display: "flex" }}>
+            <PlatformGlyph platform={id} size={18} />
+          </span>
+        )}
+        <span style={{ fontSize: 18, fontWeight: 700 }}>{title}</span>
+      </div>
+      {tags.map((tag) => (
+        <button key={tag.name} className="detail-game" onClick={() => push({ type: "game", game: tag })}>
+          <GameCircle game={tag} color={color} size={58} />
+          <span className="grow ellipsis" style={{ fontSize: 15, fontWeight: 600 }}>
+            {tag.name}
+          </span>
+        </button>
+      ))}
+    </div>
   );
 }

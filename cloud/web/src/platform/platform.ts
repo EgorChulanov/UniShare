@@ -13,6 +13,31 @@ export interface SignInPayload {
   vkUser?: { firstName?: string; lastName?: string; photoUrl?: string };
 }
 
+export interface GeoPoint {
+  lat: number;
+  lng: number;
+  accuracy?: number;
+}
+
+/** navigator.geolocation with a timeout; null when denied or unavailable. */
+function browserLocation(timeout = 8000): Promise<GeoPoint | null> {
+  return new Promise((resolve) => {
+    if (!("geolocation" in navigator)) return resolve(null);
+    const timer = setTimeout(() => resolve(null), timeout + 500);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        clearTimeout(timer);
+        resolve({ lat: position.coords.latitude, lng: position.coords.longitude, accuracy: position.coords.accuracy });
+      },
+      () => {
+        clearTimeout(timer);
+        resolve(null);
+      },
+      { enableHighAccuracy: true, timeout, maximumAge: 30_000 },
+    );
+  });
+}
+
 export interface PlatformAdapter {
   kind: ClientPlatform;
   /** Raw OS hint (ios, android, tdesktop, mobile_web, ...). */
@@ -33,6 +58,8 @@ export interface PlatformAdapter {
   addToHomeScreen?(): Promise<boolean>;
   canAddToHomeScreen(): boolean;
   setClosingConfirmation(enabled: boolean): void;
+  /** Device location for AirShare (null when unavailable or denied). */
+  getLocation(): Promise<GeoPoint | null>;
 }
 
 // ── Telegram ────────────────────────────────────────────────────────────────
@@ -64,6 +91,12 @@ interface TelegramWebApp {
   safeAreaInset?: { top: number; bottom: number; left: number; right: number };
   contentSafeAreaInset?: { top: number; bottom: number; left: number; right: number };
   isFullscreen?: boolean;
+  LocationManager?: {
+    isInited: boolean;
+    isLocationAvailable: boolean;
+    init(callback?: () => void): void;
+    getLocation(callback: (data: { latitude: number; longitude: number; horizontal_accuracy?: number | null } | null) => void): void;
+  };
   BackButton: { show(): void; hide(): void; onClick(cb: () => void): void; offClick(cb: () => void): void };
   HapticFeedback: {
     impactOccurred(style: "light" | "medium" | "heavy" | "rigid" | "soft"): void;
@@ -280,6 +313,26 @@ function telegramAdapter(): PlatformAdapter {
       if (enabled) tg.enableClosingConfirmation();
       else tg.disableClosingConfirmation();
     },
+    async getLocation() {
+      const manager = tg?.LocationManager;
+      if (!manager || !tg.isVersionAtLeast("8.0")) return browserLocation();
+      const fromTelegram = await new Promise<GeoPoint | null>((resolve) => {
+        const timer = setTimeout(() => resolve(null), 10_000);
+        const read = () => {
+          if (!manager.isLocationAvailable) {
+            clearTimeout(timer);
+            return resolve(null);
+          }
+          manager.getLocation((data) => {
+            clearTimeout(timer);
+            resolve(data ? { lat: data.latitude, lng: data.longitude, accuracy: data.horizontal_accuracy ?? undefined } : null);
+          });
+        };
+        if (manager.isInited) read();
+        else manager.init(read);
+      });
+      return fromTelegram ?? browserLocation(4000);
+    },
   };
 }
 
@@ -377,6 +430,11 @@ function vkAdapter(): PlatformAdapter {
     setClosingConfirmation() {
       /* not available */
     },
+    async getLocation() {
+      const result = await withTimeout(bridge.send("VKWebAppGetGeodata"), 10_000);
+      if (result && result.available) return { lat: Number(result.lat), lng: Number(result.long), accuracy: Number((result as { accuracy?: number }).accuracy) || undefined };
+      return browserLocation(4000);
+    },
   };
 }
 
@@ -464,6 +522,9 @@ function webAdapter(): PlatformAdapter {
     },
     setClosingConfirmation() {
       /* not needed */
+    },
+    getLocation() {
+      return browserLocation();
     },
   };
 }

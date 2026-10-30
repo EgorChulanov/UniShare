@@ -30,7 +30,7 @@ cloud/
 ```text
  Telegram ─┐                        ┌─ PostgreSQL (accounts, profiles, chats…)
  VK ───────┼──▶ HTTPS (Caddy) ──▶ UniShare server ─┼─ Disk / S3 (avatars, chat photos)
- Browser ──┘        REST + WebSocket   │           └─ RAWG (game covers, cached)
+ Browser ──┘        REST + WebSocket   │           └─ Steam / Wikipedia / RAWG (game covers, cached)
                                        └─▶ Telegram Bot API / VK API (notifications)
 ```
 
@@ -38,7 +38,7 @@ cloud/
 - The **Telegram** sign-in is verified on the server with an HMAC over `initData` signed with the bot token.
 - The **VK** sign-in is verified on the server through the `sign` launch-params signature, keyed with the app secret.
 - The **website** signs in through the Telegram Login Widget.
-- Every sign-in method is a row in `user_identities` attached to a single UniShare account. **Settings → Linked accounts** creates a 15-minute link token, shown as a QR code and a link. Opening it in the other app attaches that identity to the same profile.
+- Every sign-in method is a row in `user_identities` attached to a single UniShare account. **Settings → Linked accounts** creates a 15-minute link token, shown as a link. Opening it in the other app attaches that identity to the same profile.
 - After a match, a partner can show their Telegram or VK contact by turning on **“Show my contacts to chat partners”**. The button **“Message on Telegram”** then appears, in the spirit of Dayvinchik, while conversations still stay in UniShare.
 
 ### Notifications
@@ -49,7 +49,7 @@ cloud/
 ### Telegram features used
 - **Display:** full-screen mode (Bot API 8.0), safe areas, swipe-to-close disabled, theme colors.
 - **Native controls:** the BackButton, haptics, and closing confirmation during onboarding.
-- **Device features:** the QR scanner (`showScanQrPopup`) and home-screen shortcuts.
+- **Device features:** `LocationManager` for AirShare and home-screen shortcuts.
 - **Bot setup:** the menu button, commands and descriptions are configured automatically.
 - **Sharing:** `shareMessage` with prepared inline messages (Bot API 8.0) and `requestWriteAccess`.
 

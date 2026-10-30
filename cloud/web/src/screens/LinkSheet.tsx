@@ -1,4 +1,5 @@
-import { Copy, ExternalLink, RefreshCw, Unlink } from "lucide-react";
+// Linked sign-in accounts: one UniShare profile in Telegram, VK and the browser.
+import { Copy, ExternalLink, RefreshCw } from "lucide-react";
 import { useState } from "react";
 import type { LinkTokenResponse } from "@unishare/shared";
 import { useApp } from "../app/store";
@@ -6,11 +7,18 @@ import { api } from "../lib/api";
 import { useT } from "../i18n/i18n";
 import { platform } from "../platform/platform";
 import { PROVIDER_COLORS, ProviderIcon, Sheet, Spinner } from "../components/ui";
-import { QrCode } from "./QrCode";
-import { copyText } from "./profileShare";
 
 type Provider = "telegram" | "vk";
 const NAMES: Record<Provider, string> = { telegram: "Telegram", vk: "ВКонтакте" };
+
+async function copyText(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 export function LinkAccountsSheet() {
   const t = useT();
@@ -27,8 +35,7 @@ export function LinkAccountsSheet() {
   const createLink = async (provider: Provider) => {
     setBusy(provider);
     try {
-      const token = await api.linkToken();
-      setLink({ provider, token });
+      setLink({ provider, token: await api.linkToken() });
     } catch (error) {
       toastError(error);
     } finally {
@@ -69,68 +76,64 @@ export function LinkAccountsSheet() {
   return (
     <Sheet
       title={t("profile.linked")}
-      headerLeft={
-        <button className="icon-btn small" onClick={() => void refresh()} aria-label={t("feed.refresh")}>
-          {busy === "refresh" ? <Spinner size={16} /> : <RefreshCw size={16} />}
+      lead={
+        <button className="icon-circle" onClick={() => void refresh()} aria-label={t("feed.refresh")}>
+          {busy === "refresh" ? <Spinner size={14} /> : <RefreshCw size={15} strokeWidth={2.6} />}
         </button>
       }
     >
-      <div className="col" style={{ gap: 12 }}>
-        <div className="muted">{t("profile.linked.hint")}</div>
-        {(["telegram", "vk"] as const).map((provider) => {
-          const identity = profile.identities.find((item) => item.provider === provider);
-          return (
-            <div key={provider} className="identity-row">
-              <span className="ico" style={{ background: PROVIDER_COLORS[provider] }}>
-                <ProviderIcon provider={provider} size={20} />
-              </span>
-              <div className="grow">
-                <div style={{ fontWeight: 800 }}>{NAMES[provider]}</div>
-                <div className="muted ellipsis" style={{ fontSize: 13 }}>
-                  {identity
-                    ? identity.username
-                      ? provider === "telegram" ? `@${identity.username}` : identity.username
-                      : identity.displayName ?? t("profile.connected")
-                    : "—"}
+      <div className="container form">
+        <div className="group" style={{ marginTop: 20 }}>
+          {(["telegram", "vk"] as const).map((provider) => {
+            const identity = profile.identities.find((item) => item.provider === provider);
+            return (
+              <div key={provider} className="group-row with-icon">
+                <span className="platform-badge" style={{ width: 30, height: 30, background: PROVIDER_COLORS[provider], color: "#fff", borderRadius: 8 }}>
+                  <ProviderIcon provider={provider} size={17} />
+                </span>
+                <div className="grow col" style={{ minWidth: 0 }}>
+                  <span>{NAMES[provider]}</span>
+                  <span className="secondary ellipsis" style={{ fontSize: 13 }}>
+                    {identity ? (identity.username ? (provider === "telegram" ? `@${identity.username}` : identity.username) : identity.displayName ?? t("profile.connected")) : "—"}
+                  </span>
                 </div>
+                {identity ? (
+                  <button className="btn-plain" style={{ color: "var(--red)", padding: 0, fontSize: 15 }} onClick={() => void unlink(provider)} disabled={busy === `unlink-${provider}`}>
+                    {busy === `unlink-${provider}` ? <Spinner size={14} /> : t("profile.unlink")}
+                  </button>
+                ) : (
+                  <button className="btn-plain" style={{ padding: 0, fontSize: 15 }} onClick={() => void createLink(provider)} disabled={!available[provider] || busy === provider}>
+                    {busy === provider ? <Spinner size={14} /> : t(provider === "telegram" ? "profile.link.telegram" : "profile.link.vk")}
+                  </button>
+                )}
               </div>
-              {identity ? (
-                <button className="chip" onClick={() => void unlink(provider)} disabled={busy === `unlink-${provider}`}>
-                  {busy === `unlink-${provider}` ? <Spinner size={14} /> : <Unlink size={14} />} {t("profile.unlink")}
-                </button>
-              ) : (
-                <button className="chip selected" onClick={() => void createLink(provider)} disabled={!available[provider] || busy === provider}>
-                  {busy === provider ? <Spinner size={14} /> : null}
-                  {t(provider === "telegram" ? "profile.link.telegram" : "profile.link.vk")}
-                </button>
-              )}
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
+        <div className="group-footer">{t("profile.linked.hint")}</div>
 
         {link && url && (
-          <div className="glass card col" style={{ alignItems: "center", gap: 14, textAlign: "center" }}>
-            <QrCode value={url} size={200} />
-            <div className="muted" style={{ fontSize: 13.5 }}>{t("profile.link.open")}</div>
-            <div className="row" style={{ width: "100%", gap: 10 }}>
-              <button
-                className={`btn grow ${link.provider === "telegram" ? "btn-telegram" : "btn-vk"}`}
-                onClick={() => platform.openLink(url)}
-              >
-                <ExternalLink size={17} /> {NAMES[link.provider]}
+          <>
+            <div className="group" style={{ marginTop: 24 }}>
+              <button className="group-row with-icon" onClick={() => platform.openLink(url)}>
+                <span className="ico">
+                  <ExternalLink size={19} />
+                </span>
+                <span className="grow" style={{ color: "var(--accent-text)" }}>
+                  {NAMES[link.provider]}
+                </span>
               </button>
-              <button
-                className="btn btn-glass"
-                aria-label={t("profile.link.copy")}
-                onClick={() => void copyText(url).then((ok) => ok && toast(t("common.copied"), "success"))}
-              >
-                <Copy size={17} />
+              <button className="group-row with-icon" onClick={() => void copyText(url).then((ok) => ok && toast(t("common.copied"), "success"))}>
+                <span className="ico">
+                  <Copy size={19} />
+                </span>
+                <span className="grow" style={{ color: "var(--accent-text)" }}>
+                  {t("profile.link.copy")}
+                </span>
               </button>
             </div>
-            <button className="btn btn-ghost" onClick={() => void refresh()}>
-              <RefreshCw size={15} /> {t("feed.refresh")}
-            </button>
-          </div>
+            <div className="group-footer">{t("profile.link.open")}</div>
+          </>
         )}
       </div>
     </Sheet>

@@ -1,14 +1,16 @@
+// FeedView.swift + FeedCardsOverlay.swift + SkillCardsOverlay.swift + CommunityStoriesRail.
 import { AnimatePresence, animate, motion, useMotionValue, useTransform, type PanInfo } from "framer-motion";
-import { Heart, Layers, Maximize2, QrCode, RefreshCw, RotateCcw, Sparkles, Star, X } from "lucide-react";
+import { Radio, Heart, Maximize2, Star, UsersRound, X } from "lucide-react";
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { create } from "zustand";
-import { LIMITS, PLATFORM_INFO, type DiscoveryKind, type ProfileCard, type Story } from "@unishare/shared";
+import type { DiscoveryKind, ProfileCard, Story } from "@unishare/shared";
 import { useApp } from "../app/store";
 import { api } from "../lib/api";
 import { useT } from "../i18n/i18n";
 import { platform } from "../platform/platform";
-import { Avatar, Empty, GamesRow, PlatformGlyph, ProviderIcon, Segmented, Spinner } from "../components/ui";
-import { storyBackground, StoryGlyph } from "./StoryViewer";
+import { Avatar, BrandIcon, GameCirclesRow, PlatformGlyph, Segmented, Spinner } from "../components/ui";
+import { PLATFORM_INFO } from "@unishare/shared";
+import { StoryGlyph } from "./StoryViewer";
 
 // ── Stories ────────────────────────────────────────────────────────────────
 
@@ -30,27 +32,28 @@ export const useStories = create<StoriesState>((set) => ({
   },
 }));
 
-function StoriesRail() {
-  const stories = useStories((state) => state.stories);
-  const push = useApp((state) => state.push);
-  if (!stories.length) return null;
+/** CommunityStoryCard (106×106). */
+function StoryCard({ story, onClick }: { story: Story; onClick(): void }) {
+  const accent = `#${story.accentHex}`;
   return (
-    <div className="stories">
-      {stories.map((story, index) => (
-        <button
-          key={story.id}
-          className={`story-tile ${story.isSeen ? "" : "unseen"}`}
-          style={{ background: storyBackground(story.accentHex) }}
-          onClick={() => {
-            platform.haptic("light");
-            push({ type: "story", index });
-          }}
-        >
-          <StoryGlyph symbol={story.symbol} size={22} />
-          <span className="t">{story.title}</span>
-        </button>
-      ))}
-    </div>
+    <button
+      className="story-card"
+      onClick={onClick}
+      style={{
+        background: `linear-gradient(135deg, color-mix(in srgb, ${accent} 95%, transparent), color-mix(in srgb, ${accent} 46%, transparent), var(--card))`,
+        opacity: story.isSeen ? 0.72 : 1,
+      }}
+    >
+      {story.imageUrl ? <img src={story.imageUrl} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", filter: "brightness(0.82)" }} /> : <span className="deco" />}
+      <span className="shade" />
+      <span className="inner">
+        <span className="sym">
+          <StoryGlyph symbol={story.symbol} size={15} />
+        </span>
+        <span className="t">{story.title}</span>
+      </span>
+      <span className="stroke" style={{ boxShadow: story.isSeen ? "inset 0 0 0 1px rgba(255,255,255,0.12)" : `inset 0 0 0 2.5px ${accent}` }} />
+    </button>
   );
 }
 
@@ -111,35 +114,25 @@ export const useFeed = create<FeedState>((set, get) => ({
   },
 }));
 
-const UNDO_KEY = "unishare.undo";
-function undoAllowance(): { date: string; count: number } {
-  const today = new Date().toISOString().slice(0, 10);
-  try {
-    const stored = JSON.parse(localStorage.getItem(UNDO_KEY) ?? "null") as { date: string; count: number } | null;
-    return stored?.date === today ? stored : { date: today, count: 0 };
-  } catch {
-    return { date: today, count: 0 };
-  }
-}
-
 // ── Screen ─────────────────────────────────────────────────────────────────
 
 export function FeedScreen() {
   const t = useT();
   const kind = useFeed((state) => state.kind);
   const deck = useFeed((state) => state.decks[state.kind]);
-  const undoStack = useFeed((state) => state.undoStack);
+  const stories = useStories((state) => state.stories);
   const push = useApp((state) => state.push);
-  const toast = useApp((state) => state.toast);
   const topRef = useRef<SwipeHandle>(null);
   const [storiesCollapsed, setStoriesCollapsed] = useState(false);
+  const dragStart = useRef<number | null>(null);
 
   useEffect(() => {
-    if (!useFeed.getState().decks[kind].loaded) void useFeed.getState().load(kind);
-    void useStories.getState().load();
-    // Load the other deck in the background so switching is instant.
+    const feed = useFeed.getState();
+    // Reload when returning to an empty deck: new profiles may have appeared.
+    if (!feed.decks[kind].loaded || (feed.decks[kind].cards.length === 0 && !feed.decks[kind].loading)) void feed.load(kind, true);
     const other: DiscoveryKind = kind === "teammates" ? "skills" : "teammates";
-    if (!useFeed.getState().decks[other].loaded) void useFeed.getState().load(other);
+    if (!feed.decks[other].loaded) void feed.load(other);
+    void useStories.getState().load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -147,47 +140,23 @@ export function FeedScreen() {
     async (card: ProfileCard, decision: "like" | "dislike") => {
       const feed = useFeed.getState();
       feed.remove(kind, card.uid);
-      if (decision === "dislike") {
-        useFeed.setState((state) => ({ undoStack: [...state.undoStack.slice(-2), { card, kind }] }));
-      }
+      if (decision === "dislike") useFeed.setState((state) => ({ undoStack: [...state.undoStack.slice(-2), { card, kind }] }));
       try {
         const result = await api.swipe(card.uid, kind, decision);
         if (result.matched && result.chatId) {
-          useApp.getState().showMatch(result.chatId, card);
+          platform.haptic("success");
+          useApp.getState().toast(`${t("feed.swipe.match")} · ${card.username}`, "success");
           void useApp.getState().loadChats();
-        } else if (decision === "like") {
-          toast(t("feed.liked"));
         }
       } catch (error) {
         feed.restore(kind, card);
         useApp.getState().toastError(error);
       }
     },
-    [kind, t, toast],
+    [kind, t],
   );
 
-  const undo = async () => {
-    const last = undoStack[undoStack.length - 1];
-    if (!last) return;
-    const allowance = undoAllowance();
-    if (allowance.count >= LIMITS.maxUndoPerDay) {
-      toast(t("feed.undo.limit"));
-      return;
-    }
-    useFeed.setState((state) => ({ undoStack: state.undoStack.slice(0, -1) }));
-    const { restored } = await api.undo(last.card.uid, last.kind).catch(() => ({ restored: false }));
-    if (restored) {
-      useFeed.getState().restore(last.kind, last.card);
-      platform.haptic("medium");
-      try {
-        localStorage.setItem(UNDO_KEY, JSON.stringify({ date: allowance.date, count: allowance.count + 1 }));
-      } catch {
-        /* ignored */
-      }
-    }
-  };
-
-  // Keyboard shortcuts on desktop: ← pass, → like.
+  // Keyboard on desktop: ← pass, → like.
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
       if (useApp.getState().overlays.length || (event.target as HTMLElement)?.tagName === "INPUT") return;
@@ -203,30 +172,38 @@ export function FeedScreen() {
   return (
     <div
       className="screen"
-      style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}
-      onTouchMove={undefined}
+      style={{ display: "flex", flexDirection: "column", overflow: "hidden", paddingBottom: "var(--tabbar-space)" }}
+      onPointerDown={(event) => (dragStart.current = event.clientY)}
+      onPointerMove={(event) => {
+        if (dragStart.current === null) return;
+        const dy = event.clientY - dragStart.current;
+        if (dy < -22 && !storiesCollapsed && stories.length) setStoriesCollapsed(true);
+      }}
+      onPointerUp={() => (dragStart.current = null)}
     >
-      <div style={{ maxWidth: 520, width: "100%", margin: "0 auto", display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}>
-        <AnimatePresence initial={false}>
-          {!storiesCollapsed ? (
-            <motion.div key="stories" initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} style={{ overflow: "hidden", flexShrink: 0 }}>
-              <StoriesRail />
-            </motion.div>
-          ) : (
-            <motion.button
-              key="handle"
-              className="center"
-              style={{ width: "100%", padding: "2px 0 8px" }}
-              onClick={() => setStoriesCollapsed(false)}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-            >
-              <span style={{ width: 34, height: 4, borderRadius: 2, background: "var(--text-3)" }} />
-            </motion.button>
-          )}
-        </AnimatePresence>
+      <div className="container feed-column" style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}>
+        {stories.length > 0 && (
+          <AnimatePresence initial={false} mode="popLayout">
+            {storiesCollapsed ? (
+              <motion.button key="handle" className="stories-handle" onClick={() => setStoriesCollapsed(false)} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                <span className="bar" />
+                <svg width="10" height="7" viewBox="0 0 10 7" aria-hidden>
+                  <path d="M1 1.5l4 4 4-4" stroke="var(--text-2)" strokeWidth="1.8" fill="none" strokeLinecap="round" />
+                </svg>
+              </motion.button>
+            ) : (
+              <motion.div key="rail" initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -16 }} transition={{ type: "spring", stiffness: 380, damping: 34 }}>
+                <div className="stories-rail">
+                  {stories.map((story, index) => (
+                    <StoryCard key={story.id} story={story} onClick={() => push({ type: "story", index })} />
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        )}
 
-        <div className="row" style={{ marginBottom: 10, flexShrink: 0 }}>
+        <div className="row" style={{ gap: 10, padding: "6px 16px 10px" }}>
           <Segmented
             id="feed"
             value={kind}
@@ -236,65 +213,38 @@ export function FeedScreen() {
               { value: "skills", label: t("feed.segment.skills") },
             ]}
           />
-          <button className="icon-btn" style={{ width: 46, height: 46 }} onClick={() => push({ type: "nearby" })} aria-label={t("feed.nearby")}>
-            <QrCode size={20} />
+          <button className="liquid center" style={{ width: 42, height: 42, borderRadius: "50%" }} onClick={() => push({ type: "airshare" })} aria-label={t("feed.airshare.nearby")}>
+            <Radio size={19} strokeWidth={2.4} />
           </button>
         </div>
 
-        <div
-          className="feed-stage"
-          onPointerDown={() => !storiesCollapsed && useStories.getState().stories.length > 0 && setStoriesCollapsed(true)}
-        >
+        <div className="feed-stage">
           {!deck.loaded || (deck.loading && !deck.cards.length) ? (
-            <div className="swipe-card center" style={{ cursor: "default" }}>
-              <Spinner size={36} />
+            <div className="center" style={{ height: "100%" }}>
+              <Spinner size={30} />
             </div>
           ) : cards.length === 0 ? (
-            <div className="glass center" style={{ position: "absolute", inset: 0, borderRadius: "var(--radius-xl)" }}>
-              <Empty icon={<Layers size={30} />} title={t("feed.empty")} subtitle={t("feed.empty.subtitle")}>
-                <button className="btn btn-glass" onClick={() => void useFeed.getState().load(kind, true)}>
-                  <RefreshCw size={16} /> {t("feed.refresh")}
-                </button>
-              </Empty>
+            <div className="center col" style={{ height: "100%", gap: 14, textAlign: "center", padding: 28 }}>
+              <UsersRound size={42} strokeWidth={1.8} />
+              <div style={{ fontSize: 19, fontWeight: 700 }}>{t("feed.empty")}</div>
+              <div className="secondary" style={{ fontSize: 14, fontWeight: 500 }}>{t("feed.empty.subtitle")}</div>
             </div>
           ) : (
-            [...cards]
-              .reverse()
-              .map((card) => {
-                const depth = cards.indexOf(card);
-                return (
-                  <SwipeCard
-                    key={card.uid}
-                    ref={depth === 0 ? topRef : undefined}
-                    card={card}
-                    kind={kind}
-                    depth={depth}
-                    onDecide={(decision) => void decide(card, decision)}
-                    onOpen={() => push({ type: "profile", uid: card.uid, card })}
-                  />
-                );
-              })
+            [...cards].reverse().map((card) => {
+              const depth = cards.indexOf(card);
+              return (
+                <SwipeCard
+                  key={card.uid}
+                  ref={depth === 0 ? topRef : undefined}
+                  card={card}
+                  kind={kind}
+                  depth={depth}
+                  onDecide={(decision) => void decide(card, decision)}
+                  onOpen={() => push({ type: "profile", uid: card.uid, card, source: "feed" })}
+                />
+              );
+            })
           )}
-        </div>
-
-        <div className="feed-actions">
-          <button className="feed-action small glass" onClick={() => void undo()} disabled={!undoStack.length} aria-label={t("feed.undo")} style={{ opacity: undoStack.length ? 1 : 0.4 }}>
-            <RotateCcw size={20} color="var(--warning)" />
-          </button>
-          <button className="feed-action pass glass" onClick={() => topRef.current?.swipe("left")} disabled={!cards.length} aria-label={t("feed.swipe.pass")}>
-            <X size={30} strokeWidth={3} />
-          </button>
-          <button className="feed-action like" onClick={() => topRef.current?.swipe("right")} disabled={!cards.length} aria-label={t("feed.swipe.like")}>
-            <Heart size={28} fill="#fff" />
-          </button>
-          <button
-            className="feed-action small glass"
-            onClick={() => cards[0] && push({ type: "profile", uid: cards[0].uid, card: cards[0] })}
-            disabled={!cards.length}
-            aria-label={t("feed.card.tap_details")}
-          >
-            <Maximize2 size={18} />
-          </button>
         </div>
       </div>
     </div>
@@ -307,7 +257,7 @@ interface SwipeHandle {
   swipe(direction: "left" | "right"): void;
 }
 
-const SWIPE_THRESHOLD = 110;
+const SWIPE_THRESHOLD = 105;
 
 const SwipeCard = forwardRef<SwipeHandle, {
   card: ProfileCard;
@@ -318,9 +268,11 @@ const SwipeCard = forwardRef<SwipeHandle, {
 }>(function SwipeCard({ card, kind, depth, onDecide, onOpen }, ref) {
   const t = useT();
   const x = useMotionValue(0);
-  const rotate = useTransform(x, [-300, 0, 300], [-14, 0, 14]);
-  const likeOpacity = useTransform(x, [20, SWIPE_THRESHOLD], [0, 1]);
-  const passOpacity = useTransform(x, [-SWIPE_THRESHOLD, -20], [1, 0]);
+  const y = useMotionValue(0);
+  const rotate = useTransform(x, (value) => (value / Math.max(window.innerWidth, 1)) * 12);
+  const likeOpacity = useTransform(x, [24, SWIPE_THRESHOLD], [0, 1]);
+  const passOpacity = useTransform(x, [-SWIPE_THRESHOLD, -24], [1, 0]);
+  const yScaled = useTransform(y, (value) => value * 0.24);
   const leaving = useRef(false);
   const isTop = depth === 0;
 
@@ -328,9 +280,15 @@ const SwipeCard = forwardRef<SwipeHandle, {
     (direction: "left" | "right") => {
       if (leaving.current) return;
       leaving.current = true;
-      platform.haptic(direction === "right" ? "medium" : "light");
-      const target = (direction === "right" ? 1 : -1) * (window.innerWidth + 200);
-      void animate(x, target, { duration: 0.32, ease: [0.4, 0, 0.9, 0.6] }).then(() => onDecide(direction === "right" ? "like" : "dislike"));
+      void animate(x, direction === "right" ? 720 : -720, { duration: 0.24, ease: "easeIn" }).then(() => {
+        if (direction === "right") {
+          platform.haptic("medium");
+          setTimeout(() => platform.haptic("light"), 100);
+        } else {
+          platform.haptic("light");
+        }
+        onDecide(direction === "right" ? "like" : "dislike");
+      });
     },
     [onDecide, x],
   );
@@ -338,111 +296,112 @@ const SwipeCard = forwardRef<SwipeHandle, {
   useImperativeHandle(ref, () => ({ swipe: flyOff }), [flyOff]);
 
   const onDragEnd = (_: unknown, info: PanInfo) => {
-    if (info.offset.x > SWIPE_THRESHOLD || info.velocity.x > 700) flyOff("right");
-    else if (info.offset.x < -SWIPE_THRESHOLD || info.velocity.x < -700) flyOff("left");
-    else void animate(x, 0, { type: "spring", stiffness: 500, damping: 32 });
+    if (info.offset.x > SWIPE_THRESHOLD) flyOff("right");
+    else if (info.offset.x < -SWIPE_THRESHOLD) flyOff("left");
+    else {
+      void animate(x, 0, { type: "spring", stiffness: 380, damping: 30 });
+      void animate(y, 0, { type: "spring", stiffness: 380, damping: 30 });
+    }
   };
 
   const featured = card.platforms.find((id) => (card.platformGames[id]?.length ?? 0) > 0) ?? card.platforms[0] ?? null;
-  const featuredGames = (featured && card.platformGames[featured]?.length ? card.platformGames[featured]! : card.games).slice(0, 12);
-  const accent = featured ? PLATFORM_INFO[featured].color : "#0057FF";
+  const playing = featured && card.platformGames[featured]?.length ? card.platformGames[featured]! : card.games;
 
   return (
     <motion.div
       className="swipe-card"
-      style={{ x: isTop ? x : 0, rotate: isTop ? rotate : 0, zIndex: 10 - depth, ["--accent" as string]: accent === "#1B2838" || accent === "#313131" ? "#4d8bff" : accent }}
-      initial={{ scale: 0.92, y: 24, opacity: 0 }}
-      animate={{ scale: 1 - depth * 0.04, y: depth * 12, opacity: depth > 2 ? 0 : 1 }}
+      style={{
+        x: isTop ? x : 0,
+        y: isTop ? yScaled : depth * 10,
+        rotate: isTop ? rotate : depth % 2 === 0 ? -1 : 1,
+        zIndex: 10 - depth,
+      }}
+      initial={{ scale: 0.94, opacity: 0 }}
+      animate={{ scale: isTop ? 1 : 1 - depth * 0.035, opacity: 1 }}
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
       drag={isTop ? "x" : false}
-      dragElastic={0.9}
+      dragElastic={1}
       dragMomentum={false}
+      onDrag={(_, info) => y.set(info.offset.y)}
       onDragEnd={onDragEnd}
-      onTap={() => isTop && Math.abs(x.get()) < 6 && onOpen()}
+      onTap={() => isTop && Math.abs(x.get()) < 8 && onOpen()}
       aria-hidden={!isTop}
     >
-      <div className="glow" />
-      <div className="sheen" />
-      {isTop && (
-        <>
-          <motion.div className="stamp like" style={{ opacity: likeOpacity }}>{t("feed.swipe.like")}</motion.div>
-          <motion.div className="stamp pass" style={{ opacity: passOpacity }}>{t("feed.swipe.pass")}</motion.div>
-        </>
-      )}
+      <span className="deco" />
       <div className="content">
         <div className="row" style={{ gap: 13 }}>
           <span style={{ borderRadius: "50%", boxShadow: "0 0 0 1px rgba(255,255,255,0.22)" }}>
-            <Avatar url={card.avatarUrl} name={card.username} size={56} online={card.isOnline} />
+            <Avatar url={card.avatarUrl} size={54} />
           </span>
           <div className="grow">
-            <div className="row" style={{ gap: 6 }}>
-              <span className="name ellipsis">{card.username}</span>
-              {card.providers.map((provider) => (
-                <span key={provider} style={{ opacity: 0.7 }}>
-                  <ProviderIcon provider={provider} size={14} />
-                </span>
-              ))}
-            </div>
-            {card.status && <div className="sub ellipsis">{card.status}</div>}
+            <div className="name ellipsis">{card.username}</div>
+            {card.status && <div className="status ellipsis">{card.status}</div>}
           </div>
-          {card.rating > 0 && (
+          {kind === "teammates" && card.rating > 0 && (
             <span className="rating-pill">
-              <Star size={12} fill="#FFB020" color="#FFB020" /> {card.rating.toFixed(1)}
+              <Star size={11} fill="#fff" color="#fff" /> {card.rating.toFixed(1)}
             </span>
           )}
         </div>
 
         <div style={{ flex: 1, minHeight: 18 }} />
 
+        {featured && (
+          <div style={{ marginBottom: kind === "skills" ? 24 : 20 }}>
+            <span className="platform-pill">
+              {PLATFORM_INFO[featured].brand ? <BrandIcon file={PLATFORM_INFO[featured].brand!} size={15} /> : <PlatformGlyph platform={featured} size={15} />}
+              {featured}
+            </span>
+          </div>
+        )}
+
         {kind === "skills" ? (
           <div>
-            <h4 className="row" style={{ gap: 6 }}>
-              <Sparkles size={16} /> {t("profile.skills")}
-            </h4>
-            <div className="chips" style={{ marginBottom: 14 }}>
-              {card.skills.length ? (
-                card.skills.slice(0, 10).map((skill) => (
-                  <span key={skill} className="chip" style={{ background: "rgba(255,255,255,0.12)", color: "#fff" }}>{skill}</span>
-                ))
-              ) : (
-                <span className="sub">{t("skills.empty")}</span>
-              )}
-            </div>
-            {card.skillsDescription && (
-              <p className="sub" style={{ fontSize: 14, lineHeight: 1.45, display: "-webkit-box", WebkitLineClamp: 4, WebkitBoxOrient: "vertical", overflow: "hidden", margin: 0 }}>
-                {card.skillsDescription}
-              </p>
+            <h4>{t("profile.skills")}</h4>
+            {card.skills.length ? (
+              <div className="flow" style={{ gap: 9 }}>
+                {card.skills.map((skill) => (
+                  <span key={skill} className="skill-chip">{skill}</span>
+                ))}
+              </div>
+            ) : (
+              <div style={{ fontSize: 13, fontWeight: 500, color: "rgba(255,255,255,0.48)" }}>{t("skills.empty")}</div>
             )}
           </div>
         ) : (
           <div>
-            {featured && (
-              <div className="row" style={{ marginBottom: 16, flexWrap: "wrap", gap: 6 }}>
-                {card.platforms.slice(0, 3).map((id) => (
-                  <span key={id} className="platform-pill">
-                    <PlatformGlyph platform={id} size={14} /> {id}
-                  </span>
-                ))}
-                {card.platforms.length > 3 && <span className="platform-pill">+{card.platforms.length - 3}</span>}
-              </div>
-            )}
             <h4>{t("profile.games")}</h4>
-            {featuredGames.length ? <GamesRow games={featuredGames} size={58} /> : <div className="sub">{t("feed.platforms.empty")}</div>}
+            {playing.length ? (
+              <GameCirclesRow games={playing} color="#ffffff" size={58} padding={22} />
+            ) : (
+              <div style={{ fontSize: 13, fontWeight: 500, color: "rgba(255,255,255,0.45)" }}>{t("profile.games.add.hint")}</div>
+            )}
             {card.wantedGames.length > 0 && (
-              <div style={{ marginTop: 18 }}>
+              <div style={{ marginTop: 22 }}>
                 <h4>{t("profile.wanted")}</h4>
-                <GamesRow games={card.wantedGames.slice(0, 10)} size={50} />
+                <GameCirclesRow games={card.wantedGames} color="#ffffff" size={58} padding={22} />
               </div>
             )}
           </div>
         )}
 
         <div style={{ flex: 1, minHeight: 12 }} />
-        <div className="row sub" style={{ fontSize: 11 }}>
+        <div className="card-footer">
           <span className="grow">{t("feed.card.tap_details")}</span>
-          <Maximize2 size={12} />
+          <Maximize2 size={11} strokeWidth={2.6} />
         </div>
       </div>
+
+      {isTop && (
+        <>
+          <motion.div className="swipe-indicator" style={{ opacity: likeOpacity }}>
+            <Heart size={82} fill="#32D875" color="#32D875" />
+          </motion.div>
+          <motion.div className="swipe-indicator" style={{ opacity: passOpacity }}>
+            <X size={82} color="#FF453A" strokeWidth={4} />
+          </motion.div>
+        </>
+      )}
     </motion.div>
   );
 });

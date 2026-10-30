@@ -3,7 +3,9 @@ import type {
   ChatDetails,
   ChatMessage,
   ChatSummary,
+  AirShareResult,
   DiscoveryKind,
+  GameDetails,
   GameSearchResult,
   LikeRequestItem,
   LinkTokenResponse,
@@ -12,6 +14,7 @@ import type {
   ProfileUpdate,
   PublicConfig,
   Review,
+  SearchResults,
   Story,
   SwipeResult,
 } from "@unishare/shared";
@@ -144,6 +147,21 @@ export const api = {
   stories: () => request<Story[]>("GET", "/api/stories"),
   viewStory: (id: string) => request<{ ok: true }>("POST", `/api/stories/${id}/view`),
   searchGames: (query: string) => request<GameSearchResult[]>("GET", `/api/games/search?q=${encodeURIComponent(query)}`),
+  popularGames: () => request<GameSearchResult[]>("GET", "/api/games/popular"),
+  gameDetails: (game: { name: string; steamAppId?: number | null; rawgId?: number | null }) => {
+    const params = new URLSearchParams({ name: game.name });
+    if (game.steamAppId) params.set("steamAppId", String(game.steamAppId));
+    if (game.rawgId) params.set("rawgId", String(game.rawgId));
+    return request<GameDetails>("GET", `/api/games/details?${params}`);
+  },
+  search: (query: string, platform?: string | null) => {
+    const params = new URLSearchParams({ q: query });
+    if (platform) params.set("platform", platform);
+    return request<SearchResults>("GET", `/api/search?${params}`);
+  },
+  airsharePing: (location: { lat: number; lng: number; accuracy?: number } | null) =>
+    request<AirShareResult>("POST", "/api/airshare/ping", location ?? {}),
+  airshareLeave: () => request<{ ok: true }>("DELETE", "/api/airshare"),
 };
 
 /** Downscales an image to JPEG before upload (fast on mobile networks). */

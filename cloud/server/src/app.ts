@@ -15,6 +15,7 @@ import { meRoutes } from "./routes/me";
 import { feedRoutes } from "./routes/feed";
 import { chatRoutes } from "./routes/chats";
 import { socialRoutes } from "./routes/social";
+import { discoverRoutes } from "./routes/discover";
 import { telegramStatus, telegramWebhookHandler } from "./bot/telegram";
 
 function webDistDir(): string | null {
@@ -118,6 +119,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(feedRoutes);
   await app.register(chatRoutes);
   await app.register(socialRoutes);
+  await app.register(discoverRoutes);
 
   // ── Media ─────────────────────────────────────────────────────────────────
 

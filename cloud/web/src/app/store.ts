@@ -3,6 +3,8 @@ import {
   decodeDeepLink,
   parseAnyLink,
   type ChatMessage,
+  type GameTag,
+  type Platform,
   type ChatSummary,
   type DeepLink,
   type LikeRequestItem,
@@ -16,16 +18,19 @@ import { realtime } from "../lib/realtime";
 import { platform } from "../platform/platform";
 import { detectLanguage, errorMessage, hasLanguagePreference, t, useI18n, type Language } from "../i18n/i18n";
 
-export type Tab = "feed" | "chats" | "profile";
+export type Tab = "feed" | "chats" | "profile" | "search";
 
 export type Overlay =
-  | { type: "profile"; uid: string; card?: ProfileCard }
+  | { type: "profile"; uid: string; card?: ProfileCard; source?: "feed" }
   | { type: "chat"; chatId: string }
   | { type: "story"; index: number }
   | { type: "settings" }
   | { type: "edit" }
   | { type: "skills" }
-  | { type: "nearby" }
+  | { type: "airshare" }
+  | { type: "game"; game: GameTag }
+  | { type: "platform"; platform: Platform }
+  | { type: "subscription"; name: string }
   | { type: "link" }
   | { type: "report"; uid: string; username: string }
   | { type: "rating"; chatId: string; uid: string; username: string }
@@ -49,6 +54,9 @@ interface AppState {
   isNewUser: boolean;
   showGreeting: boolean;
   tab: Tab;
+  /** Last non-search tab, shown as the collapsed tab bar while searching. */
+  lastTab: Exclude<Tab, "search">;
+  tabBarCollapsed: boolean;
   overlays: Overlay[];
   toasts: Toast[];
   themeMode: ThemeMode;
@@ -107,6 +115,8 @@ export const useApp = create<AppState>((set, get) => ({
   isNewUser: false,
   showGreeting: false,
   tab: "feed",
+  lastTab: "feed",
+  tabBarCollapsed: false,
   overlays: [],
   toasts: [],
   themeMode: storedTheme(),
@@ -229,8 +239,8 @@ export const useApp = create<AppState>((set, get) => ({
   },
 
   setTab(tab) {
-    if (get().tab !== tab) platform.haptic("selection");
-    set({ tab });
+    if (get().tab !== tab) platform.haptic("light");
+    set({ tab, tabBarCollapsed: false, ...(tab === "search" ? {} : { lastTab: tab }) });
   },
 
   push(overlay) {
@@ -307,8 +317,11 @@ export const useApp = create<AppState>((set, get) => ({
   },
 
   showMatch(chatId, partner) {
+    // FeedView.swift shows a toast-style confirmation and moves on.
     platform.haptic("success");
     set({ match: { chatId, partner } });
+    get().toast(`${t("feed.swipe.match")} · ${partner.username}`, "success");
+    void get().loadChats();
   },
 
   dismissMatch() {
@@ -324,7 +337,7 @@ export const useApp = create<AppState>((set, get) => ({
       state.setTab("chats");
       state.push({ type: "chat", chatId: link.chatId });
     } else if (link.kind === "screen") {
-      if (link.screen === "nearby") state.push({ type: "nearby" });
+      if (link.screen === "nearby") state.push({ type: "airshare" });
       else state.setTab(link.screen);
     }
   },
@@ -467,3 +480,17 @@ export function resolvedTheme(state: Pick<AppState, "themeMode" | "systemScheme"
   return state.themeMode === "system" ? state.systemScheme : state.themeMode;
 }
 
+
+/** iOS 26-style tab bar minimisation: collapse while scrolling down, expand on scroll up. */
+export function collapseOnScroll() {
+  let last = 0;
+  return (event: { currentTarget: HTMLElement }) => {
+    const top = event.currentTarget.scrollTop;
+    const delta = top - last;
+    last = top;
+    const collapsed = useApp.getState().tabBarCollapsed;
+    if (top < 40 && collapsed) useApp.setState({ tabBarCollapsed: false });
+    else if (delta > 6 && top > 80 && !collapsed) useApp.setState({ tabBarCollapsed: true });
+    else if (delta < -6 && collapsed) useApp.setState({ tabBarCollapsed: false });
+  };
+}

@@ -1,28 +1,35 @@
-import { Bell, ChevronRight, FileText, Globe, Info, Link2, LogOut, Mail, Moon, Shield, Smartphone, Sun, SunMoon, Trash2, UserRound } from "lucide-react";
+// Port of UniShare/Features/Profile/SettingsSheet.swift (List, inset grouped),
+// plus the web-only rows: linked accounts, bot notifications, home screen.
+import { AnimatePresence } from "framer-motion";
+import { Bell, Check, ChevronRight, FileText, Hand, Info, Link2, LogOut, Mail, Smartphone, Trash2, UserRound } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { useApp, type ThemeMode } from "../app/store";
 import { api, setToken } from "../lib/api";
 import { LANGUAGES, useI18n, useT, type Language } from "../i18n/i18n";
 import { platform } from "../platform/platform";
-import { Sheet, Spinner, Toggle } from "../components/ui";
+import { ActionSheet, PROVIDER_COLORS, ProviderIcon, Sheet, Spinner, Toggle } from "../components/ui";
 
-const APP_VERSION = "1.0.0";
+function legalUrl(file: string): string {
+  return new URL(`/legal/${file}`, window.location.origin).toString();
+}
 
-function Row({ icon, color, title, subtitle, right, onClick, danger }: { icon: ReactNode; color: string; title: string; subtitle?: string; right?: ReactNode; onClick?: () => void; danger?: boolean }) {
-  const content = (
-    <>
-      <span className="ico" style={{ background: color }}>{icon}</span>
-      <div className="grow">
-        <div style={{ color: danger ? "var(--danger)" : undefined }}>{title}</div>
-        {subtitle && <div className="muted" style={{ fontSize: 12.5, fontWeight: 600, marginTop: 2 }}>{subtitle}</div>}
-      </div>
-      {right ?? (onClick ? <ChevronRight size={18} className="faint" /> : null)}
-    </>
+function CheckRow({ label, selected, onClick }: { label: string; selected: boolean; onClick(): void }) {
+  return (
+    <button className="group-row" onClick={onClick} aria-pressed={selected}>
+      <span className="grow">{label}</span>
+      {selected && <Check size={18} strokeWidth={2.6} color="var(--accent-text)" />}
+    </button>
   );
-  return onClick ? (
-    <button className="settings-row" onClick={onClick}>{content}</button>
-  ) : (
-    <div className="settings-row">{content}</div>
+}
+
+function LinkRow({ icon, label, detail, onClick }: { icon: ReactNode; label: string; detail?: ReactNode; onClick(): void }) {
+  return (
+    <button className="group-row with-icon" onClick={onClick}>
+      <span className="ico">{icon}</span>
+      <span className="grow">{label}</span>
+      {detail}
+      <ChevronRight size={16} className="secondary" style={{ opacity: 0.6 }} />
+    </button>
   );
 }
 
@@ -39,7 +46,8 @@ export function SettingsSheet() {
   const toastError = useApp((state) => state.toastError);
   const language = useI18n((state) => state.language);
   const setLanguage = useI18n((state) => state.setLanguage);
-  const [busy, setBusy] = useState<string | null>(null);
+  const [busy, setBusy] = useState<"notifications" | "delete" | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const provider = platform.kind === "telegram" ? "telegram" : platform.kind === "vk" ? "vk" : null;
   const identity = provider ? profile.identities.find((item) => item.provider === provider) : undefined;
@@ -79,7 +87,7 @@ export function SettingsSheet() {
   };
 
   const deleteAccount = async () => {
-    if (!window.confirm(`${t("settings.delete.title")}\n\n${t("settings.delete.message")}`)) return;
+    setConfirmDelete(false);
     setBusy("delete");
     try {
       await api.deleteAccount();
@@ -91,111 +99,108 @@ export function SettingsSheet() {
     }
   };
 
-  const themes: { id: ThemeMode; label: string; icon: ReactNode }[] = [
-    { id: "system", label: t("settings.theme.system"), icon: <SunMoon size={17} /> },
-    { id: "light", label: t("settings.theme.light"), icon: <Sun size={17} /> },
-    { id: "dark", label: t("settings.theme.dark"), icon: <Moon size={17} /> },
+  const themes: { id: ThemeMode; label: string }[] = [
+    { id: "system", label: t("settings.theme.system") },
+    { id: "light", label: t("settings.theme.light") },
+    { id: "dark", label: t("settings.theme.dark") },
   ];
+  const linked = profile.identities.map((item) => item.provider);
 
   return (
-    <Sheet full title={t("profile.settings")}>
-      <div className="col" style={{ gap: 6 }}>
-        <div className="section-title" style={{ marginTop: 6 }}>{t("profile.theme")}</div>
-        <div className="settings-group glass">
+    <Sheet title={t("profile.settings")}>
+      <div className="container form">
+        <div className="group-title">{t("profile.theme")}</div>
+        <div className="group">
           {themes.map((item) => (
-            <Row
+            <CheckRow
               key={item.id}
-              icon={item.icon}
-              color="#5856D6"
-              title={item.label}
+              label={item.label}
+              selected={themeMode === item.id}
               onClick={() => {
                 platform.haptic("selection");
                 setThemeMode(item.id);
               }}
-              right={themeMode === item.id ? <span className="pill" style={{ color: "var(--primary)" }}>✓</span> : <span />}
             />
           ))}
         </div>
 
-        <div className="section-title">{t("profile.language")}</div>
-        <div className="settings-group glass">
+        <div className="group-title">{t("profile.language")}</div>
+        <div className="group">
           {LANGUAGES.map((item) => (
-            <Row
-              key={item.id}
-              icon={<Globe size={17} />}
-              color="#0A84FF"
-              title={item.name}
-              onClick={() => void changeLanguage(item.id)}
-              right={language === item.id ? <span className="pill" style={{ color: "var(--primary)" }}>✓</span> : <span />}
-            />
+            <CheckRow key={item.id} label={item.name} selected={language === item.id} onClick={() => void changeLanguage(item.id)} />
           ))}
         </div>
 
-        <div className="section-title">{t("settings.notifications")}</div>
-        <div className="settings-group glass">
+        <div className="group-title">{t("profile.linked")}</div>
+        <div className="group">
+          <LinkRow
+            icon={<Link2 size={20} />}
+            label={t("profile.linked")}
+            onClick={() => push({ type: "link" })}
+            detail={
+              <span className="row" style={{ gap: 4 }}>
+                {linked.map((item) => (
+                  <span key={item} className="platform-badge" style={{ width: 22, height: 22, background: PROVIDER_COLORS[item], color: "#fff" }}>
+                    <ProviderIcon provider={item} size={12} />
+                  </span>
+                ))}
+              </span>
+            }
+          />
+          <div className="group-row">
+            <UserRound size={20} color="var(--accent-text)" />
+            <span className="grow">{t("settings.contact")}</span>
+            <Toggle on={profile.allowDirectContact} onChange={(value) => void toggleContact(value)} label={t("settings.contact")} />
+          </div>
           {notificationsAvailable && provider && (
-            <Row
-              icon={<Bell size={17} />}
-              color="#FF9F0A"
-              title={t("settings.notifications")}
-              subtitle={t(provider === "telegram" ? "settings.notifications.telegram" : "settings.notifications.vk")}
-              right={
-                identity?.canMessage ? (
-                  <span className="pill" style={{ color: "var(--success)" }}>{t("profile.connected")}</span>
-                ) : (
-                  <button className="chip selected" onClick={() => void enableNotifications()} disabled={busy === "notifications"}>
-                    {busy === "notifications" ? <Spinner size={14} /> : t("settings.notifications.enable")}
-                  </button>
-                )
-              }
-            />
+            <div className="group-row">
+              <Bell size={20} color="var(--accent-text)" />
+              <span className="grow">{t("settings.notifications")}</span>
+              {identity?.canMessage ? (
+                <Check size={18} strokeWidth={2.6} color="var(--green)" />
+              ) : (
+                <button className="btn-plain" style={{ padding: 0 }} onClick={() => void enableNotifications()} disabled={busy === "notifications"}>
+                  {busy === "notifications" ? <Spinner size={16} /> : t("settings.notifications.enable")}
+                </button>
+              )}
+            </div>
           )}
-          <Row
-            icon={<UserRound size={17} />}
-            color="#30D158"
-            title={t("settings.contact")}
-            subtitle={t("settings.contact.hint")}
-            right={<Toggle on={profile.allowDirectContact} onChange={(value) => void toggleContact(value)} label={t("settings.contact")} />}
-          />
-          <Row icon={<Link2 size={17} />} color="#2AABEE" title={t("profile.linked")} subtitle={t("profile.linked.hint")} onClick={() => push({ type: "link" })} />
-          {platform.canAddToHomeScreen() && (
-            <Row icon={<Smartphone size={17} />} color="#64D2FF" title={t("settings.home")} onClick={() => void platform.addToHomeScreen?.()} />
-          )}
+          {platform.canAddToHomeScreen() && <LinkRow icon={<Smartphone size={20} />} label={t("settings.home")} onClick={() => void platform.addToHomeScreen?.()} />}
+        </div>
+        <div className="group-footer">{t("settings.contact.hint")}</div>
+
+        <div className="group-title">{t("settings.about")}</div>
+        <div className="group">
+          <LinkRow icon={<Info size={20} fill="currentColor" color="var(--card)" style={{ color: "var(--primary)" }} />} label={t("transparency.title")} onClick={() => push({ type: "transparency" })} />
+          <LinkRow icon={<Hand size={20} />} label={t("settings.privacy")} onClick={() => platform.openLink(config?.privacyUrl ?? legalUrl("privacy.html"))} />
+          <LinkRow icon={<FileText size={20} />} label={t("settings.terms")} onClick={() => platform.openLink(config?.termsUrl ?? legalUrl("terms.html"))} />
+          <LinkRow icon={<Mail size={20} />} label={t("settings.support")} onClick={() => platform.openLink(legalUrl("support.html"))} />
         </div>
 
-        <div className="section-title">{t("settings.about")}</div>
-        <div className="settings-group glass">
-          <Row icon={<Info size={17} />} color="#0057FF" title={t("transparency.title")} onClick={() => push({ type: "transparency" })} />
-          <Row icon={<Shield size={17} />} color="#8E8E93" title={t("settings.privacy")} onClick={() => platform.openLink(config?.privacyUrl ?? "/legal/privacy.html")} />
-          <Row icon={<FileText size={17} />} color="#8E8E93" title={t("settings.terms")} onClick={() => platform.openLink(config?.termsUrl ?? "/legal/terms.html")} />
-          <Row
-            icon={<Mail size={17} />}
-            color="#8E8E93"
-            title={t("settings.support")}
-            subtitle={config?.supportEmail}
-            onClick={() => {
-              window.location.href = `mailto:${config?.supportEmail ?? "official@egorchulanov.ru"}`;
-            }}
-          />
-        </div>
-
-        <div className="settings-group glass" style={{ marginTop: 18 }}>
+        <div className="group" style={{ marginTop: 34 }}>
           {platform.kind === "web" && (
-            <Row icon={<LogOut size={17} />} color="#FF453A" title={t("profile.logout")} danger onClick={() => void signOut()} />
+            <button className="group-row destructive" onClick={() => void signOut()}>
+              <LogOut size={19} /> {t("profile.logout")}
+            </button>
           )}
-          <Row
-            icon={busy === "delete" ? <Spinner size={16} /> : <Trash2 size={17} />}
-            color="#FF453A"
-            title={t("settings.delete.account")}
-            danger
-            onClick={() => void deleteAccount()}
-          />
-        </div>
-
-        <div className="faint center" style={{ fontSize: 12, padding: "18px 0 4px" }}>
-          UniShare {t("settings.version")} {APP_VERSION} · {platform.kind === "telegram" ? "Telegram" : platform.kind === "vk" ? "VK" : "Web"}
+          <button className="group-row destructive" disabled={busy === "delete"} onClick={() => setConfirmDelete(true)}>
+            <Trash2 size={19} /> <span className="grow">{t("settings.delete.account")}</span>
+            {busy === "delete" && <Spinner size={16} />}
+          </button>
         </div>
       </div>
+
+      <AnimatePresence>
+        {confirmDelete && (
+          <ActionSheet
+            title={t("settings.delete.title")}
+            message={t("settings.delete.message")}
+            actions={[{ label: t("settings.delete.confirm"), destructive: true, onSelect: () => void deleteAccount() }]}
+            cancelLabel={t("settings.delete.cancel")}
+            onCancel={() => setConfirmDelete(false)}
+          />
+        )}
+      </AnimatePresence>
     </Sheet>
   );
 }
