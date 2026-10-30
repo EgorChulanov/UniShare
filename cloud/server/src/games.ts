@@ -348,23 +348,25 @@ async function mapLimit<T, R>(items: T[], limit: number, work: (item: T) => Prom
 }
 
 export async function popularGames(): Promise<GameSearchResult[]> {
-  // v5: earlier lists may hold titles only one player had, player titles under
-  // a store name, or one Steam app twice.
-  const key = "popular:v5";
+  // v6: earlier lists may hold titles only one player had, player titles under
+  // a store name, one Steam app twice, or miss a game hidden by a prefix match.
+  const key = "popular:v6";
   const cached = await cacheGet<GameSearchResult[]>(key);
   if (cached && cached.length) return cached;
 
   const results: GameSearchResult[] = [];
   const seen = new Set<string>();
-  /** One tile per Steam app: the first one (players' own title in step 1) wins. */
+  /** One tile per Steam app: the first one wins. */
   const seenApps = new Set<number>();
-  const add = (game: GameSearchResult) => {
+  const add = (game: GameSearchResult, appKey: number | null | undefined = game.steamAppId) => {
     const normalized = normalizeGameName(game.name);
-    if (!game.backgroundImage || seen.has(normalized) || (game.steamAppId && seenApps.has(game.steamAppId))) return;
+    if (!game.backgroundImage || seen.has(normalized) || (appKey && seenApps.has(appKey))) return;
     seen.add(normalized);
-    if (game.steamAppId) seenApps.add(game.steamAppId);
+    if (appKey) seenApps.add(appKey);
     results.push(game);
   };
+  /** A resolved title only claims its Steam app when it is the store title; a prefix match ("Minecraft" -> "Minecraft Dungeons") is another game. */
+  const sameApp = (cover: ResolvedCover, name: string) => (cover.steamAppId && cover.title && matchScore(cover.title, name) === 3 ? cover.steamAppId : null);
 
   // 1. What UniShare players actually have. Names are typed freely, so only
   // titles that are a Steam app or in the offline catalog are shown, never
@@ -386,7 +388,7 @@ export async function popularGames(): Promise<GameSearchResult[]> {
     const catalogName = catalog.get(normalizeGameName(name));
     if (!cover || (!cover.steamAppId && !catalogName)) continue;
     const title = catalogName && catalogName.toLowerCase() === name.toLowerCase() ? catalogName : name;
-    add({ id: cover.steamAppId ?? 0, name: title, backgroundImage: cover.coverUrl, released: null, source: cover.steamAppId ? "steam" : "catalog", steamAppId: cover.steamAppId });
+    add({ id: cover.steamAppId ?? 0, name: title, backgroundImage: cover.coverUrl, released: null, source: cover.steamAppId ? "steam" : "catalog", steamAppId: cover.steamAppId }, sameApp(cover, name));
   }
 
   // 2. Steam top sellers.
@@ -405,7 +407,7 @@ export async function popularGames(): Promise<GameSearchResult[]> {
     const covers = await mapLimit(missing, 4, async (name) => ({ name, cover: results.length >= 24 ? null : await resolveCover(name) }));
     for (const { name, cover } of covers) {
       if (results.length >= 24) break;
-      if (cover) add({ id: cover.steamAppId ?? 0, name, backgroundImage: cover.coverUrl, released: null, source: cover.steamAppId ? "steam" : "catalog", steamAppId: cover.steamAppId });
+      if (cover) add({ id: cover.steamAppId ?? 0, name, backgroundImage: cover.coverUrl, released: null, source: cover.steamAppId ? "steam" : "catalog", steamAppId: cover.steamAppId }, sameApp(cover, name));
     }
   }
 

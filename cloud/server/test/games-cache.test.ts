@@ -275,13 +275,27 @@ test("Popular now only shows user-entered names that are a Steam app or in the o
     { name: "dota 2 is life", count: 5 }, // prefix of Steam's "Dota 2": kept under the players' title, which /api/players matches
     { name: "Some Wiki Article", count: 4 }, // only a Wikipedia image: left out
     { name: "mario kart 8 deluxe", count: 3 }, // console title from the offline catalog
+    { name: "Baldurs Gate 3", count: 2 }, // the store title without the apostrophe: the same app
   ];
   mockFetch((url) => {
     if (isSearch(url)) {
-      return url.searchParams.get("term") === "dota 2 is life" ? { items: [{ type: "app", id: 570, name: "Dota 2", tiny_image: null }] } : { items: [] };
+      const term = url.searchParams.get("term");
+      if (term === "dota 2 is life") return { items: [{ type: "app", id: 570, name: "Dota 2", tiny_image: null }] };
+      if (term === "Baldurs Gate 3") return { items: [{ type: "app", id: 1086940, name: "Baldur's Gate 3", tiny_image: null }] };
+      return { items: [] };
     }
-    // The same app among the top sellers does not get a second tile.
-    if (url.pathname === "/api/featuredcategories") return { top_sellers: { items: [{ id: 570, name: "Dota 2", header_image: "https://cdn/570.jpg" }] } };
+    // A prefix match does not claim its app, so the "Dota 2" top seller keeps its tile;
+    // an exact title does, so Baldur's Gate 3 is not shown twice.
+    if (url.pathname === "/api/featuredcategories") {
+      return {
+        top_sellers: {
+          items: [
+            { id: 570, name: "Dota 2", header_image: "https://cdn/570.jpg" },
+            { id: 1086940, name: "Baldur's Gate 3", header_image: "https://cdn/bg3.jpg" },
+          ],
+        },
+      };
+    }
     const title = wikiTitle(url);
     if (title === "Some_Wiki_Article_(video_game)" || title === "mario_kart_8_deluxe_(video_game)") {
       return { type: "standard", title, thumbnail: { source: `https://upload.wikimedia.org/${title}.jpg` } };
@@ -294,20 +308,22 @@ test("Popular now only shows user-entered names that are a Steam app or in the o
     [
       ["dota 2 is life", 570],
       ["Mario Kart 8 Deluxe", null],
+      ["Baldurs Gate 3", 1086940],
+      ["Dota 2", 570],
     ],
   );
   const usedQuery = statements.find((text) => text.includes("unnest(u.games || u.wanted_games)")) ?? "";
   assert.match(usedQuery, /not exists \(select 1 from content_rules r where r\.is_active and g ~\* r\.pattern\)/);
   // A title only one player has never becomes "popular".
   assert.match(usedQuery, /group by lower\(g\) having count\(distinct u\.uid\) >= 2/);
-  assert.equal(cache.get("popular:v5")?.seconds, 12 * 3600);
+  assert.equal(cache.get("popular:v6")?.seconds, 12 * 3600);
 });
 
 test("Popular now: a list built without Steam's top sellers is kept for minutes only", async () => {
   mockFetch((url) => (url.pathname === "/api/featuredcategories" ? status(503) : isSearch(url) ? { items: [{ type: "app", id: 570, name: url.searchParams.get("term"), tiny_image: null }] } : undefined));
   const list = await games.popularGames();
   assert.ok(list.length > 0);
-  assert.equal(cache.get("popular:v5")?.seconds, FAILURE_SECONDS);
+  assert.equal(cache.get("popular:v6")?.seconds, FAILURE_SECONDS);
 });
 
 // ── Cover enrichment ───────────────────────────────────────────────────────

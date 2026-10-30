@@ -122,7 +122,7 @@ test("AirShare: reopening nearby reuses the stored fix, so rejoining cannot prob
   }
 });
 
-test("AirShare: short steps do not move the stored place, so walking around is still limited", () => {
+test("AirShare: every new grid cell counts, so walking around is still limited", () => {
   const t = 14_800_000;
   let now = t;
   let hits = 0;
@@ -136,8 +136,8 @@ test("AirShare: short steps do not move the stored place, so walking around is s
     airshare.airshareLeave("walker", now + 10);
     now += airshare.LEAVE_GRACE_MS + 100;
   }
-  // Every other step is more than 250 m from the stored place and counts; at most ten count.
-  assert.ok(hits <= 21, `hits=${hits}`);
+  // Every 200 m step lands in another cell and counts; at most ten count.
+  assert.ok(hits <= 10, `hits=${hits}`);
   assert.throws(() => airshare.airsharePing("walker", { ...north(100_000), accuracy: 20 }, "198.51.100.7", now), isTooMany);
 });
 
@@ -150,6 +150,16 @@ test("AirShare: reopening after a real move takes the new place, so people next 
   airshare.airsharePing("bob", { ...north(620), accuracy: 15 }, "198.51.100.12", later);
   assert.deepEqual(airshare.airsharePing("alice", { ...north(600), accuracy: 15 }, "198.51.100.11", later + 100), ["bob"]);
   assert.deepEqual(airshare.airsharePing("bob", { ...north(620), accuracy: 15 }, "198.51.100.12", later + 200), ["alice"]);
+});
+
+test("AirShare: a reopen one cell away takes the new cell, so a friend 10 m away is found", () => {
+  const t = 14_950_000;
+  airshare.airsharePing("alice", { ...north(0), accuracy: 15 }, "198.51.100.21", t);
+  airshare.airshareLeave("alice", t + 60_000);
+  const later = t + 5 * 60_000;
+  airshare.airsharePing("bob", { ...north(200), accuracy: 15 }, "198.51.100.22", later);
+  assert.deepEqual(airshare.airsharePing("alice", { ...north(190), accuracy: 15 }, "198.51.100.21", later + 100), ["bob"]);
+  assert.deepEqual(airshare.airsharePing("bob", { ...north(200), accuracy: 15 }, "198.51.100.22", later + 200), ["alice"]);
 });
 
 test("AirShare ignores a ping that arrives right after leaving", () => {

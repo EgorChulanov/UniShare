@@ -7,8 +7,9 @@
 //   may be a carrier NAT or a VPN), and the radius stays within 250 m-1 km;
 // - a session keeps its first fix (snapped to a ~150 m grid) for its whole
 //   life, so one session cannot be moved around to measure distances;
-// - reopening AirShare within 250 m of the last place reuses that place's fix
-//   (position and accuracy), so leaving and rejoining reveals nothing new;
+// - reopening AirShare in the same grid cell as the last place reuses that
+//   place's fix (position and accuracy), so leaving and rejoining reveals
+//   nothing new; any other cell is a new place;
 // - starting sessions at new places (or with a newly precise fix) is rate-limited;
 // - a client still waiting for its location is matched with nobody.
 import { tooMany } from "./lib/errors";
@@ -23,12 +24,6 @@ const MAX_PRECISE_ACCURACY_M = 1_000;
 const DEFAULT_ACCURACY_M = 100;
 /** Stored coordinates are snapped to this grid (about 150 m of latitude). */
 const GRID_DEG = 0.00135;
-/**
- * A session started this close to the last counted place reuses that place's
- * fix; farther away it counts as a new place. Kept at the smallest match
- * radius so a reused fix never hides people standing next to the user.
- */
-const REOPEN_M = MIN_RADIUS_M;
 /** Candidates returned per ping; the route drops blocked and inactive users, then keeps 20. */
 export const MAX_CANDIDATES = 60;
 /** Pings this soon after leaving are ignored, so a request still in flight cannot re-add the user. */
@@ -109,13 +104,16 @@ export function airsharePing(userId: string, input: PingInput, ip: string | null
   if (!fix) {
     const sent = readFix(input);
     if (sent) {
-      // Reopening near the last place is free but reuses that place's fix, and
-      // does not move it; a new place, or a precise fix after a coarse one, is
-      // counted. The stored place expires ten minutes after it was counted.
+      // Reopening in the same grid cell is free and reuses that place's fix
+      // (the same position a fresh fix would give, and the stored accuracy);
+      // another cell, or a precise fix after a coarse one, is counted. The
+      // stored place expires ten minutes after it was counted. Both values come
+      // from snap(), so comparing them exactly is safe.
       const last = lastPlace.get(userId);
       const reopening =
         last !== undefined &&
-        distanceMeters(last.lat, last.lng, sent.lat, sent.lng) <= REOPEN_M &&
+        last.lat === sent.lat &&
+        last.lng === sent.lng &&
         (last.accuracy <= MAX_PRECISE_ACCURACY_M || sent.accuracy > MAX_PRECISE_ACCURACY_M);
       if (reopening) {
         fix = { lat: last.lat, lng: last.lng, accuracy: last.accuracy };

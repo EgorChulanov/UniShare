@@ -18,18 +18,21 @@ export function ChatSheet({ chatId }: { chatId: string }) {
   // Closes this chat only: a request may finish after it was closed or covered by a sheet.
   // Once a pop is on its way, later calls (the list update right after it) do nothing.
   const closing = useRef(false);
+  // A sheet on its way out (already closed through history) never pops again; the
+  // ref is read at call time, since block/delete/404 handlers hold an older `close`.
   // A sheet that was closing can be reused when a chat opens at the same layer during its exit.
   const isPresent = useIsPresent();
-  useEffect(() => {
+  const presentRef = useRef(isPresent);
+  useLayoutEffect(() => {
+    presentRef.current = isPresent;
     if (isPresent) closing.current = false;
   }, [isPresent]);
-  // A sheet on its way out (already closed through history) never pops again.
   const close = useCallback(() => {
     const top = useApp.getState().overlays.at(-1);
-    if (!isPresent || closing.current || top?.type !== "chat" || top.chatId !== chatId) return;
+    if (!presentRef.current || closing.current || top?.type !== "chat" || top.chatId !== chatId) return;
     closing.current = true;
     useApp.getState().pop();
-  }, [chatId, isPresent]);
+  }, [chatId]);
   return (
     <motion.div className="pushed" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", stiffness: 420, damping: 42 }}>
       <ChatView chatId={chatId} onClose={close} />
