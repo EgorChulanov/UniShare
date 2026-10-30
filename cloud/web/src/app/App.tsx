@@ -80,6 +80,15 @@ function MainShell() {
   const tab = useApp((state) => state.tab);
   const overlays = useApp((state) => state.overlays);
 
+  // Desktop: Escape closes the top sheet, like the close button.
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && useApp.getState().overlays.length) useApp.getState().pop();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
   return (
     <>
       <AnimatePresence mode="wait" initial={false}>

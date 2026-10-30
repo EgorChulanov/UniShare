@@ -473,6 +473,7 @@ svg { flex-shrink: 0; }
 .airshare { position: relative; display: flex; flex-direction: column; align-items: center; gap: 28px; padding: 36px 0 24px; min-height: 100%; }
 .airshare-glow { position: absolute; left: 50%; top: 190px; width: 400px; height: 400px; margin: -200px 0 0 -200px; border-radius: 50%; pointer-events: none; background: radial-gradient(circle, color-mix(in srgb, var(--primary) 30%, transparent), transparent 70%); animation: glow-pulse 2s ease-in-out infinite alternate; }
 @keyframes glow-pulse { from { transform: scale(1); } to { transform: scale(1.15); } }
+.airshare-name { font-size: 11px; width: 92px; text-align: center; }
 .airshare-phone { position: relative; width: 72px; height: 72px; display: flex; align-items: center; justify-content: center; }
 .airshare-phone .screen-slot { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding-top: 4px; }
 .airshare-pill { position: relative; display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; border-radius: 999px; background: var(--card); border: 1px solid; font-size: 14px; font-weight: 500; }

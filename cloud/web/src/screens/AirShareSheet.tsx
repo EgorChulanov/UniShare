@@ -76,27 +76,27 @@ export function AirShareSheet() {
           </p>
         </div>
 
-        <motion.div className="row" style={{ justifyContent: "center", padding: "16px 0", position: "relative" }} animate={{ gap: connected ? 0 : 76 }} transition={{ type: "spring", stiffness: 160, damping: 13 }}>
-          <motion.div className="col" style={{ alignItems: "center", gap: 8 }} animate={{ x: connected ? 8 : 0 }} transition={{ type: "spring", stiffness: 160, damping: 13 }}>
-            <div className="airshare-phone" style={{ color: "var(--primary)", transform: "rotate(-12deg)" }}>
+        <motion.div className="row" style={{ justifyContent: "center", padding: "16px 0", position: "relative" }} animate={{ gap: connected ? 0 : 40 }} transition={{ type: "spring", stiffness: 160, damping: 13 }}>
+          <div className="col" style={{ alignItems: "center", gap: 8 }}>
+            <motion.div className="airshare-phone" style={{ color: "var(--primary)", rotate: -12 }} animate={{ x: connected ? 16 : 0 }} transition={{ type: "spring", stiffness: 160, damping: 13 }}>
               <Smartphone size={72} strokeWidth={1.6} />
               <span className="screen-slot">
                 <Avatar url={me?.avatarUrl} size={28} />
               </span>
-            </div>
-            <span className="secondary" style={{ fontSize: 11 }}>
+            </motion.div>
+            <span className="secondary ellipsis airshare-name">
               {me?.username ?? t("airshare.me")}
             </span>
-          </motion.div>
-          <motion.div className="col" style={{ alignItems: "center", gap: 8 }} animate={{ x: connected ? -8 : 0 }} transition={{ type: "spring", stiffness: 160, damping: 13 }}>
-            <div className="airshare-phone" style={{ color: "var(--tertiary)", transform: "rotate(12deg)" }}>
+          </div>
+          <div className="col" style={{ alignItems: "center", gap: 8 }}>
+            <motion.div className="airshare-phone" style={{ color: "var(--tertiary)", rotate: 12 }} animate={{ x: connected ? -16 : 0 }} transition={{ type: "spring", stiffness: 160, damping: 13 }}>
               <Smartphone size={72} strokeWidth={1.6} />
               <span className="screen-slot">{first ? <Avatar url={first.avatarUrl} size={28} /> : <HelpCircle size={20} strokeWidth={2.6} className="secondary" />}</span>
-            </div>
-            <span className="secondary" style={{ fontSize: 11 }}>
+            </motion.div>
+            <span className="secondary ellipsis airshare-name">
               {first?.username ?? "?"}
             </span>
-          </motion.div>
+          </div>
         </motion.div>
 
         <div className="airshare-pill" style={{ borderColor: `color-mix(in srgb, ${statusColor} 40%, transparent)` }}>
