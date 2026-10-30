@@ -112,6 +112,8 @@ let toastId = 0;
 let historyDepth = 0;
 /** Overlays the next popstate closes: more than one after popOverlays(n). */
 let pendingPops = 0;
+/** Tags this page load's history entries; entries left from before a reload count as depth 0. */
+const historyLoad = Math.random().toString(36).slice(2);
 
 export const useApp = create<AppState>((set, get) => ({
   phase: "booting",
@@ -264,7 +266,7 @@ export const useApp = create<AppState>((set, get) => ({
   push(overlay) {
     set((state) => ({ overlays: [...state.overlays, overlay] }));
     historyDepth += 1;
-    history.pushState({ unishareOverlay: historyDepth }, "");
+    history.pushState({ unishareOverlay: historyDepth, unishareLoad: historyLoad }, "");
     syncBackButton();
   },
 
@@ -398,10 +400,16 @@ function syncBackButton() {
   platform.setBackButton(visible, () => useApp.getState().pop());
 }
 
-window.addEventListener("popstate", () => {
-  // history.go(-n) from popOverlays arrives as one event; every other back closes one overlay.
-  const steps = Math.max(1, pendingPops);
+window.addEventListener("popstate", (event) => {
+  // history.go(-n) arrives as one event, from popOverlays or from a jump in the
+  // browser's back menu: close every overlay above the entry we landed on.
+  let steps = pendingPops;
   pendingPops = 0;
+  if (!steps) {
+    const state = event.state as { unishareOverlay?: unknown; unishareLoad?: unknown } | null;
+    const target = state?.unishareLoad === historyLoad && typeof state.unishareOverlay === "number" ? state.unishareOverlay : 0;
+    steps = historyDepth > target ? historyDepth - target : 1;
+  }
   for (let index = 0; index < steps; index += 1) {
     if (historyDepth > 0) historyDepth -= 1;
     if (useApp.getState().overlays.length) useApp.getState().closeOverlay();

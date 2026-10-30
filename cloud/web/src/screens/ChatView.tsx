@@ -23,12 +23,13 @@ export function ChatSheet({ chatId }: { chatId: string }) {
   useEffect(() => {
     if (isPresent) closing.current = false;
   }, [isPresent]);
+  // A sheet on its way out (already closed through history) never pops again.
   const close = useCallback(() => {
     const top = useApp.getState().overlays.at(-1);
-    if (closing.current || top?.type !== "chat" || top.chatId !== chatId) return;
+    if (!isPresent || closing.current || top?.type !== "chat" || top.chatId !== chatId) return;
     closing.current = true;
     useApp.getState().pop();
-  }, [chatId]);
+  }, [chatId, isPresent]);
   return (
     <motion.div className="pushed" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", stiffness: 420, damping: 42 }}>
       <ChatView chatId={chatId} onClose={close} />

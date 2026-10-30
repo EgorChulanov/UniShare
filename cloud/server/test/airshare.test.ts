@@ -122,13 +122,13 @@ test("AirShare: reopening nearby reuses the stored fix, so rejoining cannot prob
   }
 });
 
-test("AirShare: steps under 1 km do not move the stored place, so walking around is still limited", () => {
+test("AirShare: short steps do not move the stored place, so walking around is still limited", () => {
   const t = 14_800_000;
   let now = t;
   let hits = 0;
   for (let i = 0; i < 40; i++) {
     try {
-      airshare.airsharePing("walker", { ...north(i * 900), accuracy: 20 }, "198.51.100.7", now);
+      airshare.airsharePing("walker", { ...north(i * 200), accuracy: 20 }, "198.51.100.7", now);
       hits++;
     } catch (error) {
       assert.ok(isTooMany(error));
@@ -136,9 +136,20 @@ test("AirShare: steps under 1 km do not move the stored place, so walking around
     airshare.airshareLeave("walker", now + 10);
     now += airshare.LEAVE_GRACE_MS + 100;
   }
-  // Every other step is more than 1 km from the stored place and counts; at most ten count.
+  // Every other step is more than 250 m from the stored place and counts; at most ten count.
   assert.ok(hits <= 21, `hits=${hits}`);
   assert.throws(() => airshare.airsharePing("walker", { ...north(100_000), accuracy: 20 }, "198.51.100.7", now), isTooMany);
+});
+
+test("AirShare: reopening after a real move takes the new place, so people next to each other match", () => {
+  const t = 14_900_000;
+  airshare.airsharePing("alice", { ...north(0), accuracy: 15 }, "198.51.100.11", t);
+  airshare.airshareLeave("alice", t + 60_000);
+  // Seven minutes later Alice reopens 600 m away, next to Bob.
+  const later = t + 7 * 60_000;
+  airshare.airsharePing("bob", { ...north(620), accuracy: 15 }, "198.51.100.12", later);
+  assert.deepEqual(airshare.airsharePing("alice", { ...north(600), accuracy: 15 }, "198.51.100.11", later + 100), ["bob"]);
+  assert.deepEqual(airshare.airsharePing("bob", { ...north(620), accuracy: 15 }, "198.51.100.12", later + 200), ["alice"]);
 });
 
 test("AirShare ignores a ping that arrives right after leaving", () => {

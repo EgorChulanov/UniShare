@@ -280,7 +280,8 @@ test("Popular now only shows user-entered names that are a Steam app or in the o
     if (isSearch(url)) {
       return url.searchParams.get("term") === "dota 2 is life" ? { items: [{ type: "app", id: 570, name: "Dota 2", tiny_image: null }] } : { items: [] };
     }
-    if (url.pathname === "/api/featuredcategories") return { top_sellers: { items: [] } };
+    // The same app among the top sellers does not get a second tile.
+    if (url.pathname === "/api/featuredcategories") return { top_sellers: { items: [{ id: 570, name: "Dota 2", header_image: "https://cdn/570.jpg" }] } };
     const title = wikiTitle(url);
     if (title === "Some_Wiki_Article_(video_game)" || title === "mario_kart_8_deluxe_(video_game)") {
       return { type: "standard", title, thumbnail: { source: `https://upload.wikimedia.org/${title}.jpg` } };
@@ -299,14 +300,14 @@ test("Popular now only shows user-entered names that are a Steam app or in the o
   assert.match(usedQuery, /not exists \(select 1 from content_rules r where r\.is_active and g ~\* r\.pattern\)/);
   // A title only one player has never becomes "popular".
   assert.match(usedQuery, /group by lower\(g\) having count\(distinct u\.uid\) >= 2/);
-  assert.equal(cache.get("popular:v4")?.seconds, 12 * 3600);
+  assert.equal(cache.get("popular:v5")?.seconds, 12 * 3600);
 });
 
 test("Popular now: a list built without Steam's top sellers is kept for minutes only", async () => {
   mockFetch((url) => (url.pathname === "/api/featuredcategories" ? status(503) : isSearch(url) ? { items: [{ type: "app", id: 570, name: url.searchParams.get("term"), tiny_image: null }] } : undefined));
   const list = await games.popularGames();
   assert.ok(list.length > 0);
-  assert.equal(cache.get("popular:v4")?.seconds, FAILURE_SECONDS);
+  assert.equal(cache.get("popular:v5")?.seconds, FAILURE_SECONDS);
 });
 
 // ── Cover enrichment ───────────────────────────────────────────────────────

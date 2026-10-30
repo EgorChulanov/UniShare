@@ -348,17 +348,21 @@ async function mapLimit<T, R>(items: T[], limit: number, work: (item: T) => Prom
 }
 
 export async function popularGames(): Promise<GameSearchResult[]> {
-  // v4: earlier lists may hold titles only one player had, or player titles under a store name.
-  const key = "popular:v4";
+  // v5: earlier lists may hold titles only one player had, player titles under
+  // a store name, or one Steam app twice.
+  const key = "popular:v5";
   const cached = await cacheGet<GameSearchResult[]>(key);
   if (cached && cached.length) return cached;
 
   const results: GameSearchResult[] = [];
   const seen = new Set<string>();
+  /** One tile per Steam app: the first one (players' own title in step 1) wins. */
+  const seenApps = new Set<number>();
   const add = (game: GameSearchResult) => {
     const normalized = normalizeGameName(game.name);
-    if (!game.backgroundImage || seen.has(normalized)) return;
+    if (!game.backgroundImage || seen.has(normalized) || (game.steamAppId && seenApps.has(game.steamAppId))) return;
     seen.add(normalized);
+    if (game.steamAppId) seenApps.add(game.steamAppId);
     results.push(game);
   };
 
