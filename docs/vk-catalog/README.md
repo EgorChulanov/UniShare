@@ -38,7 +38,7 @@
   - `screenshots/2-profile.jpg`: анкета игрока
   - `screenshots/3-chat.jpg`: чат после мэтча
   - `screenshots/4-my-profile.jpg`: мой профиль
-  - `screenshots/5-nearby-qr.jpg`: QR-код «Рядом»
-  - `screenshots/6-desktop.jpg`: версия для компьютера
+  - `screenshots/5-search.jpg`: поиск игр и игроков
+  - `screenshots/6-desktop.jpg`: поиск в версии для компьютера
 
 Политика конфиденциальности: `https://51-250-76-125.sslip.io/legal/privacy.html`. Правила: `https://51-250-76-125.sslip.io/legal/terms.html`.
