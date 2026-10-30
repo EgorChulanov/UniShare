@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { normalizeGameName, subscriptionService, type DiscoveryKind, type GameTag, type MyProfile, type Subscription } from "@unishare/shared";
 import { collapseOnScroll, useApp } from "../app/store";
 import { useI18n, useT } from "../i18n/i18n";
-import { Avatar, BrandIcon, GameCircle, PlatformBadgeRow, platformColor } from "../components/ui";
+import { Avatar, BrandIcon, GameCircle, PlatformBadgeRow, PlatformMark, platformColor } from "../components/ui";
 import { ProfileCardFace, type CardFaceData } from "../components/ProfileCardFace";
 
 export function tagFor(profile: Pick<MyProfile, "gameMetadata">, name: string): GameTag {
@@ -130,19 +130,22 @@ function GamesCard({ profile }: { profile: MyProfile }) {
   if (!profile.platforms.length && !profile.wantedGames.length) return null;
   return (
     <div className="card-surface games-card" role="button" tabIndex={0} onClick={() => push({ type: "edit" })} onKeyDown={(event) => event.key === "Enter" && push({ type: "edit" })}>
-      <div className="caption" style={{ fontSize: 14, padding: "14px 16px 8px" }}>
-        {t("profile.games")}
+      <div className="row" style={{ padding: "16px 16px 4px", gap: 8 }}>
+        <span className="grow" style={{ fontSize: 17, fontWeight: 800 }}>
+          {t("profile.games")}
+        </span>
+        <ChevronRight size={18} strokeWidth={2.6} className="secondary" />
       </div>
       {profile.platforms.map((id, index) => (
         <div key={id}>
           {index > 0 && <div className="divider" style={{ margin: "0 16px" }} />}
-          <GamesRow title={id} color={platformColor(id)} games={(profile.platformGames[id] ?? []).map((name) => tagFor(profile, name))} trailing={index % 2 === 1} />
+          <GamesRow title={id} mark={<PlatformMark platform={id} size={22} />} color={platformColor(id)} games={(profile.platformGames[id] ?? []).map((name) => tagFor(profile, name))} />
         </div>
       ))}
       {profile.wantedGames.length > 0 && (
         <div>
           {profile.platforms.length > 0 && <div className="divider" style={{ margin: "0 16px" }} />}
-          <GamesRow title={t("profile.wanted")} color="var(--accent-text)" games={profile.wantedGames.map((name) => tagFor(profile, name))} trailing={profile.platforms.length % 2 === 1} />
+          <GamesRow title={t("profile.wanted")} color="var(--accent-text)" games={profile.wantedGames.map((name) => tagFor(profile, name))} />
         </div>
       )}
       <div style={{ height: 8 }} />
@@ -150,25 +153,28 @@ function GamesCard({ profile }: { profile: MyProfile }) {
   );
 }
 
-function GamesRow({ title, color, games, trailing }: { title: string; color: string; games: GameTag[]; trailing: boolean }) {
+function GamesRow({ title, mark, color, games }: { title: string; mark?: React.ReactNode; color: string; games: GameTag[] }) {
   const t = useT();
   return (
-    <div className="col" style={{ gap: 8, padding: "12px 16px", alignItems: trailing ? "flex-end" : "flex-start" }}>
-      <span style={{ fontSize: 11, fontWeight: 600, color }}>{title}</span>
-      <div className="row" style={{ gap: 10 }}>
-        {games.length === 0 ? (
-          <span className="secondary" style={{ fontSize: 12 }}>
-            {t("profile.games.add.hint")}
-          </span>
-        ) : (
-          games.slice(0, 5).map((game) => (
-            <div key={game.name} className="game-item" style={{ width: 44 }}>
-              <GameCircle game={game} color={color} size={44} />
-              <span style={{ width: 44, fontSize: 8 }}>{game.name}</span>
+    <div className="col" style={{ gap: 10, padding: "12px 16px" }}>
+      <span className="row" style={{ gap: 8, fontSize: 13, fontWeight: 700, color: "var(--text-2)" }}>
+        {mark}
+        {title}
+      </span>
+      {games.length === 0 ? (
+        <span className="secondary" style={{ fontSize: 13 }}>
+          {t("profile.games.add.hint")}
+        </span>
+      ) : (
+        <div className="h-scroll" style={{ gap: 12 }}>
+          {games.map((game) => (
+            <div key={game.name} className="game-item" style={{ width: 60 }}>
+              <GameCircle game={game} color={color} size={52} />
+              <span style={{ width: 60, fontSize: 11 }}>{game.name}</span>
             </div>
-          ))
-        )}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -196,20 +202,20 @@ function SubscriptionsSection({ subscriptions }: { subscriptions: Subscription[]
           const service = subscriptionService(subscription.name);
           const progress = subscriptionProgress(subscription);
           return (
-            <div key={subscription.id} className="glass" style={{ margin: "0 16px", padding: "10px 16px", borderRadius: 12 }}>
+            <div key={subscription.id} className="glass" style={{ margin: "0 16px", padding: "14px 16px", borderRadius: 20 }}>
               <div className="row" style={{ gap: 12 }}>
                 <span style={{ width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--accent-text)" }}>
                   {service?.brand ? <BrandIcon file={service.brand} size={20} /> : <Sparkles size={18} />}
                 </span>
                 <div className="grow col" style={{ gap: 2 }}>
-                  <span style={{ fontSize: 14, fontWeight: 500 }}>{subscription.name}</span>
+                  <span style={{ fontSize: 16, fontWeight: 600 }}>{subscription.name}</span>
                   {subscription.planName && (
-                    <span className="secondary" style={{ fontSize: 11 }}>
+                    <span className="secondary" style={{ fontSize: 13 }}>
                       {subscription.planName}
                     </span>
                   )}
                   {subscription.expiresAt && (
-                    <span className="secondary" style={{ fontSize: 11 }}>
+                    <span className="secondary" style={{ fontSize: 13 }}>
                       {t("subscription.expires", new Date(subscription.expiresAt).toLocaleDateString(language, { day: "numeric", month: "short", year: "numeric" }))}
                     </span>
                   )}
@@ -221,7 +227,7 @@ function SubscriptionsSection({ subscriptions }: { subscriptions: Subscription[]
                   <div className="progress-bar">
                     <span style={{ width: `${progress.fraction * 100}%` }} />
                   </div>
-                  <span className="secondary" style={{ fontSize: 10, fontWeight: 500 }}>
+                  <span className="secondary" style={{ fontSize: 12, fontWeight: 600 }}>
                     {t("subscription.days.remaining", progress.days)}
                   </span>
                 </div>

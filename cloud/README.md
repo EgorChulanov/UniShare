@@ -37,7 +37,7 @@ cloud/
 ### Accounts across platforms
 - The **Telegram** sign-in is verified on the server with an HMAC over `initData` signed with the bot token.
 - The **VK** sign-in is verified on the server through the `sign` launch-params signature, keyed with the app secret.
-- The **website** signs in through the Telegram Login Widget.
+- The **website** signs in through the Telegram Login Widget. It stays hidden until BotFather `/setdomain` points at the site and `TELEGRAM_LOGIN_WIDGET=true` is set; until then the site sends people to the bot or the VK app.
 - Every sign-in method is a row in `user_identities` attached to a single UniShare account. **Settings → Linked accounts** creates a 15-minute link token, shown as a link. Opening it in the other app attaches that identity to the same profile.
 - After a match, a partner can show their Telegram or VK contact by turning on **“Show my contacts to chat partners”**. The button **“Message on Telegram”** then appears, in the spirit of Dayvinchik, while conversations still stay in UniShare.
 
@@ -99,6 +99,7 @@ sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/EgorChulanov/UniSha
 | `PUBLIC_URL`, `DOMAIN` | HTTPS address of the app (Telegram and VK require HTTPS) |
 | `SESSION_SECRET` | ≥32 random characters |
 | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_USERNAME` | Bot from @BotFather |
+| `TELEGRAM_LOGIN_WIDGET` | `true` once BotFather `/setdomain` points at `PUBLIC_URL` (shows the Login Widget on the website) |
 | `VK_APP_ID`, `VK_APP_SECRET` | VK Mini App ID and secure key |
 | `VK_GROUP_ID`, `VK_GROUP_TOKEN` | Optional VK community for notifications |
 | `STORAGE_DRIVER=s3`, `S3_*` | Yandex Object Storage instead of the local disk |

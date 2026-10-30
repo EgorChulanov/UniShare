@@ -41,6 +41,8 @@ export const config = {
     botUsername: optional("TELEGRAM_BOT_USERNAME"),
     /** Optional Mini App short name created with /newapp (t.me/<bot>/<name>). */
     appShortName: optional("TELEGRAM_APP_SHORT_NAME"),
+    /** Show the Telegram Login Widget on the website; it only works once BotFather /setdomain points at PUBLIC_URL. */
+    loginWidget: flag("TELEGRAM_LOGIN_WIDGET"),
     webhookSecret: optional("TELEGRAM_WEBHOOK_SECRET"),
     /** Alternative Bot API endpoint (e.g. a relay) if api.telegram.org is unreachable from the server. */
     apiRoot: optional("TELEGRAM_API_ROOT"),

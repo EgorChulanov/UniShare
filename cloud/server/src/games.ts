@@ -317,9 +317,26 @@ export async function searchGames(input: string): Promise<GameSearchResult[]> {
   return merge(merge(curated, steam), offline(needle));
 }
 
+/** Treats "Counter-Strike 2" and "Counter Strike 2", or "Assassin's Creed" and "Assassins Creed", as one game. */
+function dedupeKey(name: string): string {
+  return normalizeGameName(name).replace(/['’`]/g, "").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+}
+
+/** Keeps the first entry of each game in order, borrowing artwork from a later duplicate when it has none. */
 function merge(first: GameSearchResult[], second: GameSearchResult[]): GameSearchResult[] {
-  const seen = new Set(first.map((game) => normalizeGameName(game.name)));
-  return [...first, ...second.filter((game) => !seen.has(normalizeGameName(game.name)))].slice(0, 12);
+  const merged: GameSearchResult[] = [];
+  const position = new Map<string, number>();
+  for (const game of [...first, ...second]) {
+    const key = dedupeKey(game.name);
+    const at = position.get(key);
+    if (at === undefined) {
+      position.set(key, merged.length);
+      merged.push(game);
+    } else if (!merged[at].backgroundImage && game.backgroundImage) {
+      merged[at] = { ...merged[at], backgroundImage: game.backgroundImage };
+    }
+  }
+  return merged.slice(0, 12);
 }
 
 // ── Popular now ────────────────────────────────────────────────────────────

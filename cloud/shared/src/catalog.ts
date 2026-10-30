@@ -14,7 +14,7 @@ export interface PlatformInfo {
 export const PLATFORM_INFO: Record<Platform, PlatformInfo> = {
   Steam: { id: "Steam", color: "#1B2838", brand: "steam.svg" },
   "Epic Games": { id: "Epic Games", color: "#313131", brand: "epicgames.svg" },
-  Nintendo: { id: "Nintendo", color: "#E60012", brand: "nintendo.svg" },
+  Nintendo: { id: "Nintendo", color: "#E60012", brand: "nintendo-switch.svg" },
   PlayStation: { id: "PlayStation", color: "#003791", brand: "playstation.svg" },
   Xbox: { id: "Xbox", color: "#107C10", brand: "xbox.svg" },
   PC: { id: "PC", color: "#0078D4", brand: null },
@@ -107,7 +107,7 @@ export const SUBSCRIPTION_SERVICES: SubscriptionService[] = [
   },
   {
     name: "Nintendo Switch Online",
-    brand: "nintendo.svg",
+    brand: "nintendo-switch.svg",
     plans: [
       { name: "Individual", cycles: ["1m", "3m", "12m"] },
       { name: "Family", cycles: ["12m"], maximumSlots: 8 },

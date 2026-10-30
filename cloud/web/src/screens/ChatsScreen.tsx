@@ -88,10 +88,10 @@ function ChatList({ onOpen, selected }: { onOpen(chatId: string): void; selected
   return (
     <div style={{ paddingTop: 8 }}>
       {requests.length > 0 && (
-        <div className="col" style={{ gap: 8, padding: "10px 0" }}>
-          <span className="caption" style={{ padding: "0 18px" }}>
+        <div className="col" style={{ gap: 2, padding: "4px 0 10px" }}>
+          <h2 className="section-title" style={{ padding: "8px 18px 6px" }}>
             {t("chats.requests")}
-          </span>
+          </h2>
           {requests.map((request) => (
             <RequestRow key={request.id} request={request} onOpen={onOpen} />
           ))}
@@ -105,12 +105,24 @@ function ChatList({ onOpen, selected }: { onOpen(chatId: string): void; selected
           <p>{t("chats.empty.subtitle")}</p>
         </div>
       ) : (
-        chats.map((chat) => (
-          <div key={chat.id}>
-            <ChatRow chat={chat} active={chat.id === selected} onOpen={onOpen} />
-            <div className="divider" style={{ marginLeft: 82 }} />
-          </div>
-        ))
+        <>
+          {requests.length > 0 && chats.length > 0 && (
+            <h2 className="section-title" style={{ padding: "8px 18px 6px" }}>
+              {t("chats.matches")}
+            </h2>
+          )}
+          {chats.map((chat, index) => {
+            const active = chat.id === selected;
+            // No hairline next to the highlighted row: the pill already separates it.
+            const divider = !active && chats[index + 1]?.id !== selected && index < chats.length - 1;
+            return (
+              <div key={chat.id}>
+                <ChatRow chat={chat} active={active} onOpen={onOpen} />
+                {divider && <div className="divider" style={{ marginLeft: 85 }} />}
+              </div>
+            );
+          })}
+        </>
       )}
     </div>
   );
@@ -151,9 +163,9 @@ function RequestRow({ request, onOpen }: { request: LikeRequestItem; onOpen(chat
   };
 
   return (
-    <div className="row" style={{ gap: 13, padding: "8px 18px" }}>
+    <div className="row" style={{ gap: 13, padding: "11px 18px" }}>
       <button onClick={() => useApp.getState().push({ type: "profile", uid: request.from.uid, card: request.from })} aria-label={request.from.username}>
-        <Avatar url={request.from.avatarUrl} size={48} ring />
+        <Avatar url={request.from.avatarUrl} size={54} ring />
       </button>
       <div className="col grow" style={{ gap: 5, alignItems: "flex-start", minWidth: 0 }}>
         <span className="ellipsis" style={{ fontSize: 15, fontWeight: 600, maxWidth: "100%" }}>
@@ -179,21 +191,21 @@ function ChatRow({ chat, active, onOpen }: { chat: ChatSummary; active: boolean;
   const preview = chat.lastMessage ? (chat.lastMessage === "📷" ? `📷 ${t("chat.photo")}` : chat.lastMessage) : t("chat.empty");
 
   return (
-    <button className="list-row" style={{ padding: "11px 18px", background: active ? "var(--fill)" : undefined }} onClick={() => onOpen(chat.id)}>
+    <button className={`list-row${active ? " active" : ""}`} onClick={() => onOpen(chat.id)}>
       <Avatar url={chat.partner.avatarUrl} size={54} online={chat.partner.isOnline} />
       <div className="col grow" style={{ gap: 5, minWidth: 0 }}>
         <div className="row" style={{ gap: 7, minWidth: 0 }}>
-          <span className="ellipsis" style={{ fontSize: 15, fontWeight: unread > 0 ? 600 : 400 }}>
+          <span className="ellipsis" style={{ fontSize: 16, fontWeight: unread > 0 ? 700 : 600 }}>
             {chat.partner.username}
           </span>
           <TypeBadge kind={chat.kind} />
         </div>
-        <span className="ellipsis" style={{ fontSize: 13, color: typing ? "var(--accent-text)" : "var(--text-2)" }}>
+        <span className="ellipsis" style={{ fontSize: 14, color: typing ? "var(--accent-text)" : unread > 0 ? "var(--text)" : "var(--text-2)" }}>
           {typing ? t("chat.typing") : preview}
         </span>
       </div>
-      <div className="col" style={{ alignItems: "flex-end", gap: 7, flexShrink: 0 }}>
-        <span className="secondary" style={{ fontSize: 11 }}>
+      <div className="col" style={{ alignItems: "flex-end", alignSelf: "stretch", gap: 7, paddingTop: 2, flexShrink: 0 }}>
+        <span style={{ fontSize: 12, color: unread > 0 ? "var(--accent-text)" : "var(--text-2)", fontWeight: unread > 0 ? 600 : 400 }}>
           {relativeTime(chat.lastMessageAt, language)}
         </span>
         {unread > 0 && <span className="badge">{unread > 99 ? "99+" : unread}</span>}

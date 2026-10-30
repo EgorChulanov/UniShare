@@ -208,6 +208,8 @@ export interface AirShareResult {
 export interface PublicConfig {
   telegramBotUsername: string | null;
   telegramAppShortName: string | null;
+  /** Whether the website offers the Telegram Login Widget (the bot's domain is set in BotFather). */
+  telegramLoginWidget: boolean;
   vkAppId: number | null;
   /** Community that sends VK notifications (VKWebAppAllowMessagesFromGroup). */
   vkGroupId: number | null;

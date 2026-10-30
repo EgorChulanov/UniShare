@@ -1,6 +1,7 @@
 // Strings for the redesign that follows the latest App Store screenshots
 // (docs/assets/store-mockups): Exchange instead of Teammates, the profile hero
-// with the card preview, platform categories and the AirShare start screen.
+// with the card preview, platform categories, the AirShare start screen and the
+// sign-in page with the UniShare planet.
 type Dict = Record<string, string>;
 
 export const redesignStrings: Record<"ru" | "en" | "uk" | "be", Dict> = {
@@ -22,6 +23,12 @@ export const redesignStrings: Record<"ru" | "en" | "uk" | "be", Dict> = {
     "profile.stats.platforms": "Платформ: {0}",
     "airshare.subtitle": "Держите оба телефона рядом и нажмите «Начать», чтобы найти другого пользователя UniShare.",
     "airshare.start": "Начать поиск рядом",
+    "skills.sheet.title": "Анкета навыков",
+    "settings.account": "Аккаунт",
+    "landing.feature.nearby.text": "AirShare находит игрока рядом за секунды",
+    "landing.legal.inline": "Продолжая, вы принимаете {terms} и {privacy}.",
+    "landing.legal.terms": "Правила",
+    "landing.legal.privacy": "Политику конфиденциальности",
   },
   en: {
     "feed.segment.teammates": "Exchange",
@@ -41,6 +48,12 @@ export const redesignStrings: Record<"ru" | "en" | "uk" | "be", Dict> = {
     "profile.stats.platforms": "Platforms: {0}",
     "airshare.subtitle": "Keep both devices nearby and tap Start to find another UniShare user.",
     "airshare.start": "Start nearby search",
+    "skills.sheet.title": "Skills profile",
+    "settings.account": "Account",
+    "landing.feature.nearby.text": "AirShare finds a player next to you in seconds",
+    "landing.legal.inline": "By continuing you accept the {terms} and {privacy}.",
+    "landing.legal.terms": "Terms",
+    "landing.legal.privacy": "Privacy Policy",
   },
   uk: {
     "feed.segment.teammates": "Обмін",
@@ -60,6 +73,13 @@ export const redesignStrings: Record<"ru" | "en" | "uk" | "be", Dict> = {
     "profile.stats.platforms": "Платформ: {0}",
     "airshare.subtitle": "Тримайте обидва телефони поруч і натисніть «Почати», щоб знайти іншого користувача UniShare.",
     "airshare.start": "Почати пошук поруч",
+    "chats.matches": "Метчі",
+    "skills.sheet.title": "Анкета навичок",
+    "settings.account": "Акаунт",
+    "landing.feature.nearby.text": "AirShare знаходить гравця поруч за секунди",
+    "landing.legal.inline": "Продовжуючи, ви приймаєте {terms} та {privacy}.",
+    "landing.legal.terms": "Правила",
+    "landing.legal.privacy": "Політику конфіденційності",
   },
   be: {
     "feed.segment.teammates": "Абмен",
@@ -79,5 +99,15 @@ export const redesignStrings: Record<"ru" | "en" | "uk" | "be", Dict> = {
     "profile.stats.platforms": "Платформаў: {0}",
     "airshare.subtitle": "Трымайце абодва тэлефоны побач і націсніце «Пачаць», каб знайсці іншага карыстальніка UniShare.",
     "airshare.start": "Пачаць пошук побач",
+    "chats.matches": "Мэтчы",
+    "skills.sheet.title": "Анкета навыкаў",
+    "settings.account": "Акаўнт",
+    "landing.feature.feed.text": "Гульні, платформы і навыкі на адной картцы",
+    "landing.feature.match.text": "Узаемны лайк адкрывае асабісты чат",
+    "landing.feature.nearby.text": "AirShare знаходзіць гульца побач за секунды",
+    "landing.feature.safe.text": "Паролі і плацежныя даныя блакуюцца",
+    "landing.legal.inline": "Працягваючы, вы прымаеце {terms} і {privacy}.",
+    "landing.legal.terms": "Правілы",
+    "landing.legal.privacy": "Палітыку прыватнасці",
   },
 };

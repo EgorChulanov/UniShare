@@ -70,13 +70,17 @@ export function SkillsSheet() {
 
   return (
     <Sheet
-      title={t("profile.skills.create")}
+      title={t("skills.sheet.title")}
       lead={
         <button className="btn-plain secondary" onClick={pop}>
           {t("cancel")}
         </button>
       }
-      trail={null}
+      trail={
+        <span className="step-count" aria-live="polite">
+          {step + 1}/{STEPS}
+        </span>
+      }
       footer={
         <div className="row" style={{ gap: 14, padding: "12px 24px calc(var(--safe-bottom) + 24px)", maxWidth: 608, width: "100%", margin: "0 auto" }}>
           {step > 0 && (

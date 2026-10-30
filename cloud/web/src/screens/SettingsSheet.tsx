@@ -131,7 +131,7 @@ export function SettingsSheet() {
           ))}
         </div>
 
-        <div className="group-title">{t("profile.linked")}</div>
+        <div className="group-title">{t("settings.account")}</div>
         <div className="group">
           <LinkRow
             icon={<Link2 size={20} />}
@@ -147,14 +147,18 @@ export function SettingsSheet() {
               </span>
             }
           />
-          <div className="group-row">
-            <UserRound size={20} color="var(--accent-text)" />
+          <div className="group-row with-icon">
+            <span className="ico">
+              <UserRound size={20} />
+            </span>
             <span className="grow">{t("settings.contact")}</span>
             <Toggle on={profile.allowDirectContact} onChange={(value) => void toggleContact(value)} label={t("settings.contact")} />
           </div>
           {notificationsAvailable && provider && (
-            <div className="group-row">
-              <Bell size={20} color="var(--accent-text)" />
+            <div className="group-row with-icon">
+              <span className="ico">
+                <Bell size={20} />
+              </span>
               <span className="grow">{t("settings.notifications")}</span>
               {identity?.canMessage ? (
                 <Check size={18} strokeWidth={2.6} color="var(--green)" />
@@ -171,7 +175,7 @@ export function SettingsSheet() {
 
         <div className="group-title">{t("settings.about")}</div>
         <div className="group">
-          <LinkRow icon={<Info size={20} fill="currentColor" color="var(--card)" style={{ color: "var(--primary)" }} />} label={t("transparency.title")} onClick={() => push({ type: "transparency" })} />
+          <LinkRow icon={<Info size={20} />} label={t("transparency.title")} onClick={() => push({ type: "transparency" })} />
           <LinkRow icon={<Hand size={20} />} label={t("settings.privacy")} onClick={() => platform.openLink(config?.privacyUrl ?? legalUrl("privacy.html"))} />
           <LinkRow icon={<FileText size={20} />} label={t("settings.terms")} onClick={() => platform.openLink(config?.termsUrl ?? legalUrl("terms.html"))} />
           <LinkRow icon={<Mail size={20} />} label={t("settings.support")} onClick={() => platform.openLink(legalUrl("support.html"))} />

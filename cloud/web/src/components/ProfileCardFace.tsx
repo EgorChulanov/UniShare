@@ -56,7 +56,7 @@ export function ProfileCardFace({ card, kind, footer = true }: { card: CardFaceD
           )}
         </div>
 
-        <div style={{ flex: 1, minHeight: 18 }} />
+        <div style={{ height: 28, flexShrink: 0 }} />
 
         {featured && (
           <div style={{ marginBottom: 18 }}>
@@ -86,14 +86,14 @@ export function ProfileCardFace({ card, kind, footer = true }: { card: CardFaceD
         ) : (
           <div>
             {playing.length ? (
-              <GameCirclesRow games={playing} color="#ffffff" size={66} padding={22} />
+              <GameCirclesRow games={playing} color="#ffffff" size={footer ? 76 : 66} padding={22} />
             ) : (
               <div className="card-muted">{t("profile.games.add.hint")}</div>
             )}
             {card.wantedGames.length > 0 && (
               <div style={{ marginTop: 20 }}>
                 <h4>{t("profile.wanted")}</h4>
-                <GameCirclesRow games={card.wantedGames} color="#ffffff" size={54} padding={22} />
+                <GameCirclesRow games={card.wantedGames} color="#ffffff" size={footer ? 60 : 54} padding={22} />
               </div>
             )}
           </div>

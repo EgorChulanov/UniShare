@@ -7,7 +7,7 @@ import { PLATFORMS, PLATFORM_INFO, type GameDetails, type GameSearchResult, type
 import { api } from "../lib/api";
 import { collapseOnScroll, useApp } from "../app/store";
 import { useT } from "../i18n/i18n";
-import { Avatar, PlatformBadgeRow, PlatformGlyph, Sheet, Spinner, platformColor } from "../components/ui";
+import { Avatar, PlatformBadgeRow, gameInitials, PlatformGlyph, Sheet, Spinner, platformColor } from "../components/ui";
 
 const popularCache: { games: GameSearchResult[] | null } = { games: null };
 
@@ -162,7 +162,13 @@ function GameCard({ game, onClick, hidden }: { game: GameSearchResult; onClick()
   const [failed, setFailed] = useState(false);
   return (
     <button className="game-card" onClick={onClick} aria-hidden={hidden || undefined} tabIndex={hidden ? -1 : undefined}>
-      {game.backgroundImage && !failed && <img src={game.backgroundImage} alt="" loading="lazy" draggable={false} onError={() => setFailed(true)} />}
+      {game.backgroundImage && !failed ? (
+        <img src={game.backgroundImage} alt="" loading="lazy" draggable={false} onError={() => setFailed(true)} />
+      ) : (
+        <span className="game-card-blank" aria-hidden>
+          {gameInitials(game.name)}
+        </span>
+      )}
       <span className="shade" />
       <span className="name">{game.name}</span>
     </button>

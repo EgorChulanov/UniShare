@@ -1,6 +1,6 @@
 // Port of UniShare/Features/Chat/ChatView.swift.
 import { AnimatePresence, motion, useIsPresent } from "framer-motion";
-import { ArrowUp, BadgeCheck, CheckCircle2, ChevronLeft, ChevronRight, Clock, Ellipsis, Flag, Image as ImageIcon, ShieldCheck, Trash2, UserX } from "lucide-react";
+import { ArrowUp, BadgeCheck, CheckCircle2, ChevronLeft, ChevronRight, Clock, Ellipsis, Flag, Images, ShieldCheck, Trash2, UserX } from "lucide-react";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ChangeEvent, type KeyboardEvent, type UIEvent } from "react";
 import type { ChatDetails, ChatMessage } from "@unishare/shared";
 import { useApp } from "../app/store";
@@ -8,7 +8,7 @@ import { ApiError, api, compressImage, mediaUrl } from "../lib/api";
 import { realtime } from "../lib/realtime";
 import { platform } from "../platform/platform";
 import { errorMessage, useI18n, useT } from "../i18n/i18n";
-import { ActionSheet, PROVIDER_COLORS, ProviderIcon, Spinner, useEscape } from "../components/ui";
+import { ActionSheet, Avatar, PROVIDER_COLORS, ProviderIcon, SelectedDot, Spinner, useEscape } from "../components/ui";
 
 const PAGE_SIZE = 50;
 const TYPING_INTERVAL = 2500;
@@ -322,22 +322,23 @@ export function ChatView({ chatId, embedded, onClose }: { chatId: string; embedd
       <header className={`nav-header chat-nav${embedded ? " embedded" : ""}`}>
         <div className="lead">
           {!embedded && (
-            <button className="back-btn" onClick={close} aria-label={t("chat.back")}>
-              <ChevronLeft size={26} strokeWidth={2.4} />
+            <button className="close-btn" onClick={close} aria-label={t("chat.back")}>
+              <ChevronLeft size={24} strokeWidth={2.6} />
             </button>
           )}
         </div>
         <button className="principal" onClick={openProfile} disabled={!partner}>
-          <span className="ellipsis" style={{ fontSize: 16, fontWeight: 600, maxWidth: "100%" }}>
-            {partner?.username ?? ""}
+          <Avatar url={partner?.avatarUrl} size={36} />
+          <span className="col" style={{ minWidth: 0, alignItems: "flex-start", gap: 1 }}>
+            <span className="ellipsis" style={{ fontSize: 17, fontWeight: 700, maxWidth: "100%" }}>
+              {partner?.username ?? ""}
+            </span>
+            <span style={{ fontSize: 13, fontWeight: 600, color: isTyping ? "var(--accent-text)" : partner?.isOnline ? "var(--green)" : "var(--text-2)" }}>{status}</span>
           </span>
-          <span style={{ fontSize: 12, color: isTyping ? "var(--accent-text)" : partner?.isOnline ? "var(--green)" : "var(--text-2)" }}>{status}</span>
         </button>
         <div className="trail" style={{ position: "relative" }}>
-          <button className="back-btn" onClick={() => setMenuOpen((open) => !open)} aria-label={t("chat.more")} aria-expanded={menuOpen}>
-            <span className="ellipsis-circle">
-              <Ellipsis size={15} strokeWidth={2.6} />
-            </span>
+          <button className="close-btn" onClick={() => setMenuOpen((open) => !open)} aria-label={t("chat.more")} aria-expanded={menuOpen}>
+            <Ellipsis size={20} strokeWidth={2.6} color="var(--accent-text)" />
           </button>
           <AnimatePresence>
             {menuOpen && (
@@ -403,7 +404,7 @@ export function ChatView({ chatId, embedded, onClose }: { chatId: string; embedd
 
       <div className="messages" ref={listRef} onScroll={onScroll}>
         <div className="safety" style={{ marginBottom: 4 }}>
-          <ShieldCheck size={16} fill="var(--primary)" color="var(--bg)" style={{ flexShrink: 0 }} />
+          <ShieldCheck size={20} color="var(--accent-text)" style={{ flexShrink: 0 }} />
           <span>{t("chat.safety.notice")}</span>
         </div>
         {(loadingOlder || (loading && messages.length === 0)) && (
@@ -425,7 +426,7 @@ export function ChatView({ chatId, embedded, onClose }: { chatId: string; embedd
                   (pending.has(message.id) ? (
                     <Clock size={11} />
                   ) : message.readAt ? (
-                    <CheckCircle2 size={12} fill="var(--primary)" color="var(--bg)" />
+                    <SelectedDot size={13} />
                   ) : (
                     <CheckCircle2 size={12} />
                   ))}
@@ -450,8 +451,8 @@ export function ChatView({ chatId, embedded, onClose }: { chatId: string; embedd
 
       <div className="input-bar">
         <input ref={fileRef} type="file" accept="image/*" hidden onChange={sendImage} />
-        <button className="center" style={{ width: 36, height: 38, color: "var(--accent-text)" }} onClick={() => fileRef.current?.click()} disabled={sending} aria-label={t("chat.attach")}>
-          {sending ? <Spinner size={18} /> : <ImageIcon size={22} />}
+        <button className="close-btn" style={{ color: "var(--accent-text)" }} onClick={() => fileRef.current?.click()} disabled={sending} aria-label={t("chat.attach")}>
+          {sending ? <Spinner size={18} /> : <Images size={21} />}
         </button>
         <textarea ref={textareaRef} rows={1} value={text} maxLength={1000} placeholder={t("chat.placeholder")} onChange={onChange} onKeyDown={onKeyDown} enterKeyHint="send" />
         <button className={`send-btn ${text.trim() ? "ready" : ""}`} onClick={() => void sendText()} disabled={!text.trim()} aria-label={t("chat.send")}>

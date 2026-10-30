@@ -1,13 +1,13 @@
 // Game search used by onboarding (GameSearchPickerView / gamesPerPlatformStep)
 // and profile editing (EditProfileSheet.gamesEditor). Results come from the
 // API (RAWG when configured, Steam and the offline catalog otherwise).
-import { AlertTriangle, CheckCircle2, Gamepad2, PlusCircle, Search, X, XCircle } from "lucide-react";
+import { AlertTriangle, Gamepad2, PlusCircle, Search, X, XCircle } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { normalizeGameName, sanitizeGameName, type GameSearchResult, type GameTag } from "@unishare/shared";
 import { api } from "../lib/api";
 import { useT } from "../i18n/i18n";
 import { platform } from "../platform/platform";
-import { Spinner } from "./ui";
+import { SelectedDot, Spinner } from "./ui";
 
 function toTag(game: GameSearchResult): GameTag {
   return {
@@ -93,9 +93,9 @@ export function GamePicker({
 
   return (
     <div className="col" style={{ gap: 12 }}>
-      <label className="field glass" style={{ padding: "10px 14px", borderRadius: 12 }}>
-        <Search size={18} className="secondary" />
-        <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={placeholder ?? t("onboarding.games.search")} enterKeyHint="search" autoComplete="off" />
+      <label className="field glass" style={{ padding: "14px 16px", borderRadius: 16 }}>
+        <Search size={19} strokeWidth={2.4} className="secondary" />
+        <input style={{ fontSize: 17 }} value={query} onChange={(event) => setQuery(event.target.value)} placeholder={placeholder ?? t("onboarding.games.search")} enterKeyHint="search" autoComplete="off" />
         {loading && <Spinner size={16} />}
         {query && (
           <button onClick={() => setQuery("")} aria-label={t("common.close")} className="secondary" style={{ display: "flex" }}>
@@ -139,10 +139,10 @@ export function GamePicker({
             return (
               <button key={`${game.source ?? "r"}-${game.id}-${game.name}`} className={`game-result glass ${isSelected ? "selected" : ""}`} onClick={() => toggle(tag)}>
                 <ResultCover url={tag.coverUrl} />
-                <span className="grow ellipsis" style={{ fontSize: 14 }}>
+                <span className="grow ellipsis" style={{ fontSize: 16, fontWeight: 600 }}>
                   {game.name}
                 </span>
-                {isSelected ? <CheckCircle2 size={20} fill="var(--primary)" color="var(--bg)" /> : <PlusCircle size={20} className="secondary" />}
+                {isSelected ? <SelectedDot size={22} /> : <PlusCircle size={22} className="secondary" />}
               </button>
             );
           })}
@@ -151,20 +151,20 @@ export function GamePicker({
               <span className="result-cover">
                 <PlusCircle size={16} color="var(--primary)" />
               </span>
-              <span className="grow ellipsis" style={{ fontSize: 14 }}>
+              <span className="grow ellipsis" style={{ fontSize: 16, fontWeight: 600 }}>
                 {t("game.search.add", custom!)}
               </span>
             </button>
           )}
           {!loading && results.length === 0 && (
-            <span className="secondary" style={{ fontSize: 12, paddingTop: 4 }}>
+            <span className="secondary" style={{ fontSize: 14, paddingTop: 4 }}>
               {t("game.search.empty")}
             </span>
           )}
         </div>
       )}
 
-      <div className="col" style={{ gap: 5, fontSize: 11 }}>
+      <div className="col" style={{ gap: 5, fontSize: 12 }}>
         {failed && (
           <span className="row" style={{ gap: 5, color: "var(--orange)" }}>
             <AlertTriangle size={12} /> {t("game.search.catalog.unavailable")}

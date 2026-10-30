@@ -1,6 +1,6 @@
 // Web ports of the iOS building blocks in UniShare/Components/*.swift.
 import { AnimatePresence, motion, useIsPresent } from "framer-motion";
-import { Star, User, X } from "lucide-react";
+import { Check, Star, User, X } from "lucide-react";
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { PLATFORM_INFO, type GameTag, type Platform } from "@unishare/shared";
 import { mediaUrl } from "../lib/api";
@@ -46,12 +46,35 @@ export function platformColor(id: Platform): string {
   return color;
 }
 
-/** PlatformBadge.swift: circle tinted with the platform color, brand glyph inside. */
+/** Platform as a neutral circle with the brand glyph (m2); brand colour lives only in solid marks. */
+/** Two letters for a game without artwork: the first letters of its first two words ("Dota 2" → "D2"). */
+export function gameInitials(name: string): string {
+  const [first = name, second] = name.match(/[\p{L}\p{N}]+/gu) ?? [];
+  return (second ? first[0] + second[0] : first.slice(0, 2)).toUpperCase();
+}
+
 export function PlatformBadge({ platform: id, size = 32 }: { platform: Platform; size?: number }) {
-  const color = platformColor(id);
   return (
-    <span className="platform-badge" title={id} style={{ width: size, height: size, background: `color-mix(in srgb, ${color} 15%, transparent)`, color }}>
+    <span className="platform-badge" title={id} style={{ width: size, height: size }}>
       <PlatformGlyph platform={id} size={size * 0.52} />
+    </span>
+  );
+}
+
+/** Solid brand square with a white glyph, as in the Search platform grid. */
+export function PlatformMark({ platform: id, size = 28 }: { platform: Platform; size?: number }) {
+  return (
+    <span className="platform-mark" title={id} style={{ width: size, height: size, borderRadius: Math.round(size * 0.32), ["--brand" as string]: PLATFORM_INFO[id].color }}>
+      <PlatformGlyph platform={id} size={Math.round(size * 0.58)} />
+    </span>
+  );
+}
+
+/** Selected state: a solid violet disc with a white tick (m2). */
+export function SelectedDot({ size = 22 }: { size?: number }) {
+  return (
+    <span className="selected-dot" style={{ width: size, height: size }} aria-hidden>
+      <Check size={Math.round(size * 0.62)} strokeWidth={3} />
     </span>
   );
 }
@@ -249,8 +272,10 @@ export function Stars({ value, size = 14 }: { value: number; size?: number }) {
 export function CloseButton({ onClick }: { onClick(): void }) {
   const t = useT();
   return (
-    <button className="icon-circle" onClick={onClick} aria-label={t("common.close")}>
-      <X size={16} strokeWidth={2.6} />
+    <button className="close-btn" onClick={onClick} aria-label={t("common.close")}>
+      <span className="x-disc">
+        <X size={14} strokeWidth={3.2} />
+      </span>
     </button>
   );
 }

@@ -484,7 +484,7 @@ Find people who have AirShare open nearby at the same moment.
 | GET | `/api/config` | none | `PublicConfig` |
 | GET | `/health` | none | `{ ok, telegram, probe?, probeAlternatives? }` |
 
-- `PublicConfig` has `telegramBotUsername`, `telegramAppShortName`, `vkAppId`, `vkGroupId`, `publicUrl`, `supportEmail`, `privacyUrl`, `termsUrl` and `devAuth`. Load it at startup for the legal links, the support address, and whether to offer dev sign-in.
+- `PublicConfig` has `telegramBotUsername`, `telegramAppShortName`, `telegramLoginWidget`, `vkAppId`, `vkGroupId`, `publicUrl`, `supportEmail`, `privacyUrl`, `termsUrl` and `devAuth`. Load it at startup for the legal links, the support address, and whether to offer dev sign-in.
 - `/health` is for monitoring. `ok: true` means the database answered (otherwise `500`). `telegram` is `{ mode, configured, route, error, checkedAt }`, or `null` without a bot. `?probe=1` (with optional `&ips=`) makes the server test its connection to the Telegram Bot API; clients should not call it.
 
 Media routes are described in [section 5](#5-uploads-and-media).

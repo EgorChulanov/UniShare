@@ -106,6 +106,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   app.get("/api/config", async (): Promise<PublicConfig> => ({
     telegramBotUsername: config.telegram.botUsername,
     telegramAppShortName: config.telegram.appShortName,
+    telegramLoginWidget: config.telegram.loginWidget && Boolean(config.telegram.botUsername),
     vkAppId: config.vk.appId,
     vkGroupId: config.vk.groupId,
     publicUrl: config.publicUrl,

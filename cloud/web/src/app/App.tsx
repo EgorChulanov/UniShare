@@ -161,7 +161,8 @@ function TabBar() {
   const tab = useApp((state) => state.tab);
   const collapsed = useApp((state) => state.tabBarCollapsed);
   const lastTab = useApp((state) => state.lastTab);
-  const hidden = useApp((state) => state.overlays.some((overlay) => overlay.type === "chat"));
+  // Sheets and pushed screens cover the tab bar, as on iOS; on desktop it would poke out under a dialog.
+  const hidden = useApp((state) => state.overlays.length > 0);
   const setTab = useApp((state) => state.setTab);
   const profile = useApp((state) => state.profile);
   const unread = useUnreadCount();
@@ -187,7 +188,7 @@ function TabBar() {
     <AnimatePresence>
       {!hidden && (
         <motion.nav
-          className={`tabbar-wrap ${tab === "search" ? "searching" : ""}`}
+          className={`tabbar-wrap ${tab === "search" ? "searching" : ""} ${tab === "chats" ? "chats" : ""}`}
           aria-label="Navigation"
           initial={{ y: 120, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}

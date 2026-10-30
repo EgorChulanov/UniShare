@@ -1,5 +1,5 @@
 // Port of UniShare/Features/Profile/EditProfileSheet.swift (+ SubscriptionEditorSheet).
-import { AtSign, Camera, CheckCircle2, Circle, Hash, Sparkles } from "lucide-react";
+import { AtSign, Camera, Circle, Hash, Sparkles } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { create } from "zustand";
 import {
@@ -20,7 +20,7 @@ import { api, compressImage } from "../lib/api";
 import { errorMessage, useI18n, useT } from "../i18n/i18n";
 import { platform } from "../platform/platform";
 import { GamePicker } from "../components/GamePicker";
-import { Avatar, BrandIcon, PlatformBadge, Sheet, Spinner, Toggle, platformColor } from "../components/ui";
+import { Avatar, BrandIcon, PlatformBadge, PlatformMark, SelectedDot, Sheet, Spinner, Toggle, platformColor } from "../components/ui";
 import { subscriptionProgress, tagFor } from "./ProfileScreen";
 
 /** A platform's games, or the wanted games tab after the platform tabs. */
@@ -201,8 +201,8 @@ export function EditProfileSheet() {
         <div className="col" style={{ alignItems: "center", gap: 10 }}>
           <button style={{ position: "relative" }} onClick={() => fileInput.current?.click()} aria-label={t("profile.change.avatar")}>
             {avatar ? <img src={avatar.url} alt="" style={{ width: 90, height: 90, borderRadius: "50%", objectFit: "cover" }} /> : <Avatar url={profile.avatarUrl} size={90} />}
-            <span className="center" style={{ position: "absolute", right: 0, bottom: 0, width: 26, height: 26, borderRadius: "50%", background: "var(--primary)" }}>
-              <Camera size={11} fill="#fff" color="var(--primary)" />
+            <span className="center" style={{ position: "absolute", right: -4, bottom: -2, width: 32, height: 32, borderRadius: "50%", background: "var(--accent-grad)", color: "#fff", border: "3px solid var(--sheet-bg)" }}>
+              <Camera size={14} strokeWidth={2.4} />
             </span>
           </button>
           <button className="btn-plain" style={{ fontSize: 14, padding: 0 }} onClick={() => fileInput.current?.click()}>
@@ -239,9 +239,9 @@ export function EditProfileSheet() {
             {PLATFORMS.map((id) => {
               const selected = draft.platforms.includes(id);
               return (
-                <button key={id} className={`check-row glass ${selected ? "selected" : ""}`} style={{ padding: 12, borderRadius: 12 }} onClick={() => togglePlatform(id)} aria-pressed={selected}>
-                  <PlatformBadge platform={id} size={28} />
-                  <span className="grow ellipsis" style={{ fontSize: 14 }}>
+                <button key={id} className={`check-row glass ${selected ? "selected" : ""}`} style={{ padding: "12px 16px", borderRadius: 16, minHeight: 60 }} onClick={() => togglePlatform(id)} aria-pressed={selected}>
+                  <PlatformMark platform={id} size={36} />
+                  <span className="grow ellipsis" style={{ fontSize: 16, fontWeight: 600 }}>
                     {id}
                   </span>
                   <CheckMark on={selected} />
@@ -286,7 +286,7 @@ export function EditProfileSheet() {
                     {service.brand ? <BrandIcon file={service.brand} size={22} /> : <Sparkles size={20} />}
                   </span>
                   <span className="grow col" style={{ gap: 2, minWidth: 0 }}>
-                    <span className="ellipsis" style={{ fontSize: 14, fontWeight: 500 }}>
+                    <span className="ellipsis" style={{ fontSize: 16, fontWeight: 600 }}>
                       {service.name}
                     </span>
                     {existing && <SubscriptionSummary subscription={existing} />}
@@ -312,7 +312,7 @@ function SubscriptionSummary({ subscription }: { subscription: Subscription }) {
       : null;
   if (!text) return null;
   return (
-    <span className="secondary ellipsis" style={{ fontSize: 11 }}>
+    <span className="secondary ellipsis" style={{ fontSize: 13 }}>
       {text}
     </span>
   );
@@ -321,14 +321,16 @@ function SubscriptionSummary({ subscription }: { subscription: Subscription }) {
 function EditField({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="col" style={{ gap: 8 }}>
-      <span className="caption">{title}</span>
+      <span className="group-title" style={{ margin: "0 4px" }}>
+        {title}
+      </span>
       {children}
     </div>
   );
 }
 
 function CheckMark({ on }: { on: boolean }) {
-  return on ? <CheckCircle2 size={22} fill="var(--primary)" color="var(--bg)" strokeWidth={2.2} /> : <Circle size={22} className="secondary" strokeWidth={1.6} />;
+  return on ? <SelectedDot size={22} /> : <Circle size={22} className="secondary" strokeWidth={1.6} />;
 }
 
 // ── SubscriptionEditorSheet (Form) ─────────────────────────────────────────
@@ -341,6 +343,30 @@ function toDateInput(iso: string | null | undefined): string {
 
 function fromDateInput(value: string): string {
   return new Date(`${value}T12:00:00`).toISOString();
+}
+
+/** The date as text in a pill, like the iOS compact DatePicker; the native picker opens from a transparent input on top. */
+function DatePill({ value, min, onChange }: { value: string | null | undefined; min?: string; onChange(value: string): void }) {
+  const language = useI18n((state) => state.language);
+  const label = new Date(value ?? Date.now()).toLocaleDateString(language, { day: "numeric", month: "short", year: "numeric" });
+  return (
+    <span className="date-pill">
+      {label}
+      <input
+        type="date"
+        min={min}
+        value={toDateInput(value)}
+        onClick={(event) => {
+          try {
+            event.currentTarget.showPicker?.();
+          } catch {
+            // Some embedded browsers refuse showPicker(); the input still opens its own picker.
+          }
+        }}
+        onChange={(event) => event.target.value && onChange(event.target.value)}
+      />
+    </span>
+  );
 }
 
 export function SubscriptionEditorSheet({ name }: { name: string }) {
@@ -374,7 +400,7 @@ export function SubscriptionEditorSheet({ name }: { name: string }) {
     <Sheet
       title={t("subscription.edit")}
       lead={
-        <button className="btn-plain" onClick={pop}>
+        <button className="btn-plain secondary" onClick={pop}>
           {t("cancel")}
         </button>
       }
@@ -424,17 +450,11 @@ export function SubscriptionEditorSheet({ name }: { name: string }) {
         <div className="group">
           <label className="group-row">
             <span className="grow">{t("subscription.started")}</span>
-            <input type="date" className="date-pill" value={toDateInput(draft.startedAt)} onChange={(event) => event.target.value && setDraft((current) => recalc({ ...current, startedAt: fromDateInput(event.target.value) }))} />
+            <DatePill value={draft.startedAt} onChange={(value) => setDraft((current) => recalc({ ...current, startedAt: fromDateInput(value) }))} />
           </label>
           <label className="group-row">
             <span className="grow">{t("subscription.expiry")}</span>
-            <input
-              type="date"
-              className="date-pill"
-              min={toDateInput(draft.startedAt)}
-              value={toDateInput(draft.expiresAt)}
-              onChange={(event) => event.target.value && setDraft((current) => ({ ...current, expiresAt: fromDateInput(event.target.value) }))}
-            />
+            <DatePill value={draft.expiresAt} min={toDateInput(draft.startedAt)} onChange={(value) => setDraft((current) => ({ ...current, expiresAt: fromDateInput(value) }))} />
           </label>
           <div className="group-row">
             <span className="grow">{t("subscription.auto.renew")}</span>

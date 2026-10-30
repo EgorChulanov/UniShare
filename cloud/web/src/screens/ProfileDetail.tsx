@@ -9,7 +9,7 @@ import { useApp } from "../app/store";
 import { api } from "../lib/api";
 import { useT } from "../i18n/i18n";
 import { platform } from "../platform/platform";
-import { ActionSheet, Avatar, PlatformBadgeRow, PlatformGlyph, Sheet, Spinner, platformColor, useEscape } from "../components/ui";
+import { ActionSheet, Avatar, PlatformBadgeRow, PlatformMark, Sheet, Spinner, gameInitials, useEscape } from "../components/ui";
 import { useFeed } from "./FeedScreen";
 
 export function ProfileDetailSheet({ uid, card: initial, source }: { uid: string; card?: ProfileCard; source?: "feed" }) {
@@ -114,10 +114,8 @@ export function ProfileDetailSheet({ uid, card: initial, source }: { uid: string
   const menu =
     isOther && card ? (
       <div style={{ position: "relative" }}>
-        <button className="back-btn" onClick={() => setMenuOpen((open) => !open)} aria-label={t("chat.more")} aria-expanded={menuOpen}>
-          <span className="ellipsis-circle">
-            <Ellipsis size={15} strokeWidth={2.6} />
-          </span>
+        <button className="close-btn" onClick={() => setMenuOpen((open) => !open)} aria-label={t("chat.more")} aria-expanded={menuOpen}>
+          <Ellipsis size={20} strokeWidth={2.6} color="var(--accent-text)" />
         </button>
         <AnimatePresence>
           {menuOpen && (
@@ -187,8 +185,8 @@ export function ProfileDetailSheet({ uid, card: initial, source }: { uid: string
           <div className="container col" style={{ gap: 20, padding: "4px 20px 20px" }}>
             <DetailHero card={card} />
 
-            <label className="search-bar">
-              <Search size={17} />
+            <label className="search-field glass compact">
+              <Search size={18} strokeWidth={2.4} />
               <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t("feed.search.placeholder")} enterKeyHint="search" />
             </label>
 
@@ -284,15 +282,10 @@ function DetailHero({ card }: { card: ProfileCard }) {
 /** One platform's games as a grid of covers; tap opens the game page. */
 function GameList({ title, platform: id, tags }: { title: string; platform?: Platform; tags: GameTag[] }) {
   const push = useApp((state) => state.push);
-  const color = id ? platformColor(id) : "var(--accent-text)";
   return (
     <div className="col" style={{ gap: 12 }}>
-      <div className="row" style={{ gap: 8 }}>
-        {id && (
-          <span style={{ color, display: "flex" }}>
-            <PlatformGlyph platform={id} size={18} />
-          </span>
-        )}
+      <div className="row" style={{ gap: 10 }}>
+        {id && <PlatformMark platform={id} size={28} />}
         <span style={{ fontSize: 18, fontWeight: 800 }}>{title}</span>
         <span className="secondary" style={{ fontSize: 14, fontWeight: 700 }}>
           {tags.length}
@@ -315,7 +308,7 @@ function DetailGameCard({ tag, onClick }: { tag: GameTag; onClick(): void }) {
         <img src={tag.coverUrl} alt="" loading="lazy" draggable={false} onError={() => setFailed(true)} />
       ) : (
         <span className="game-card-blank" aria-hidden>
-          {tag.name.slice(0, 2).toUpperCase()}
+          {gameInitials(tag.name)}
         </span>
       )}
       <span className="shade" />

@@ -40,8 +40,9 @@ function StoryCard({ story, onClick }: { story: Story; onClick(): void }) {
       className="story-card"
       onClick={onClick}
       style={{
-        background: `linear-gradient(135deg, color-mix(in srgb, ${accent} 95%, transparent), color-mix(in srgb, ${accent} 46%, transparent), var(--card))`,
-        opacity: story.isSeen ? 0.72 : 1,
+        background: `linear-gradient(135deg, color-mix(in srgb, ${accent} 95%, transparent), color-mix(in srgb, ${accent} 46%, transparent), #16132a)`,
+        // Seen stories fade like the iOS rail without letting the page show through.
+        filter: story.isSeen ? "saturate(0.55) brightness(0.8)" : undefined,
       }}
     >
       {story.imageUrl ? <img src={story.imageUrl} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", filter: "brightness(0.82)" }} /> : <span className="deco" />}

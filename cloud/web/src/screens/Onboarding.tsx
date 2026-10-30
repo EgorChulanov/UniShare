@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { AtSign, CheckCircle2, ChevronLeft, Circle, Image as ImageIcon, PlusCircle, X } from "lucide-react";
+import { AtSign, ChevronLeft, Circle, Image as ImageIcon, PlusCircle, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   LIMITS,
@@ -15,7 +15,7 @@ import { useApp } from "../app/store";
 import { api, compressImage } from "../lib/api";
 import { errorMessage, useT } from "../i18n/i18n";
 import { platform } from "../platform/platform";
-import { Avatar, BrandIcon, PlatformBadge, Spinner } from "../components/ui";
+import { Avatar, BrandIcon, PlatformBadge, SelectedDot, Spinner } from "../components/ui";
 import { GamePicker } from "../components/GamePicker";
 
 const STEPS = ["username", "avatar", "platform", "games", "skills", "subscriptions"] as const;
@@ -261,7 +261,7 @@ export function Onboarding() {
                       <span className="grow ellipsis" style={{ fontSize: 15, fontWeight: 500 }}>
                         {id}
                       </span>
-                      {selected ? <CheckCircle2 size={22} fill="var(--primary)" color="var(--bg)" /> : <Circle size={22} strokeWidth={1.6} className="secondary" />}
+                      {selected ? <SelectedDot size={22} /> : <Circle size={22} strokeWidth={1.6} className="secondary" />}
                     </button>
                   );
                 })}
@@ -327,7 +327,7 @@ export function Onboarding() {
                       <span className="grow ellipsis" style={{ fontSize: 15 }}>
                         {service.name}
                       </span>
-                      {selected ? <CheckCircle2 size={22} fill="var(--primary)" color="var(--bg)" /> : <Circle size={22} strokeWidth={1.6} className="secondary" />}
+                      {selected ? <SelectedDot size={22} /> : <Circle size={22} strokeWidth={1.6} className="secondary" />}
                     </button>
                   );
                 })}

@@ -1,13 +1,13 @@
 // Port of ReportSheet in UniShare/Features/Chat/ChatView.swift.
 import { AnimatePresence, motion } from "framer-motion";
-import { BadgeCheck, CheckCircle2, CircleEllipsis, CircleHelp, Hand, MessageSquareWarning, UserMinus, UserX } from "lucide-react";
+import { BadgeCheck, CircleEllipsis, CircleHelp, Hand, MessageSquareWarning, UserMinus, UserX } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { LIMITS, REPORT_REASONS } from "@unishare/shared";
 import { useApp } from "../app/store";
 import { api } from "../lib/api";
 import { useT } from "../i18n/i18n";
 import { platform } from "../platform/platform";
-import { Sheet, Spinner } from "../components/ui";
+import { SelectedDot, Sheet, Spinner } from "../components/ui";
 
 const ICONS: Record<(typeof REPORT_REASONS)[number]["icon"], ReactNode> = {
   spam: <MessageSquareWarning size={19} />,
@@ -88,7 +88,7 @@ export function ReportSheet({ uid, username }: { uid: string; username: string }
                 <AnimatePresence>
                   {reason === item.key && (
                     <motion.span initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0, opacity: 0 }} style={{ display: "flex" }}>
-                      <CheckCircle2 size={21} fill="var(--primary)" color="var(--card)" />
+                      <SelectedDot size={21} />
                     </motion.span>
                   )}
                 </AnimatePresence>
