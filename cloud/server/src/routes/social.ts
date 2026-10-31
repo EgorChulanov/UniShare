@@ -6,6 +6,7 @@ import { badRequest, notFound } from "../lib/errors";
 import { assertContentAllowed, assertRateLimit } from "../lib/moderation";
 import { publish } from "../realtime";
 import { searchGames } from "../games";
+import { notifyAdminsAboutReport } from "../bot/telegram";
 
 const REASON_KEYS = new Set<string>(REPORT_REASONS.map((reason) => reason.key));
 
@@ -19,10 +20,12 @@ export async function socialRoutes(app: FastifyInstance): Promise<void> {
     await assertRateLimit("reports", session.userId);
     const subject = await queryOne(`select 1 from users where uid = $1`, [subjectId]);
     if (!subject) throw notFound("Profile is unavailable");
-    await query(
-      `insert into reports (reporter_id, subject_id, reason, details) values ($1, $2, $3, $4)`,
+    const report = await queryOne<{ id: string }>(
+      `insert into reports (reporter_id, subject_id, reason, details) values ($1, $2, $3, $4) returning id`,
       [session.userId, subjectId, reason, details],
     );
+    // Admins get a Telegram message with Ban / Dismiss buttons (never fails the request).
+    if (report) void notifyAdminsAboutReport(report.id).catch(() => undefined);
     return { ok: true };
   });
 

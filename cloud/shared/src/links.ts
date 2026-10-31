@@ -6,7 +6,7 @@ export type DeepLink =
   | { kind: "profile"; uid: string }
   | { kind: "chat"; chatId: string }
   | { kind: "link"; token: string }
-  | { kind: "screen"; screen: "feed" | "chats" | "profile" | "nearby" };
+  | { kind: "screen"; screen: "feed" | "chats" | "profile" | "nearby" | "admin" };
 
 const UUID = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
 const compactUuid = (uuid: string) => uuid.replace(/-/g, "");
@@ -36,7 +36,7 @@ export function decodeDeepLink(payload: string | null | undefined): DeepLink | n
   if (match) return { kind: "chat", chatId: expandUuid(match[1].toLowerCase()) };
   match = /^l_([A-Za-z0-9_-]{16,60})$/.exec(value);
   if (match) return { kind: "link", token: match[1] };
-  match = /^s_(feed|chats|profile|nearby)$/.exec(value);
+  match = /^s_(feed|chats|profile|nearby|admin)$/.exec(value);
   if (match) return { kind: "screen", screen: match[1] as "feed" };
   return null;
 }

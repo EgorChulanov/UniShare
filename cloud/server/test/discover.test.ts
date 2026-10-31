@@ -60,8 +60,10 @@ test("game search uses Steam without a RAWG key and keeps the offline catalog", 
     [STORESEARCH]: () => ({ items: [{ type: "app", id: 1245620, name: "ELDEN RING", tiny_image: null }] }),
   });
   const results = await games.searchGames("elden");
-  assert.equal(results[0].name, "ELDEN RING");
+  // The Steam app under the catalog spelling of its name (an alias of "elden").
+  assert.equal(results[0].name, "Elden Ring");
   assert.equal(results[0].source, "steam");
+  assert.equal(results[0].steamAppId, 1245620);
   // "Elden Ring" from the offline catalog is the same title and is not duplicated.
   assert.equal(results.filter((game) => game.name.toLowerCase() === "elden ring").length, 1);
 });

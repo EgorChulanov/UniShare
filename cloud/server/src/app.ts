@@ -133,6 +133,8 @@ export async function buildApp(): Promise<FastifyInstance> {
   // ── Media ─────────────────────────────────────────────────────────────────
 
   app.get<{ Params: { file: string } }>("/media/avatars/:file", async (request, reply) => {
+    // A plain file name only: the decoded parameter may contain "/" or "..".
+    if (!/^[A-Za-z0-9_-]+\.(jpg|png|webp)$/.test(request.params.file)) return reply.status(404).send({ error: "Not found" });
     const object = await storage.get(`avatars/${request.params.file}`);
     if (!object) return reply.status(404).send({ error: "Not found" });
     return reply.header("Cache-Control", "public, max-age=31536000, immutable").type(object.contentType).send(object.body);

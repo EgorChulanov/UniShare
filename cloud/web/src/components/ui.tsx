@@ -1,8 +1,33 @@
 // Web ports of the iOS building blocks in UniShare/Components/*.swift.
-import { AnimatePresence, motion, useIsPresent } from "framer-motion";
-import { Check, Star, User, X } from "lucide-react";
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
-import { PLATFORM_INFO, type GameTag, type Platform } from "@unishare/shared";
+import { AnimatePresence, motion, useIsPresent, useReducedMotion } from "framer-motion";
+import {
+  Check,
+  Crosshair,
+  Crown,
+  Dice5,
+  Flame,
+  Gamepad2,
+  Gem,
+  Ghost,
+  Headset,
+  Joystick,
+  Moon,
+  Orbit,
+  Rocket,
+  Shield,
+  Skull,
+  Star,
+  Sword,
+  Swords,
+  Trophy,
+  User,
+  WandSparkles,
+  X,
+  Zap,
+  type LucideProps,
+} from "lucide-react";
+import { useEffect, useLayoutEffect, useRef, useState, type ComponentType, type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
+import { AVATAR_PRESET_PREFIX, PLATFORM_INFO, avatarPreset, isAvatarArtUrl, type AvatarPreset, type GameTag, type Platform } from "@unishare/shared";
 import { mediaUrl } from "../lib/api";
 import { useApp } from "../app/store";
 import { platform } from "../platform/platform";
@@ -111,22 +136,115 @@ export function CardStackIcon({ size = 30 }: { size?: number }) {
 
 // ── Avatar (AvatarView.swift) ──────────────────────────────────────────────
 
+/** An uploaded photo, game art (cropped towards the characters), or an original "preset:<id>" avatar. */
 export function Avatar({ url, size = 44, ring, online }: { url?: string | null; name?: string | null; size?: number; ring?: boolean; online?: boolean }) {
   const [failed, setFailed] = useState(false);
-  const src = mediaUrl(url);
+  const preset = avatarPreset(url);
+  // An unknown preset id (e.g. from a newer client) falls back to the placeholder.
+  const src = url?.startsWith(AVATAR_PRESET_PREFIX) ? null : mediaUrl(url);
   useEffect(() => setFailed(false), [src]);
   // The dot sits outside the clipped circle, on its rim (45°) for large avatars.
   const dotInset = Math.max(0, Math.round(size * 0.146 - 6));
   return (
     <span className="avatar-wrap" style={{ width: size, height: size }}>
       <span className={`avatar ${ring ? "ring" : ""}`} style={{ width: size, height: size }}>
-        {src && !failed ? (
-          <img src={src} alt="" loading="lazy" onError={() => setFailed(true)} />
+        {preset ? (
+          <PresetAvatar preset={preset} size={size} />
+        ) : src && !failed ? (
+          <img src={src} alt="" loading="lazy" draggable={false} className={isAvatarArtUrl(url) ? "art" : undefined} onError={() => setFailed(true)} />
         ) : (
           <User size={size * 0.6} fill="currentColor" strokeWidth={0} />
         )}
       </span>
       {online && <span className="online-dot" style={{ right: dotInset, bottom: dotInset }} />}
+    </span>
+  );
+}
+
+// ── Original UniShare avatars (shared/src/avatars.ts) ───────────────────────
+
+type Glyph = ComponentType<LucideProps>;
+
+/** A dragon head in profile: swept-back horn, spiked mane, open jaws. */
+const DragonGlyph: Glyph = ({ size = 24, strokeWidth = 2, ...props }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <path d="M5 21c1.5-2.4 3.3-4.4 5.6-5.6l9-1.2-5.4-1.6 7.4-1.8c-1.6-1.2-3.6-2-5.6-2.3l-2.4-1.4C11 4.6 7.6 3.2 3.6 2.8c2.4 1.6 4.2 3.4 5.2 5.4-1.2 1-1.8 2-2 3.2l-2.8 1 2.2 1.6-2.4 1.6 2 1.6-2 3.8z" />
+    <path d="M12.6 9.9l1.6-.5" fill="none" />
+  </svg>
+);
+
+/** Three slash marks. */
+const ClawGlyph: Glyph = ({ size = 24, strokeWidth = 2, fill: _fill, fillOpacity: _opacity, ...props }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" {...props}>
+    <path d="M4 16.5C6.6 12 9.4 8.3 13.2 4.6" />
+    <path d="M7.4 20.2c2.9-4.9 6-8.8 10.2-12.6" />
+    <path d="M12.4 21c2.4-3.6 4.8-6.4 7.8-9" />
+  </svg>
+);
+
+/** A space helmet with a wide visor on its collar. */
+const VisorGlyph: Glyph = ({ size = 24, strokeWidth = 2, ...props }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <path d="M8.2 18.6a8 8 0 1 1 7.6 0" />
+    <path d="M7 19h10v2.5H7z" />
+    <path d="M6.6 10.2C6.6 8.3 8.1 7 10 7h4c1.9 0 3.4 1.3 3.4 3.2v1c0 2.2-1.8 3.8-4 3.8h-2.8c-2.2 0-4-1.6-4-3.8z" fill="currentColor" fillOpacity={0.45} />
+  </svg>
+);
+
+const PRESET_GLYPHS: Record<string, Glyph> = {
+  controller: Gamepad2,
+  joystick: Joystick,
+  sword: Sword,
+  swords: Swords,
+  shield: Shield,
+  crown: Crown,
+  ghost: Ghost,
+  rocket: Rocket,
+  flame: Flame,
+  bolt: Zap,
+  skull: Skull,
+  dragon: DragonGlyph,
+  crosshair: Crosshair,
+  orbit: Orbit,
+  gem: Gem,
+  trophy: Trophy,
+  headset: Headset,
+  moon: Moon,
+  wand: WandSparkles,
+  claw: ClawGlyph,
+  dice: Dice5,
+  visor: VisorGlyph,
+};
+
+/** Gradient disc with a glossy highlight, a large faded echo of the emblem and the emblem itself. */
+export function PresetAvatar({ preset, size }: { preset: AvatarPreset; size: number }) {
+  const Glyph = PRESET_GLYPHS[preset.id] ?? Gamepad2;
+  const style = { ["--a" as string]: preset.colors[0], ["--b" as string]: preset.colors[1], ["--ink" as string]: preset.ink ?? "#fff", ["--s" as string]: `${size}px` };
+  return (
+    <span className="preset-avatar" style={style} aria-hidden>
+      <Glyph className="echo" size={Math.round(size * 0.92)} strokeWidth={1.6} />
+      <Glyph className="emblem" size={Math.round(size * 0.5)} strokeWidth={size < 40 ? 2.4 : 2.1} fill="currentColor" fillOpacity={0.2} />
+    </span>
+  );
+}
+
+// ── Game art ───────────────────────────────────────────────────────────────
+
+/** Stable hue per title, so the initials placeholders of different games differ. */
+function titleHue(name: string): number {
+  let hash = 0;
+  for (const char of name) hash = (hash * 31 + char.codePointAt(0)!) | 0;
+  return Math.abs(hash) % 360;
+}
+
+/** Cover art, or the game's initials on a tinted gradient when there is none or it fails to load. */
+export function GameArt({ name, src, className }: { name: string; src?: string | null; className?: string }) {
+  const [failed, setFailed] = useState(false);
+  useEffect(() => setFailed(false), [src]);
+  if (src && !failed) return <img className={className} src={src} alt="" loading="lazy" draggable={false} onError={() => setFailed(true)} />;
+  return (
+    <span className={`game-art-blank ${className ?? ""}`} style={{ ["--hue" as string]: titleHue(name) }} aria-hidden>
+      {gameInitials(name)}
     </span>
   );
 }
@@ -149,18 +267,45 @@ export function GameCircle({ game, color = "var(--primary)", size = 44 }: { game
       }}
     >
       {game.name.slice(0, 2).toUpperCase()}
-      {game.coverUrl && !failed && <img src={game.coverUrl} alt="" loading="lazy" onError={() => setFailed(true)} />}
+      {game.coverUrl && !failed && <img src={game.coverUrl} alt="" loading="lazy" draggable={false} onError={() => setFailed(true)} />}
     </span>
   );
 }
 
-/** Horizontal row that auto-advances every 2.5 s when there are more than three games. */
+const GAMES_GAP = 10;
+/** Marquee speed in px/s: calm enough to read the covers. */
+const GAMES_SPEED = 24;
+
+/**
+ * A finger or pen held on a moving row pauses it until that press ends. Pointer events, not
+ * :active: touches do not reliably get :active (on the swipe card, whose row has touch-action: none,
+ * a held finger never did). Every press ends in pointerup or pointercancel, so the pause cannot stick.
+ */
+export function holdMarquee(event: ReactPointerEvent<HTMLElement>) {
+  if (event.pointerType === "mouse") return; // a mouse pauses it by hovering
+  const element = event.currentTarget;
+  const pointerId = event.pointerId;
+  element.dataset.held = "";
+  const release = (end: PointerEvent) => {
+    if (end.pointerId !== pointerId) return;
+    delete element.dataset.held;
+    window.removeEventListener("pointerup", release, true);
+    window.removeEventListener("pointercancel", release, true);
+  };
+  window.addEventListener("pointerup", release, true);
+  window.addEventListener("pointercancel", release, true);
+}
+
+/**
+ * Game covers in a row that glides continuously, like the "Popular now" rail in search,
+ * once there are three or more games or they do not fit. Pauses only while a finger is
+ * down or a mouse hovers it; with reduced motion it is a still row that scrolls by hand.
+ */
 export function GameCirclesRow({
   games,
   color = "var(--primary)",
   size = 52,
   titles = false,
-  trailing = false,
   autoScroll = true,
   padding = 16,
 }: {
@@ -168,51 +313,72 @@ export function GameCirclesRow({
   color?: string;
   size?: number;
   titles?: boolean;
-  trailing?: boolean;
   autoScroll?: boolean;
   padding?: number;
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  const index = useRef(0);
-  /** Last touch or press on the row: auto-scroll waits a moment instead of fighting the finger. */
-  const touchedAt = useRef(0);
+  const reducedMotion = useReducedMotion();
+  const [width, setWidth] = useState(0);
 
-  useEffect(() => {
-    if (!autoScroll || games.length <= 3) return;
-    // :hover sticks on touch screens after a tap, so it only counts for a real mouse.
-    const mouse = window.matchMedia("(hover: hover) and (pointer: fine)");
-    const timer = setInterval(() => {
-      const row = ref.current;
-      if (!row || (mouse.matches && row.matches(":hover")) || Date.now() - touchedAt.current < 4000) return;
-      index.current = (index.current + 1) % games.length;
-      const item = row.children[index.current] as HTMLElement | undefined;
-      if (!item) return;
-      const maxScroll = row.scrollWidth - row.clientWidth;
-      if (maxScroll <= 0) return;
-      const target = trailing ? item.offsetLeft + item.offsetWidth - row.clientWidth + padding : item.offsetLeft - padding;
-      row.scrollTo({ left: Math.max(0, Math.min(target, maxScroll)), behavior: "smooth" });
-      if (target >= maxScroll && !trailing) index.current = games.length - 1;
-    }, 2500);
-    return () => clearInterval(timer);
-  }, [autoScroll, games.length, trailing, padding]);
+  // Measured before paint, so a moving row never flashes as a still one first.
+  useLayoutEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+    setWidth(element.clientWidth);
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(() => setWidth(element.clientWidth));
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+
+  const itemWidth = titles ? Math.max(size, 54) : size;
+  const setWidthPx = games.length * (itemWidth + GAMES_GAP);
+  const fits = setWidthPx - GAMES_GAP <= width - padding * 2;
+  const moving = autoScroll && !reducedMotion && width > 0 && games.length > 0 && (games.length >= 3 || !fits);
+
+  const item = (game: GameTag, key: string | number, hidden: boolean) => (
+    <div className="game-item" key={key} style={{ width: itemWidth }} aria-hidden={hidden || undefined}>
+      <GameCircle game={game} color={color} size={size} />
+      {titles && <span style={{ width: itemWidth }}>{game.name}</span>}
+    </div>
+  );
 
   if (!games.length) {
-    return <div className="secondary" style={{ fontSize: 12, padding: `0 ${padding}px` }}>—</div>;
+    return (
+      <div ref={ref} className="secondary" style={{ fontSize: 12, padding: `0 ${padding}px` }}>
+        —
+      </div>
+    );
   }
+  if (!moving) {
+    return (
+      <div ref={ref} className="games-row" style={{ paddingInline: padding }}>
+        {games.map((game) => item(game, game.name, false))}
+      </div>
+    );
+  }
+
+  // One period holds the games repeated until it is at least as wide as the row, and the
+  // track holds three periods. It slides from the second period (aligned with the padding)
+  // to the third, which looks exactly the same, so the jump back is invisible.
+  const repeats = Math.max(1, Math.ceil(width / setWidthPx));
+  const period = repeats * setWidthPx;
+  const loop = Array.from({ length: repeats * 3 }, () => games).flat();
+  const firstShown = repeats * games.length;
   return (
-    <div
-      ref={ref}
-      className="games-row"
-      style={{ justifyContent: trailing ? "flex-end" : undefined, paddingInline: padding }}
-      onPointerDown={() => (touchedAt.current = Date.now())}
-      onScroll={() => (touchedAt.current = Math.max(touchedAt.current, Date.now() - 2500))}
-    >
-      {games.map((game) => (
-        <div className="game-item" key={game.name} style={{ width: titles ? Math.max(size, 54) : size }}>
-          <GameCircle game={game} color={color} size={size} />
-          {titles && <span style={{ width: Math.max(size, 54) }}>{game.name}</span>}
-        </div>
-      ))}
+    <div ref={ref} className="games-marquee" onPointerDown={holdMarquee}>
+      <div
+        className="games-track"
+        style={{
+          ["--from" as string]: `${padding - period}px`,
+          ["--to" as string]: `${padding - period * 2}px`,
+          ["--dur" as string]: `${(period / GAMES_SPEED).toFixed(2)}s`,
+          ["--gap" as string]: `${GAMES_GAP}px`,
+        }}
+      >
+        {/* Only the first copy of each game in the starting period is read out. */}
+        {loop.map((game, index) => item(game, index, index < firstShown || index >= firstShown + games.length))}
+      </div>
     </div>
   );
 }

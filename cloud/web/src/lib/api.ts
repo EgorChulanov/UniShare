@@ -1,5 +1,16 @@
 import type {
+  AdminActionEntry,
+  AdminBug,
+  AdminOverview,
+  AdminPage,
+  AdminReport,
+  AdminUserDetail,
+  AdminUserRow,
   AuthResponse,
+  BanState,
+  BugReportInput,
+  BugState,
+  ReportActionInput,
   ChatDetails,
   ChatMessage,
   ChatSummary,
@@ -110,7 +121,9 @@ export const api = {
   usernameAvailable: (username: string) =>
     request<{ available: boolean }>("GET", `/api/me/username-available?username=${encodeURIComponent(username)}`),
   uploadAvatar: (image: Blob) => request<{ avatarUrl: string }>("POST", "/api/me/avatar", undefined, image),
-  deleteAccount: () => request<{ ok: true }>("DELETE", "/api/me"),
+  // Avatar picker (AvatarPickerSheet): an original UniShare preset ("preset:<id>") or game art.
+  pickAvatar: (avatarUrl: string) => request<{ avatarUrl: string }>("POST", "/api/me/avatar/pick", { avatarUrl }),
+  deleteAccount:() => request<{ ok: true }>("DELETE", "/api/me"),
   linkToken: () => request<LinkTokenResponse>("POST", "/api/me/link-token"),
   unlink: (provider: "telegram" | "vk") => request<MyProfile>("DELETE", `/api/me/identities/${provider}`),
   setNotifications: (provider: "telegram" | "vk", allowed: boolean) =>
@@ -167,6 +180,31 @@ export const api = {
     request<AirShareResult>("POST", "/api/airshare/ping", location ?? (locating ? { locating: true } : {})),
   // keepalive: sent when AirShare closes, often together with the page being hidden.
   airshareLeave: () => request<{ ok: true }>("DELETE", "/api/airshare", undefined, undefined, true),
+
+  // Steam library import (SteamImportSheet): sign in through Steam, or a public profile link.
+  steamConnect: () => request<import("@unishare/shared").SteamConnectResponse>("POST", "/api/steam/connect"),
+  steamLibrary: () => request<import("@unishare/shared").SteamLibrary>("GET", "/api/steam/library"),
+  steamResolve: (profile: string) => request<import("@unishare/shared").SteamLibrary>("POST", "/api/steam/resolve", { profile }),
+  steamUnlink: () => request<MyProfile>("DELETE", "/api/steam"),
+
+  // Bug reports (everyone) and the admin panel (users.is_admin only).
+  reportBug: (input: BugReportInput) => request<{ ok: true; id: string }>("POST", "/api/bugs", input),
+  admin: {
+    overview: () => request<AdminOverview>("GET", "/api/admin/overview"),
+    reports: (state: string, offset = 0) => request<AdminPage<AdminReport>>("GET", `/api/admin/reports?state=${state}&offset=${offset}`),
+    report: (id: string) => request<AdminReport>("GET", `/api/admin/reports/${id}`),
+    moderateReport: (id: string, input: ReportActionInput) => request<AdminReport>("POST", `/api/admin/reports/${id}`, input),
+    bugs: (state: string, offset = 0) => request<AdminPage<AdminBug>>("GET", `/api/admin/bugs?state=${state}&offset=${offset}`),
+    bug: (id: string) => request<AdminBug>("GET", `/api/admin/bugs/${id}`),
+    setBugState: (id: string, state: BugState, note?: string) => request<AdminBug>("POST", `/api/admin/bugs/${id}`, { state, note }),
+    users: (query: string, filter = "all", offset = 0) =>
+      request<AdminPage<AdminUserRow>>("GET", `/api/admin/users?${new URLSearchParams({ q: query, filter, offset: String(offset) })}`),
+    user: (uid: string) => request<AdminUserDetail>("GET", `/api/admin/users/${uid}`),
+    ban: (uid: string, state: BanState, reason: string) => request<AdminUserDetail>("POST", `/api/admin/users/${uid}/ban`, { state, reason }),
+    unban: (uid: string) => request<AdminUserDetail>("POST", `/api/admin/users/${uid}/unban`),
+    setAdmin: (uid: string, isAdmin: boolean) => request<AdminUserDetail>("POST", `/api/admin/users/${uid}/admin`, { isAdmin }),
+    actions: (offset = 0) => request<AdminPage<AdminActionEntry>>("GET", `/api/admin/actions?offset=${offset}`),
+  },
 };
 
 /** Downscales an image to JPEG before upload (fast on mobile networks). */

@@ -278,13 +278,13 @@ test("lists the players of one game by exact name; respects onboarding and block
   await signIn("gale_dev", {
     username: "GaleDev",
     platforms: ["PC"],
-    platformGames: { PC: ["BG3"] },
-    gameMetadata: { bg3: { name: "BG3", coverUrl: null, steamAppId: 1086940 } },
+    platformGames: { PC: ["Minecraft"] },
+    gameMetadata: { minecraft: { name: "Minecraft", coverUrl: null, steamAppId: 1672970 } },
     onboardingComplete: true,
   });
-  const byApp = await call("GET", `/api/players?game=${encodeURIComponent("Baldur's Gate 3")}&steamAppId=1086940`, me.token);
+  const byApp = await call("GET", `/api/players?game=${encodeURIComponent("Minecraft Dungeons")}&steamAppId=1672970`, me.token);
   assert.deepEqual((byApp.body as { username: string }[]).map((user) => user.username), []);
-  assert.deepEqual(await players("BG3"), ["GaleDev"]);
+  assert.deepEqual(await players("Minecraft"), ["GaleDev"]);
 
   // Blocks work in both directions.
   assert.equal((await call("POST", "/api/blocks", me.token, { userId: erin.uid })).status, 200);

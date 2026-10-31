@@ -5,3 +5,4 @@ export * from "./links";
 export * from "./admin";
 export * from "./steam";
 export * from "./avatars";
+export * from "./aliases";

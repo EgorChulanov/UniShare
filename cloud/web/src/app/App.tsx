@@ -157,7 +157,7 @@ function OverlayView({ overlay }: { overlay: Overlay }) {
     case "transparency":
       return <TransparencySheet />;
     case "admin":
-      return <AdminSheet />;
+      return <AdminSheet view={overlay.view} />;
     case "bug":
       return <BugReportSheet />;
     case "steamImport":

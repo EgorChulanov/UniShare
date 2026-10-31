@@ -1,10 +1,12 @@
-// Port of UniShare/Features/Profile/ProfileView.swift.
-import { BadgeCheck, Camera, ChevronRight, Gamepad2, MonitorSmartphone, Pencil, Plus, RefreshCw, Settings, Sparkles, Star, UserCheck } from "lucide-react";
+// Port of UniShare/Features/Profile/ProfileView.swift, laid out like the latest store
+// screenshot (docs/assets/store-mockups/iphone-1.jpg): the hero and one profile card.
+import { AnimatePresence, motion } from "framer-motion";
+import { BadgeCheck, Camera, Gamepad2, MonitorSmartphone, Pencil, Plus, RefreshCw, Settings, Sparkles, Star } from "lucide-react";
 import { useMemo, useState } from "react";
 import { normalizeGameName, subscriptionService, type DiscoveryKind, type GameTag, type MyProfile, type Subscription } from "@unishare/shared";
 import { collapseOnScroll, useApp } from "../app/store";
 import { useI18n, useT } from "../i18n/i18n";
-import { Avatar, BrandIcon, GameCircle, PlatformBadgeRow, PlatformMark, platformColor } from "../components/ui";
+import { Avatar, BrandIcon, PlatformBadgeRow } from "../components/ui";
 import { ProfileCardFace, type CardFaceData } from "../components/ProfileCardFace";
 
 export function tagFor(profile: Pick<MyProfile, "gameMetadata">, name: string): GameTag {
@@ -13,9 +15,7 @@ export function tagFor(profile: Pick<MyProfile, "gameMetadata">, name: string): 
 }
 
 export function ProfileScreen() {
-  const t = useT();
   const profile = useApp((state) => state.profile);
-  const push = useApp((state) => state.push);
   const onScroll = useMemo(() => collapseOnScroll(), []);
   if (!profile) return null;
 
@@ -23,11 +23,9 @@ export function ProfileScreen() {
     <div className="screen" onScroll={onScroll}>
       <ProfileHero profile={profile} />
       <div className="container">
-        <div className="col" style={{ gap: 18, paddingTop: 24 }}>
+        <div className="col" style={{ gap: 26, paddingTop: 24 }}>
           <ProfileCardPreview profile={profile} />
-          <GamesCard profile={profile} />
           {profile.subscriptions.length > 0 && <SubscriptionsSection subscriptions={profile.subscriptions} />}
-          <SkillsProfileButton profile={profile} />
         </div>
       </div>
     </div>
@@ -39,6 +37,7 @@ function ProfileHero({ profile }: { profile: MyProfile }) {
   const t = useT();
   const push = useApp((state) => state.push);
   const edit = () => push({ type: "edit" });
+  const pickAvatar = () => push({ type: "avatar" });
   const gameCount = new Set([...profile.games, ...Object.values(profile.platformGames).flat()].map((name) => normalizeGameName(name ?? ""))).size;
   return (
     <header className="profile-hero">
@@ -47,10 +46,10 @@ function ProfileHero({ profile }: { profile: MyProfile }) {
       </button>
       <div className="hero-body">
         <div className="profile-avatar">
-          <button onClick={edit} aria-label={t("profile.change.avatar")}>
+          <button onClick={pickAvatar} aria-label={t("profile.change.avatar")}>
             <Avatar url={profile.avatarUrl} size={112} />
           </button>
-          <button className="camera" onClick={edit} aria-label={t("profile.change.avatar")}>
+          <button className="camera" onClick={pickAvatar} aria-label={t("profile.change.avatar")}>
             <Camera size={15} strokeWidth={2.4} />
           </button>
         </div>
@@ -88,7 +87,10 @@ function ProfileHero({ profile }: { profile: MyProfile }) {
   );
 }
 
-/** The card exactly as others see it in the feed, with a switch between Exchange and Skills. */
+/**
+ * The one card on My Profile, exactly as others see it in the feed, with a switch
+ * between Exchange and Skills. Tapping it edits what that card shows.
+ */
 function ProfileCardPreview({ profile }: { profile: MyProfile }) {
   const t = useT();
   const push = useApp((state) => state.push);
@@ -105,76 +107,60 @@ function ProfileCardPreview({ profile }: { profile: MyProfile }) {
     rating: profile.rating,
   };
   const other: DiscoveryKind = kind === "teammates" ? "skills" : "teammates";
+  const noSkills = kind === "skills" && !profile.hasSkillsProfile;
+  const hint = kind === "teammates" ? "profile.card.hint.teammates" : noSkills ? "profile.card.hint.skills.empty" : "profile.card.hint.skills";
+  const open = () => push({ type: kind === "skills" ? "skills" : "edit" });
+
   return (
     <section className="col" style={{ gap: 10 }}>
       <div className="row px" style={{ gap: 10 }}>
         <h2 className="section-title grow">{t("profile.card.title")}</h2>
-        <button className="capsule-btn" onClick={() => setKind(other)}>
+        <button className="capsule-btn" onClick={() => setKind(other)} aria-label={t("profile.card.switch", t(other === "skills" ? "feed.segment.skills" : "feed.segment.teammates"))}>
           <RefreshCw size={13} strokeWidth={2.6} /> {t(other === "skills" ? "feed.segment.skills" : "feed.segment.teammates")}
         </button>
       </div>
-      <p className="secondary px" style={{ margin: 0, fontSize: 13, fontWeight: 600 }}>
-        {t("profile.card.hint")}
-      </p>
-      <div className="card-face" role="button" tabIndex={0} onClick={() => push({ type: kind === "skills" ? "skills" : "edit" })} onKeyDown={(event) => event.key === "Enter" && push({ type: kind === "skills" ? "skills" : "edit" })}>
-        <ProfileCardFace card={card} kind={kind} footer={false} />
-      </div>
+      <p className="card-hint secondary px">{t(hint)}</p>
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.div
+          key={kind}
+          className="card-face"
+          role="button"
+          tabIndex={0}
+          aria-label={t(hint)}
+          onClick={open}
+          onKeyDown={(event) => {
+            if (event.key !== "Enter" && event.key !== " ") return;
+            event.preventDefault();
+            open();
+          }}
+          initial={{ opacity: 0, y: 10, scale: 0.985 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: -6, scale: 0.985 }}
+          whileTap={{ scale: 0.985 }}
+          transition={{ duration: 0.2, ease: "easeOut" }}
+        >
+          <ProfileCardFace card={card} kind={kind} footer={false} skillsInvite={noSkills ? <SkillsInvite /> : undefined} />
+        </motion.div>
+      </AnimatePresence>
     </section>
   );
 }
 
-/** Games card: one row per platform, alternating leading / trailing alignment, then the wanted games; tap to edit. */
-function GamesCard({ profile }: { profile: MyProfile }) {
-  const t = useT();
-  const push = useApp((state) => state.push);
-  if (!profile.platforms.length && !profile.wantedGames.length) return null;
-  return (
-    <div className="card-surface games-card" role="button" tabIndex={0} onClick={() => push({ type: "edit" })} onKeyDown={(event) => event.key === "Enter" && push({ type: "edit" })}>
-      <div className="row" style={{ padding: "16px 16px 4px", gap: 8 }}>
-        <span className="grow" style={{ fontSize: 17, fontWeight: 800 }}>
-          {t("profile.games")}
-        </span>
-        <ChevronRight size={18} strokeWidth={2.6} className="secondary" />
-      </div>
-      {profile.platforms.map((id, index) => (
-        <div key={id}>
-          {index > 0 && <div className="divider" style={{ margin: "0 16px" }} />}
-          <GamesRow title={id} mark={<PlatformMark platform={id} size={22} />} color={platformColor(id)} games={(profile.platformGames[id] ?? []).map((name) => tagFor(profile, name))} />
-        </div>
-      ))}
-      {profile.wantedGames.length > 0 && (
-        <div>
-          {profile.platforms.length > 0 && <div className="divider" style={{ margin: "0 16px" }} />}
-          <GamesRow title={t("profile.wanted")} color="var(--accent-text)" games={profile.wantedGames.map((name) => tagFor(profile, name))} />
-        </div>
-      )}
-      <div style={{ height: 8 }} />
-    </div>
-  );
-}
-
-function GamesRow({ title, mark, color, games }: { title: string; mark?: React.ReactNode; color: string; games: GameTag[] }) {
+/** In place of an empty skills card: what the skills profile is for, and the way to create it. */
+function SkillsInvite() {
   const t = useT();
   return (
-    <div className="col" style={{ gap: 10, padding: "12px 16px" }}>
-      <span className="row" style={{ gap: 8, fontSize: 13, fontWeight: 700, color: "var(--text-2)" }}>
-        {mark}
-        {title}
+    <div className="skills-invite">
+      <span className="emblem">
+        <Sparkles size={22} strokeWidth={2.2} />
       </span>
-      {games.length === 0 ? (
-        <span className="secondary" style={{ fontSize: 13 }}>
-          {t("profile.games.add.hint")}
-        </span>
-      ) : (
-        <div className="h-scroll" style={{ gap: 12 }}>
-          {games.map((game) => (
-            <div key={game.name} className="game-item" style={{ width: 60 }}>
-              <GameCircle game={game} color={color} size={52} />
-              <span style={{ width: 60, fontSize: 11 }}>{game.name}</span>
-            </div>
-          ))}
-        </div>
-      )}
+      <div className="col" style={{ gap: 4, minWidth: 0 }}>
+        <span className="title">{t("profile.skills.create")}</span>
+        <span className="text">{t("profile.card.skills.invite")}</span>
+      </div>
+      <span className="cta">
+        <Plus size={15} strokeWidth={2.8} /> {t("profile.card.skills.cta")}
+      </span>
     </div>
   );
 }
@@ -195,8 +181,8 @@ function SubscriptionsSection({ subscriptions }: { subscriptions: Subscription[]
   const t = useT();
   const language = useI18n((state) => state.language);
   return (
-    <div className="col" style={{ gap: 10 }}>
-      <div className="caption px">{t("profile.subscriptions")}</div>
+    <section className="col" style={{ gap: 12 }}>
+      <h2 className="section-title px">{t("profile.subscriptions")}</h2>
       <div className="col" style={{ gap: 8 }}>
         {subscriptions.map((subscription) => {
           const service = subscriptionService(subscription.name);
@@ -204,9 +190,7 @@ function SubscriptionsSection({ subscriptions }: { subscriptions: Subscription[]
           return (
             <div key={subscription.id} className="glass" style={{ margin: "0 16px", padding: "14px 16px", borderRadius: 20 }}>
               <div className="row" style={{ gap: 12 }}>
-                <span style={{ width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--accent-text)" }}>
-                  {service?.brand ? <BrandIcon file={service.brand} size={20} /> : <Sparkles size={18} />}
-                </span>
+                <span className="sub-icon">{service?.brand ? <BrandIcon file={service.brand} size={20} /> : <Sparkles size={18} />}</span>
                 <div className="grow col" style={{ gap: 2 }}>
                   <span style={{ fontSize: 16, fontWeight: 600 }}>{subscription.name}</span>
                   {subscription.planName && (
@@ -236,23 +220,6 @@ function SubscriptionsSection({ subscriptions }: { subscriptions: Subscription[]
           );
         })}
       </div>
-    </div>
-  );
-}
-
-function SkillsProfileButton({ profile }: { profile: MyProfile }) {
-  const t = useT();
-  const push = useApp((state) => state.push);
-  return (
-    <button className="skills-cta" onClick={() => push({ type: "skills" })}>
-      <span className="ico">{profile.hasSkillsProfile ? <UserCheck size={17} /> : <Plus size={18} strokeWidth={2.6} />}</span>
-      <div className="grow col" style={{ gap: 2, textAlign: "left", minWidth: 0 }}>
-        <span style={{ fontSize: 15, fontWeight: 600 }}>{t(profile.hasSkillsProfile ? "profile.skills.edit" : "profile.skills.create")}</span>
-        <span className="secondary ellipsis" style={{ fontSize: 12 }}>
-          {profile.hasSkillsProfile ? profile.skills.slice(0, 3).join(", ") : t("profile.skills.subtitle")}
-        </span>
-      </div>
-      <ChevronRight size={14} className="secondary" />
-    </button>
+    </section>
   );
 }

@@ -1,11 +1,18 @@
 // Game catalog: curated overrides, RAWG (when RAWG_API_KEY is set), the
 // public Steam store API and Wikipedia (no keys needed), plus an offline list
-// of popular titles. Every provider response is cached in PostgreSQL and no
-// provider failure ever reaches the caller.
+// of popular titles. Search understands Russian names, slang and
+// abbreviations through the alias table in @unishare/shared. Every provider
+// response is cached in PostgreSQL and no provider failure ever reaches the
+// caller.
 import {
+  GAME_ALIASES,
   POPULAR_GAMES,
+  canonicalGame,
+  findGameAliases,
+  gameSearchKey,
   normalizeGameName,
   sanitizeGameName,
+  type GameAliasMatch,
   type GameDetails,
   type GameSearchResult,
 } from "@unishare/shared";
@@ -74,14 +81,39 @@ function matchScore(candidate: string, wanted: string): number {
   return 0;
 }
 
+/** Runs one lookup per key at a time: concurrent searches for the same title share the request. */
+function shared<T>(inFlight: Map<string, Promise<T>>, key: string, work: () => Promise<T>): Promise<T> {
+  let pending = inFlight.get(key);
+  if (!pending) {
+    pending = work().finally(() => inFlight.delete(key));
+    inFlight.set(key, pending);
+  }
+  return pending;
+}
+
 // ── Offline catalog ────────────────────────────────────────────────────────
 
-function offline(needle: string): GameSearchResult[] {
-  return POPULAR_GAMES.map((name, index) => ({ name, index, normalized: normalizeGameName(name) }))
-    .filter((game) => game.normalized.includes(needle))
-    .sort((a, b) => Number(!a.normalized.startsWith(needle)) - Number(!b.normalized.startsWith(needle)) || a.name.localeCompare(b.name))
-    .slice(0, 12)
+const MAX_RESULTS = 12;
+
+/** Catalog titles with a word starting with the query ("ring" finds Elden Ring, "ark" not Dark Souls). */
+function offline(keys: string[]): GameSearchResult[] {
+  return POPULAR_GAMES.map((name, index) => ({ name, index, rank: textRank(name, keys) }))
+    .filter((game) => game.rank <= WORD_MATCH)
+    .sort((a, b) => a.rank - b.rank || a.name.localeCompare(b.name))
+    .slice(0, MAX_RESULTS)
     .map((game) => ({ id: -(game.index + 1000), name: game.name, backgroundImage: null, released: null, source: "catalog" as const }));
+}
+
+const CATALOG_IDS = new Map(POPULAR_GAMES.map((name, index) => [gameKey(name), -(index + 1000)]));
+
+/** Negative id of a catalog-only result: the offline catalog's, or a stable one derived from the title. */
+function catalogId(name: string): number {
+  const key = gameKey(name);
+  const known = CATALOG_IDS.get(key);
+  if (known) return known;
+  let hash = 0;
+  for (const char of key) hash = (Math.imul(hash, 31) + char.codePointAt(0)!) | 0;
+  return -(100_000 + (Math.abs(hash) % 1_000_000_000));
 }
 
 // ── Steam (public store API, no key) ───────────────────────────────────────
@@ -93,7 +125,44 @@ interface SteamSearchItem {
   tiny_image?: string | null;
 }
 
-const NON_GAME = /\b(soundtrack|ost|dlc|season pass|demo|artbook|art book|wallpaper|costume pack|expansion pass|upgrade|bundle)\b/i;
+/**
+ * Store entries that are not games: soundtracks, artbooks, DLC, passes,
+ * cosmetic and currency packs, edition upgrades, scenario add-ons, demos and
+ * tools (Creation Kit, SKSE). The phrases are specific enough to keep games
+ * such as "Costume Quest", "Upgrade Complete", "Skin Deep" or "The Jackbox
+ * Party Pack".
+ */
+const ADD_ON = new RegExp(
+  [
+    String.raw`\b(?:original )?soundtracks?\b`,
+    String.raw`\bost\b`,
+    String.raw`\bart ?books?\b`,
+    String.raw`\bwallpapers?\b`,
+    String.raw`\bdlc\b`,
+    String.raw`\bbonus content\b`,
+    String.raw`\b(?:season|expansion|year|battle|adventure|character|story|premium|ultimate|deluxe|gold|elite|access) pass\b`,
+    String.raw`\b(?:deluxe|ultimate|premium|gold|vault|collector['’]?s|edition|digital|anniversary) upgrade\b`,
+    String.raw`\bupgrade (?:to|pack|kit)\b`,
+    String.raw`\b(?:costume|skin|outfit|weapon|cosmetic|character|vehicle|item|starter|booster|resupply|welcome|supporter|premium|currency|coin|gem|point)s? (?:pack|set|bundle|kit)\b`,
+    String.raw`\b(?:additional|bonus|extra) (?:scenarios?|content|missions?|maps?|costumes?)\b`,
+    String.raw`\bscenario (?:pack|\d+)\b`,
+    String.raw`\b(?:fc|cod|apex|vc) points\b`,
+    String.raw`\b(?:in-?game currency|special offer)\b`,
+    String.raw`\bdemo\b`,
+    String.raw`\b(?:playtest|public test|test server|dedicated server|sdk|toolkit|mod tools?|redkit|redmod|creation kit|script extender|skse)\b`,
+    "追加|シナリオ|サウンドトラック|コスチューム",
+  ].join("|"),
+  "i",
+);
+
+/** "War Thunder - Su-30MKK Pack", "Fallout 76: Mojave Bundle"; "The Jackbox Party Pack" and "The Jackbox Naughty Pack" are games. */
+const TRAILING_PACK = /\b(?:pack|bundle)$/i;
+const PACK_GAME = /\bparty pack$|^the jackbox /i;
+
+export function isAddOn(name: string): boolean {
+  const text = name.replace(/[™®©]/g, "").trim();
+  return ADD_ON.test(text) || (TRAILING_PACK.test(text) && !PACK_GAME.test(text));
+}
 
 /**
  * Steam asset URLs for recent apps contain a content hash, so header.jpg can
@@ -110,7 +179,7 @@ export function steamImageFromCapsule(appId: number, capsule: string | null | un
 
 export function mapSteamSearch(items: SteamSearchItem[]): GameSearchResult[] {
   return items
-    .filter((item) => (item.type ?? "app") === "app" && Number.isSafeInteger(item.id) && item.name && !NON_GAME.test(item.name))
+    .filter((item) => (item.type ?? "app") === "app" && Number.isSafeInteger(item.id) && item.name && !isAddOn(item.name))
     .map((item) => ({
       id: item.id,
       name: item.name,
@@ -121,11 +190,17 @@ export function mapSteamSearch(items: SteamSearchItem[]): GameSearchResult[] {
     }));
 }
 
+const steamInFlight = new Map<string, Promise<GameSearchResult[] | null>>();
+
 /** Steam store search; `null` when Steam did not answer and nothing is cached (unlike `[]`, "no such game"). */
-export async function steamSearch(term: string): Promise<GameSearchResult[] | null> {
-  const needle = normalizeGameName(term);
-  const key = `steam:${needle}`;
-  const cached = await cacheGet<GameSearchResult[]>(key);
+export function steamSearch(term: string): Promise<GameSearchResult[] | null> {
+  const key = `steam:${normalizeGameName(term)}`;
+  return shared(steamInFlight, key, () => steamSearchUncached(term, key));
+}
+
+async function steamSearchUncached(term: string, key: string): Promise<GameSearchResult[] | null> {
+  // Entries cached before the add-on filter learned a phrase are filtered on the way out.
+  const cached = (await cacheGet<GameSearchResult[]>(key))?.filter((game) => !isAddOn(game.name));
   if (cached) return cached;
   const url = new URL("https://store.steampowered.com/api/storesearch/");
   url.searchParams.set("term", term);
@@ -179,16 +254,21 @@ function describesVideoGame(summary: WikiSummary): boolean {
   return VIDEO_GAME.test(firstSentence);
 }
 
+const CYRILLIC = /\p{Script=Cyrillic}/u;
+
 /**
  * The Wikipedia article about a game (`data: null` when there is none), or
  * `ok: false` when Wikipedia did not answer. "<name> (video game)" is tried
  * first; the bare title only counts when it describes a game ("Hades" alone is
- * the god, "Spider-Man" the comic character).
+ * the god, "Spider-Man" the comic character). Cyrillic titles ("Мир танков")
+ * are looked up on the Russian Wikipedia, as "<name> (игра)" first.
  */
-async function wikiSummary(name: string): Promise<Lookup<WikiSummary | null>> {
-  for (const [title, mustDescribeGame] of [[`${name} (video game)`, false], [name, true]] as const) {
+async function wikiSummary(name: string, lang: "en" | "ru" = CYRILLIC.test(name) ? "ru" : "en"): Promise<Lookup<WikiSummary | null>> {
+  // "(игра)" also names board games, so on the Russian Wikipedia both must describe a game.
+  const qualified = lang === "ru" ? ([`${name} (игра)`, true] as const) : ([`${name} (video game)`, false] as const);
+  for (const [title, mustDescribeGame] of [qualified, [name, true] as const]) {
     const result = await fetchJson<WikiSummary>(
-      `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title.replace(/ /g, "_"))}`,
+      `https://${lang}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title.replace(/ /g, "_"))}`,
     );
     if (!result.ok) return result;
     const summary = result.data;
@@ -218,12 +298,48 @@ async function steamHeaderImage(appId: number): Promise<Lookup<string | null>> {
   return { ok: true, data: image ? image.split("?")[0] : null };
 }
 
-/** Finds artwork for a game title: Steam first, then Wikipedia. Cached. */
+/**
+ * A cover set by hand: an enabled game_catalog_overrides row named so (or
+ * with that search term) that has a background_image. It wins over the
+ * providers and their cache, for games without free art (Fortnite, Roblox).
+ */
+async function overrideCover(name: string): Promise<ResolvedCover | null> {
+  const row = await queryOne<{ background_image: string }>(
+    `select background_image from game_catalog_overrides
+     where enabled and coalesce(background_image, '') <> ''
+       and (lower(name) = lower($1) or exists (select 1 from unnest(search_terms) t where lower(t) = lower($1)))
+     order by lower(name) = lower($1) desc, updated_at desc
+     limit 1`,
+    [name],
+  ).catch(() => null);
+  return row ? { coverUrl: row.background_image, steamAppId: null, title: null } : null;
+}
+
+const coversInFlight = new Map<string, Promise<ResolvedCover | null>>();
+
+/**
+ * Finds artwork for a game title: a hand-set override, then Steam, then
+ * Wikipedia. Cached. An alias of one game is looked up as that game ("гта 6"
+ * -> Grand Theft Auto VI), and games that are not on Steam go to Wikipedia
+ * directly: the Steam title that merely starts the same is another game
+ * ("Minecraft Dungeons").
+ */
 export async function resolveCover(name: string): Promise<ResolvedCover | null> {
   const sanitized = sanitizeGameName(name);
   if (!sanitized) return null;
-  // v3: v2 entries may hold misses cached during Steam outages and bare-title Wikipedia images.
-  const key = `cover3:${normalizeGameName(sanitized)}`;
+  const canonical = canonicalGame(sanitized);
+  if (canonical && gameSearchKey(canonical.title) !== gameSearchKey(sanitized)) return resolveCover(canonical.title);
+  const steam = canonical?.store !== "other";
+  // v3: v2 entries may hold misses cached during Steam outages and bare-title
+  // Wikipedia images. Games not on Steam have their own key, since a v3 entry
+  // may hold the art of a Steam game with a longer title.
+  const key = `${steam ? "cover3" : "cover3w"}:${normalizeGameName(sanitized)}`;
+  return shared(coversInFlight, key, () => lookupCover(sanitized, key, steam, Boolean(canonical)));
+}
+
+async function lookupCover(sanitized: string, key: string, steam: boolean, known: boolean): Promise<ResolvedCover | null> {
+  const override = await overrideCover(sanitized);
+  if (override) return override;
   const cached = await cacheGet<{ cover: ResolvedCover | null }>(key);
   if (cached) return cached.cover;
 
@@ -236,23 +352,33 @@ export async function resolveCover(name: string): Promise<ResolvedCover | null> 
   let cover: ResolvedCover | null = null;
   /** The small capsule stands in while the header lookup is down; it is replaced on the next lookup. */
   let provisional = false;
-  const results = await steamSearch(sanitized);
-  if (!results) return failed();
-  const steam = bestSteamMatch(results, sanitized);
-  if (steam?.backgroundImage) {
-    const appId = steam.steamAppId ?? steam.id;
-    let header: string | null = null;
-    if (/\/capsule_[^/]+$/.test(steam.backgroundImage)) {
-      const lookup = await steamHeaderImage(appId);
-      if (lookup.ok) header = lookup.data;
-      else provisional = true;
+  if (steam) {
+    const results = await steamSearch(sanitized);
+    if (!results) return failed();
+    const match = bestSteamMatch(results, sanitized);
+    if (match?.backgroundImage) {
+      const appId = match.steamAppId ?? match.id;
+      let header: string | null = null;
+      if (/\/capsule_[^/]+$/.test(match.backgroundImage)) {
+        const lookup = await steamHeaderImage(appId);
+        if (lookup.ok) header = lookup.data;
+        else provisional = true;
+      }
+      cover = { coverUrl: header ?? match.backgroundImage, steamAppId: appId, title: match.name };
     }
-    cover = { coverUrl: header ?? steam.backgroundImage, steamAppId: appId, title: steam.name };
   }
   if (!cover) {
     const wiki = await wikiSummary(sanitized);
     if (!wiki.ok) return failed();
-    const image = cleanWikiImage(wiki.data?.thumbnail?.source ?? wiki.data?.originalimage?.source);
+    let image = cleanWikiImage(wiki.data?.thumbnail?.source ?? wiki.data?.originalimage?.source);
+    // The English articles of Minecraft and the like have no free image, the
+    // Russian one has the cover. Only for games the alias table knows, so free
+    // text does not cost two more requests.
+    if (!image && known && !CYRILLIC.test(sanitized)) {
+      const russian = await wikiSummary(sanitized, "ru");
+      if (!russian.ok) return failed();
+      image = cleanWikiImage(russian.data?.thumbnail?.source ?? russian.data?.originalimage?.source);
+    }
     if (image) cover = { coverUrl: image, steamAppId: null, title: null };
   }
   await cachePut(key, { cover }, provisional ? FAILURE_TTL_HOURS : cover ? COVER_TTL_DAYS * 24 : MISS_TTL_HOURS);
@@ -291,36 +417,378 @@ async function rawgSearch(term: string, needle: string): Promise<GameSearchResul
   return results;
 }
 
+/** RAWG when it is configured and finds something, the Steam store otherwise. */
+async function storeSearch(term: string): Promise<GameSearchResult[]> {
+  const rawg = await rawgSearch(term, normalizeGameName(term));
+  if (rawg && rawg.length) return rawg.filter((game) => !isAddOn(game.name));
+  return (await steamSearch(term)) ?? [];
+}
+
+interface SearchPlan {
+  /** Canonical games the query names ("гта 6" -> Grand Theft Auto VI). */
+  aliases: GameAliasMatch[];
+  /** What the stores are asked (at most two): canonical names instead of slang the stores do not understand, a series with its sequel. */
+  terms: string[];
+  /** Search keys titles are ranked against. */
+  keys: string[];
+}
+
+/**
+ * What the stores are asked for named games: the words every title starts
+ * with ("Grand Theft Auto", "The Witcher"), or a single title without its
+ * sequel number ("Counter-Strike 2" -> "Counter-Strike"), so the rest of the
+ * series follows the named game instead of the store's guesses.
+ */
+function commonName(titles: string[]): string {
+  if (titles.length === 1) {
+    const series = titles[0].replace(/[\s:–—-]+(?:\d{1,2}|[ivx]+)$/i, "");
+    return gameSearchKey(series).length >= 4 ? series : titles[0];
+  }
+  const words = titles[0].split(" ");
+  for (let count = words.length; count > 0; count--) {
+    const name = words.slice(0, count).join(" ").replace(/[\s:–—-]+$/, "");
+    const key = gameSearchKey(name);
+    if (key.length < 4) break;
+    if (titles.every((title) => gameSearchKey(title) === key || gameSearchKey(title).startsWith(`${key} `))) return name;
+  }
+  return titles[0];
+}
+
+const ROMAN_NUMERAL = /^(?=[IVX])X{0,3}(?:IX|IV|V?I{0,3})$/;
+
+function toRoman(value: number): string {
+  return "X".repeat(Math.floor(value / 10)) + ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX"][value % 10];
+}
+
+/**
+ * The store names of a sequel the alias table does not have and of its
+ * series: "fallout 2" -> "Fallout 2" and "Fallout", "хитман 2" -> "Hitman 2"
+ * and "Hitman", "civ 4" -> "Sid Meier's Civilization IV" (the series' own
+ * numbering). Null when the series has no common name and the alias is
+ * Cyrillic.
+ */
+function sequelNames(titles: string[], sequel: { alias: string; number: number }): { sequel: string; series: string } | null {
+  const shared = commonName(titles);
+  const base = gameSearchKey(shared);
+  const series = titles.every((title) => gameSearchKey(title) === base || gameSearchKey(title).startsWith(`${base} `))
+    ? shared.split(/:\s|\s[-–—]\s/)[0].replace(/[\s:–—-]+(?:\d{1,2}|[IVX]+)$/, "")
+    : /[a-z]/.test(sequel.alias) && !CYRILLIC.test(sequel.alias) ? sequel.alias : null;
+  if (!series) return null;
+  const words = (title: string) => title.split(/[\s:]+/);
+  const roman = titles.filter((title) => words(title).some((word) => ROMAN_NUMERAL.test(word))).length;
+  const digits = titles.filter((title) => words(title).some((word) => /^\d+$/.test(word))).length;
+  return { sequel: `${series} ${roman > digits && sequel.number < 40 ? toRoman(sequel.number) : sequel.number}`, series };
+}
+
+function searchPlan(text: string): SearchPlan {
+  const aliases = findGameAliases(text);
+  const typed = gameSearchKey(text);
+  const exact = aliases.filter((match) => match.exact).map((match) => match.title);
+  const sequel = aliases.find((match) => match.sequel)?.sequel;
+  // Steam and RAWG only know Latin titles.
+  const readable = !CYRILLIC.test(text);
+  // "gta 6", "cs2", "rdr2": the stores find other games for an abbreviation.
+  const abbreviation = exact.length > 0 && !exact.some((title) => gameSearchKey(title).includes(typed));
+  const terms: string[] = [];
+  const keys = [typed];
+  if (sequel) {
+    // "fallout 2" is not in the table: the stores are asked for it under its
+    // series' name, and for the series, whose games follow it (the series name
+    // does not rank titles, so "Fallout Shelter" stays after them).
+    const names = sequelNames(aliases.filter((match) => match.sequel).map((match) => match.title), sequel);
+    if (names && !CYRILLIC.test(names.sequel)) {
+      terms.push(names.sequel, names.series);
+      keys.push(gameSearchKey(names.sequel));
+    }
+    // The typed Latin text only when that leaves room ("civ 4" finds other games).
+    if (readable) terms.push(text);
+  } else {
+    const named = aliases.length && (exact.length || !readable) ? commonName(exact.length ? exact : aliases.map((match) => match.title)) : null;
+    // "Мир танков" is not on the stores under its Russian name.
+    if (named && !CYRILLIC.test(named)) terms.push(named);
+    if (!aliases.length || (readable && !abbreviation)) terms.push(text);
+    keys.push(...terms.map(gameSearchKey));
+  }
+  const unique = terms
+    .filter((term, index) => terms.findIndex((other) => gameSearchKey(other) === gameSearchKey(term)) === index)
+    .slice(0, 2);
+  return { aliases, terms: unique, keys: [...new Set(keys)] };
+}
+
+const PREFIX_MATCH = 1;
+const WORD_MATCH = 2;
+const PART_MATCH = 3;
+const NO_MATCH = 4;
+
+/** 0 the title is the query, 1 starts with it, 2 has a word starting with it, 3 contains it, 4 not at all (the store's own fuzzy match). */
+function textRank(name: string, keys: string[]): number {
+  const title = gameSearchKey(name);
+  let best = NO_MATCH;
+  for (const key of keys) {
+    if (!key) continue;
+    const rank = title === key ? 0 : title.startsWith(key) ? 1 : ` ${title}`.includes(` ${key}`) ? 2 : title.includes(key) ? 3 : NO_MATCH;
+    best = Math.min(best, rank);
+  }
+  return best;
+}
+
+/**
+ * "Dead by Daylight - Chucky Chapter", "Dune: Awakening - Sardaukar Bator
+ * Armor": a store entry named after another game on the list (or an edition
+ * of it) followed by " - " is that game's DLC; "– The Definitive Edition" is not.
+ */
+function dlcOf(name: string, games: string[]): boolean {
+  const dash = /\s[-–—]\s/.exec(name);
+  if (!dash) return false;
+  const base = name.slice(0, dash.index);
+  return !isEditionOf(name, base) && games.some((game) => game !== name && isEditionOf(base, game));
+}
+
+/** "Shadow Unit - GOD OF WAR EDITION": the query only names an edition or add-on of another product. */
+function onlyAfterDash(name: string, keys: string[]): boolean {
+  const dash = /\s[-–—]\s/.exec(name);
+  if (!dash) return false;
+  const head = gameSearchKey(name.slice(0, dash.index));
+  const tail = gameSearchKey(name.slice(dash.index));
+  const mentions = (part: string) => keys.some((key) => key && part.includes(key));
+  return mentions(tail) && !mentions(head);
+}
+
+const EDITION_WORDS = new Set(["the", "of", "year", "game", "definitive", "complete", "enhanced", "remastered", "remaster", "edition", "goty", "deluxe", "digital", "gold", "ultimate", "standard", "legendary", "special", "anniversary", "directors", "cut", "legacy", "hd"]);
+const EDITION_MARKERS = new Set(["definitive", "complete", "enhanced", "remastered", "remaster", "edition", "goty", "cut", "legacy", "hd"]);
+
+/** "Grand Theft Auto V Enhanced", "Grand Theft Auto: San Andreas – The Definitive Edition" or "Apex Legends™" is the game `title`. */
+function isEditionOf(storeName: string, title: string): boolean {
+  const store = gameSearchKey(storeName);
+  const base = gameSearchKey(title);
+  if (store === base) return true;
+  if (!base || !store.startsWith(`${base} `)) return false;
+  const rest = store.slice(base.length + 1).split(" ");
+  return rest.every((word) => EDITION_WORDS.has(word)) && rest.some((word) => EDITION_MARKERS.has(word));
+}
+
+/** Alias table titles by search key, and the names the table gives each title (only those that name that one game). */
+const TABLE_TITLES = new Map(GAME_ALIASES.map(([title]) => [gameSearchKey(title), title]));
+let tableSpellings: Map<string, string[]> | null = null;
+
+function spellingsOf(title: string): string[] {
+  tableSpellings ??= new Map(
+    GAME_ALIASES.map(([own, aliases]) => [own, [own, ...aliases.split("|").filter((alias) => canonicalGame(alias)?.title === own)]]),
+  );
+  return tableSpellings.get(title) ?? [title];
+}
+
+/** The alias table title a store or saved name is, or is an edition of: "Grand Theft Auto V Enhanced" -> "Grand Theft Auto V", "ELDEN RING" -> "Elden Ring". */
+function editionTitle(name: string): string | null {
+  const words = gameSearchKey(name).split(" ");
+  for (let end = words.length; end > 0; end--) {
+    if (end < words.length && !EDITION_WORDS.has(words[end])) break;
+    const title = TABLE_TITLES.get(words.slice(0, end).join(" "));
+    if (title && isEditionOf(name, title)) return title;
+  }
+  return null;
+}
+
+/**
+ * The game a saved, typed or store name stands for: "гта 6" and "GTA VI" ->
+ * "Grand Theft Auto VI", "…Skyrim Special Edition" -> "The Elder Scrolls V:
+ * Skyrim"; any other name is itself.
+ */
+export function canonicalTitle(name: string): string {
+  return canonicalGame(name)?.title ?? editionTitle(name) ?? name;
+}
+
+/**
+ * Whether a saved name is the game `title`: spellings ("Apex Legends™"),
+ * alias table names ("гта 6") and store editions all count. /api/players
+ * lists everyone whose game passes, so every way of saving a game finds the
+ * same players.
+ */
+export function gameMatcher(title: string): (name: string) => boolean {
+  const wanted = canonicalTitle(title);
+  const key = gameKey(wanted);
+  const searchKey = gameSearchKey(wanted);
+  return (name) => {
+    const own = canonicalTitle(name);
+    if (!key || !gameKey(own)) return normalizeGameName(own) === normalizeGameName(wanted);
+    return gameKey(own) === key || gameSearchKey(own) === searchKey || isEditionOf(own, wanted) || isEditionOf(wanted, own);
+  };
+}
+
+/** Lowercased names a saved title of the game can have, for SQL: the title, its canonical title and the alias table's names of that one game. */
+export function gameSpellings(title: string): string[] {
+  const canonical = canonicalTitle(title);
+  return [...new Set([title, ...spellingsOf(canonical)].map((name) => name.toLowerCase()))];
+}
+
+/**
+ * For SQL, before gameMatcher decides: the lowercased names of a game and the
+ * longest word of each, one of which every saved name of it contains ("gta"
+ * in "GTA VI", "grand" in "Grand Theft Auto V Enhanced").
+ */
+export function gameFilter(title: string): { names: string[]; words: string[] } {
+  const names = gameSpellings(title);
+  const longest = (text: string) => text.split(/[^\p{L}\p{N}]+/u).reduce((best, word) => (word.length > best.length ? word : best), "");
+  const words = names.flatMap((name) => [longest(name), longest(normalizeGameName(name)), longest(gameSearchKey(name))]);
+  return { names, words: [...new Set(words.filter((word) => word.length >= 2))] };
+}
+
+/** "gta 6" -> also "gta6", "gta vi" and "gtavi": the ways a saved name is typed, for exact SQL matching. */
+function typedForms(name: string): string[] {
+  const lower = name.toLowerCase();
+  const forms = [lower];
+  const number = / (\d{1,2}|[ivx]+)$/.exec(lower);
+  const digits = number && (/^\d/.test(number[1]) ? number[1] : gameSearchKey(`game ${number[1]}`).split(" ")[1]);
+  if (number && digits && /^\d+$/.test(digits) && Number(digits) > 0 && Number(digits) < 40) {
+    const stem = lower.slice(0, number.index);
+    forms.push(`${stem} ${digits}`, `${stem} ${toRoman(Number(digits)).toLowerCase()}`);
+  }
+  return forms.flatMap((form) => [form, form.replace(/\s+/g, "")]);
+}
+
+/**
+ * For the people search, the games a query names exactly: their lowercased
+ * names ("гта 6" -> "grand theft auto vi", "gta 6", "gta vi", "гта6", …) and
+ * LIKE patterns for store editions older profiles saved ("grand theft auto v
+ * %" finds "Grand Theft Auto V Enhanced"). No patterns for a title that starts
+ * another one ("Counter-Strike" and "Counter-Strike 2").
+ */
+export function queryGameFilter(text: string): { names: string[]; editions: string[] } {
+  const titles = findGameAliases(text).filter((match) => match.exact).map((match) => match.title);
+  const names = [...new Set(titles.flatMap(spellingsOf).flatMap(typedForms))];
+  const editions = titles
+    .filter((title) => ![...TABLE_TITLES.keys()].some((key) => key.startsWith(`${gameSearchKey(title)} `)))
+    .flatMap((title) => {
+      const escaped = title.toLowerCase().replace(/[\\%_]/g, (char) => `\\${char}`);
+      return [`${escaped} %`, `${escaped}:%`];
+    });
+  return { names, editions };
+}
+
+/** How long a search waits for the covers of catalog games it shows; slower lookups keep running and are cached for the next search. */
+const COVER_BUDGET_MS = 1_500;
+/** Covers that are already cached are worth a short wait even after slow stores. */
+const COVER_GRACE_MS = 150;
+
+/** Each promise's value, or null for the ones still running after `ms`. */
+async function withinBudget<T>(promises: Promise<T | null>[], ms: number): Promise<(T | null)[]> {
+  if (!promises.length) return [];
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const deadline = new Promise<null>((resolve) => {
+    timer = setTimeout(() => resolve(null), ms);
+  });
+  try {
+    return await Promise.all(promises.map((promise) => Promise.race([promise, deadline])));
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
+ * Curated overrides, then the games the query names ("гта 6", "кс2",
+ * "ведьмак"), then the stores' answer for their real names with add-ons of
+ * other products dropped and the closest titles first (games the query only
+ * starts the name of, or other games of a series it names with an unknown
+ * number, "fallout 2", are ranked among them), then the offline catalog.
+ * Catalog-only results get covers within a short time budget.
+ */
 export async function searchGames(input: string): Promise<GameSearchResult[]> {
   const sanitized = sanitizeGameName(input);
   if (!sanitized) return [];
+  const started = Date.now();
   const needle = normalizeGameName(sanitized);
+  const plan = searchPlan(sanitized);
 
-  const curated = (await query<{ game_id: number; name: string; background_image: string | null; released: string | null }>(
-    `select game_id, name, background_image, released::text as released
-     from game_catalog_overrides
-     where enabled and (lower(name) like '%' || $1 || '%' or exists (select 1 from unnest(search_terms) t where lower(t) like '%' || $1 || '%'))
-     limit 12`,
-    [needle],
-  ).catch(() => [])).map((row) => ({
-    id: Number(row.game_id),
-    name: row.name,
-    backgroundImage: row.background_image,
-    released: row.released,
-    source: "catalog" as const,
+  // Covers of named games the stores do not sell are looked up while the
+  // stores answer (the others take the art of their store entry); asking
+  // again below joins the running lookup or reads its cached result.
+  const cover = (name: string) => resolveCover(name).catch(() => null);
+  for (const match of plan.aliases) if (match.store === "other") void cover(match.title);
+
+  const [curated, answers] = await Promise.all([
+    query<{ game_id: number; name: string; background_image: string | null; released: string | null }>(
+      `select game_id, name, background_image, released::text as released
+       from game_catalog_overrides
+       where enabled and (lower(name) like '%' || $1 || '%' or lower(name) = any($2::text[])
+         or exists (select 1 from unnest(search_terms) t where lower(t) like '%' || $1 || '%'))
+       limit 12`,
+      // "фортик", "mc": the curated row of the game the query names.
+      [needle, plan.aliases.filter((match) => match.exact).map((match) => match.title.toLowerCase())],
+    )
+      .catch(() => [])
+      .then((rows) =>
+        rows.map((row): GameSearchResult => ({
+          id: Number(row.game_id),
+          name: row.name,
+          backgroundImage: row.background_image,
+          released: row.released,
+          source: "catalog",
+        })),
+      ),
+    Promise.all(plan.terms.map((term) => storeSearch(term).catch(() => []))),
+  ]);
+
+  const named = plan.aliases.map((match) => ({
+    match,
+    game: { id: catalogId(match.title), name: match.title, backgroundImage: null, released: null, source: "catalog", steamAppId: null } as GameSearchResult,
   }));
+  // The stores' guesses for a name they were given by the alias table (no
+  // word of it in the title, like "CS2D" for Counter-Strike) are left out.
+  const guesses = plan.aliases.some((match) => match.exact);
+  const ranked = answers
+    .flat()
+    .filter((game) => !onlyAfterDash(game.name, plan.keys))
+    .map((game, order) => ({ game, order, rank: textRank(game.name, plan.keys) }))
+    .filter((entry) => !guesses || entry.rank < NO_MATCH)
+    .sort((a, b) => a.rank - b.rank || a.order - b.order);
+  // A store edition of a named game ("Grand Theft Auto V Enhanced") is that
+  // game: its art and Steam app go to the named card instead of a second card.
+  // Editions of other games in the alias table take the table's title, so a
+  // game is saved under one name whatever was typed to find it.
+  const stores: { game: GameSearchResult; rank: number }[] = [];
+  for (const { game, rank } of ranked) {
+    const owner = named.find((entry) => isEditionOf(game.name, entry.game.name))?.game;
+    if (!owner) {
+      const title = editionTitle(game.name);
+      stores.push({ game: title && title !== game.name ? { ...game, name: title } : game, rank });
+      continue;
+    }
+    owner.backgroundImage ??= game.backgroundImage;
+    if (!owner.steamAppId && game.steamAppId) Object.assign(owner, { id: game.steamAppId, source: "steam", steamAppId: game.steamAppId });
+  }
 
-  const rawg = await rawgSearch(sanitized, needle);
-  if (rawg && rawg.length) return merge(curated, rawg);
+  // Games the query only starts the name of rank as titles starting with it;
+  // the series of "fallout 2" as titles containing it, after the typed game.
+  // On a tie the named game (the most played) goes first.
+  const followers = named
+    .filter(({ match }) => !match.exact)
+    .map(({ match, game }) => ({ game, rank: match.sequel ? PART_MATCH : PREFIX_MATCH, named: true }));
+  const listed = [...followers, ...stores.map((entry) => ({ ...entry, named: false }))]
+    .map((entry, order) => ({ ...entry, order }))
+    .sort((a, b) => a.rank - b.rank || Number(b.named) - Number(a.named) || a.order - b.order);
+  const first = named.filter(({ match }) => match.exact).map(({ game }) => game);
+  const titles = [...first, ...listed.map(({ game }) => game)].map((game) => game.name);
+  const games = listed.filter((entry) => entry.named || !dlcOf(entry.game.name, titles)).map(({ game }) => game);
+  // Catalog titles a store result is an edition of are already on the list.
+  const catalog = offline(plan.keys).filter((game) => !games.some((store) => isEditionOf(store.name, game.name)));
+  const results = merge(curated, [...first, ...games, ...catalog]);
 
-  const steam = (await steamSearch(sanitized)) ?? [];
-  return merge(merge(curated, steam), offline(needle));
+  const pending = results.filter((game) => !game.backgroundImage && game.source === "catalog");
+  const budget = Math.max(COVER_GRACE_MS, COVER_BUDGET_MS - (Date.now() - started));
+  const found = new Map((await withinBudget(pending.map((game) => cover(game.name)), budget)).map((art, index) => [pending[index], art]));
+  return results.map((game) => {
+    const art = found.get(game);
+    if (!art) return game;
+    // The cover's Steam app is this game only when the store title is (an edition of) it.
+    const appId = !game.steamAppId && art.steamAppId && art.title && isEditionOf(art.title, game.name) ? art.steamAppId : null;
+    return { ...game, backgroundImage: art.coverUrl, ...(appId ? { id: appId, source: "steam" as const, steamAppId: appId } : {}) };
+  });
 }
 
 /**
  * Treats "Counter-Strike 2" and "Counter Strike 2", "Assassin's Creed" and "Assassins Creed", or
- * "Apex Legends™" and "Apex Legends" as one game. Search shows one card per key, and /api/players
- * lists everyone whose game has the same key, so either spelling finds the same players.
+ * "Apex Legends™" and "Apex Legends" as one game. Search shows one card per key; gameMatcher()
+ * (/api/players) also counts these spellings as one game.
  */
 export function gameKey(name: string): string {
   return normalizeGameName(name).replace(/['’`]/g, "").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
@@ -340,7 +808,7 @@ function merge(first: GameSearchResult[], second: GameSearchResult[]): GameSearc
       merged[at] = { ...merged[at], backgroundImage: game.backgroundImage };
     }
   }
-  return merged.slice(0, 12);
+  return merged.slice(0, MAX_RESULTS);
 }
 
 // ── Popular now ────────────────────────────────────────────────────────────
@@ -369,9 +837,10 @@ async function mapLimit<T, R>(items: T[], limit: number, work: (item: T) => Prom
 }
 
 export async function popularGames(): Promise<GameSearchResult[]> {
-  // v6: earlier lists may hold titles only one player had, player titles under
-  // a store name, one Steam app twice, or miss a game hidden by a prefix match.
-  const key = "popular:v6";
+  // v7: earlier lists may hold titles only one player had, player titles under
+  // a store name, one Steam app twice, miss a game hidden by a prefix match,
+  // or name a top seller by its store edition ("Grand Theft Auto V Enhanced").
+  const key = "popular:v7";
   const cached = await cacheGet<GameSearchResult[]>(key);
   if (cached && cached.length) return cached;
 
@@ -419,7 +888,8 @@ export async function popularGames(): Promise<GameSearchResult[]> {
   for (const item of (featured.ok ? featured.data?.top_sellers?.items : null) ?? []) {
     if (!Number.isSafeInteger(item.id) || !item.name || NOT_A_GAME.test(item.name)) continue;
     const image = (item.header_image ?? item.large_capsule_image ?? "").split("?")[0] || steamImageFromCapsule(item.id, null);
-    add({ id: item.id, name: item.name, backgroundImage: image, released: null, source: "steam", steamAppId: item.id });
+    // Saved from this tile, the game gets the name search shows for it.
+    add({ id: item.id, name: editionTitle(item.name) ?? item.name, backgroundImage: image, released: null, source: "steam", steamAppId: item.id });
   }
 
   // 3. Evergreen titles from the offline catalog.
@@ -546,11 +1016,16 @@ export async function gameDetails(input: { name: string; steamAppId?: number | n
     }
   }
 
+  // "гта 6" is looked up as Grand Theft Auto VI; games not on Steam skip the
+  // Steam search, whose closest title would be another game ("Minecraft Dungeons").
+  const canonical = canonicalGame(name);
+  const title = canonical?.title ?? name;
+
   if (!details && name) {
     let appId = steamAppId;
-    if (!appId) {
-      const results = await steamSearch(name);
-      if (results) appId = bestSteamMatch(results, name)?.steamAppId ?? null;
+    if (!appId && canonical?.store !== "other") {
+      const results = await steamSearch(title);
+      if (results) appId = bestSteamMatch(results, title)?.steamAppId ?? null;
       else steamFailed = true;
     }
     if (appId) {
@@ -561,7 +1036,7 @@ export async function gameDetails(input: { name: string; steamAppId?: number | n
   }
 
   if (!details && name && !steamFailed) {
-    const result = await wikiSummary(name);
+    const result = await wikiSummary(title);
     if (!result.ok) failed = true;
     const wiki = result.ok ? result.data : null;
     if (wiki) {

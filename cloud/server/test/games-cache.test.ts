@@ -329,14 +329,14 @@ test("Popular now only shows user-entered names that are a Steam app or in the o
   assert.match(usedQuery, /not exists \(select 1 from content_rules r where r\.is_active and g ~\* r\.pattern\)/);
   // A title only one player has never becomes "popular".
   assert.match(usedQuery, /group by lower\(g\) having count\(distinct u\.uid\) >= 2/);
-  assert.equal(cache.get("popular:v6")?.seconds, 12 * 3600);
+  assert.equal(cache.get("popular:v7")?.seconds, 12 * 3600);
 });
 
 test("Popular now: a list built without Steam's top sellers is kept for minutes only", async () => {
   mockFetch((url) => (url.pathname === "/api/featuredcategories" ? status(503) : isSearch(url) ? { items: [{ type: "app", id: 570, name: url.searchParams.get("term"), tiny_image: null }] } : undefined));
   const list = await games.popularGames();
   assert.ok(list.length > 0);
-  assert.equal(cache.get("popular:v6")?.seconds, FAILURE_SECONDS);
+  assert.equal(cache.get("popular:v7")?.seconds, FAILURE_SECONDS);
 });
 
 // ── Cover enrichment ───────────────────────────────────────────────────────

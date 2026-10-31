@@ -9,6 +9,7 @@ import { USER_COLUMNS, profileUpdateToColumns, toMyProfile, toProfileCard, type 
 import { detectImage, storage } from "../lib/storage";
 import { prepareProfileShare } from "../bot/telegram";
 import { enrichUserCovers } from "../enrich";
+import { ownAvatarMatcher, ownUploadedAvatarKey, uploadedAvatarUrl } from "./avatar";
 
 export async function loadMyProfile(userId: string): Promise<MyProfile> {
   const row = await queryOne<UserRow>(`select ${USER_COLUMNS} from users u where u.uid = $1`, [userId]);
@@ -29,7 +30,10 @@ export async function meRoutes(app: FastifyInstance): Promise<void> {
 
   app.patch<{ Body: ProfileUpdate }>("/api/me", async (request) => {
     const session = await requireSession(request);
-    const columns = profileUpdateToColumns(request.body ?? {});
+    const body = request.body ?? {};
+    // Besides presets and game art, the avatar may only be a photo this account already owns.
+    const isOwnAvatar = typeof body.avatarUrl === "string" ? await ownAvatarMatcher(session.userId) : undefined;
+    const columns = profileUpdateToColumns(body, isOwnAvatar);
     const current = await loadMyProfile(session.userId);
 
     const finishing = columns.onboarding_complete === true && !current.onboardingComplete;
@@ -83,9 +87,9 @@ export async function meRoutes(app: FastifyInstance): Promise<void> {
     await storage.put(key, body, image.contentType);
 
     const previous = await queryOne<{ avatar_url: string | null }>(`select avatar_url from users where uid = $1`, [session.userId]);
-    const avatarUrl = storage.publicUrl(key) ?? `/media/${key}`;
+    const avatarUrl = uploadedAvatarUrl(key);
     await query(`update users set avatar_url = $2 where uid = $1`, [session.userId, avatarUrl]);
-    const previousKey = previous?.avatar_url?.match(/avatars\/[A-Za-z0-9_.-]+$/)?.[0];
+    const previousKey = ownUploadedAvatarKey(session.userId, previous?.avatar_url);
     if (previousKey && previousKey !== key) void storage.remove([previousKey]).catch(() => undefined);
     return { avatarUrl };
   });
@@ -99,7 +103,7 @@ export async function meRoutes(app: FastifyInstance): Promise<void> {
     const avatar = await queryOne<{ avatar_url: string | null }>(`select avatar_url from users where uid = $1`, [session.userId]);
     await query(`delete from users where uid = $1`, [session.userId]);
     const keys = chatIds.map((chat) => `chats/${chat.id}`);
-    const avatarKey = avatar?.avatar_url?.match(/avatars\/[A-Za-z0-9_.-]+$/)?.[0];
+    const avatarKey = ownUploadedAvatarKey(session.userId, avatar?.avatar_url);
     if (avatarKey) keys.push(avatarKey);
     void storage.remove(keys).catch(() => undefined);
     return { ok: true };
@@ -133,7 +137,8 @@ export async function meRoutes(app: FastifyInstance): Promise<void> {
     if (provider !== "telegram" && provider !== "vk") throw badRequest("Unknown provider");
     await transaction(async (db) => {
       const count = (await db.query<{ count: number }>(
-        `select count(*)::int as count from user_identities where user_id = $1`,
+        // A linked Steam account (library import) is not a way to sign in.
+        `select count(*)::int as count from user_identities where user_id = $1 and provider <> 'steam'`,
         [session.userId],
       )).rows[0].count;
       if (count <= 1) throw badRequest("You cannot unlink the only sign-in method", "last_identity");

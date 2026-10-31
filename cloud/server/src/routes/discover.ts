@@ -2,7 +2,6 @@ import type { FastifyInstance } from "fastify";
 import {
   PLATFORMS,
   isPlatform,
-  normalizeGameName,
   sanitizeGameName,
   type AirShareResult,
   type GameDetails,
@@ -16,7 +15,7 @@ import { badRequest } from "../lib/errors";
 import { USER_COLUMNS, toProfileCard, type UserRow } from "../lib/profiles";
 import { blockedPair } from "../lib/sql";
 import { SlidingWindowLimit } from "../lib/ratelimit";
-import { gameDetails, gameKey, popularGames, searchGames } from "../games";
+import { gameDetails, gameFilter, gameMatcher, popularGames, queryGameFilter, searchGames } from "../games";
 import { airshareLeave, airsharePing } from "../airshare";
 
 function likePattern(value: string): string {
@@ -44,6 +43,8 @@ export async function discoverRoutes(app: FastifyInstance): Promise<void> {
     if (!q && !platform) return { users: [], games: [], platforms: [] };
 
     const pattern = q ? likePattern(q) : null;
+    // The games q names: "гта 6" finds players of "Grand Theft Auto VI", "гта 5" of "Grand Theft Auto V Enhanced".
+    const named = q ? queryGameFilter(q) : { names: [], editions: [] };
     const usersPromise = query<UserRow>(
       `select ${USER_COLUMNS}
        from users u
@@ -54,13 +55,14 @@ export async function discoverRoutes(app: FastifyInstance): Promise<void> {
          and ($3::text is null or $3 = any(u.platforms))
          and ($2::text is null
            or u.username::text ilike $2 escape '\\'
-           or exists (select 1 from unnest(u.games || u.wanted_games) as g where g ilike $2 escape '\\')
+           or exists (select 1 from unnest(u.games || u.wanted_games) as g where g ilike $2 escape '\\'
+             or lower(g) = any($5::text[]) or lower(g) like any($6::text[]))
            or exists (select 1 from unnest(u.platforms) as p where p ilike $2 escape '\\')
            or exists (select 1 from unnest(u.skills) as s where s ilike $2 escape '\\')
            or exists (select 1 from jsonb_array_elements(u.subscriptions) as sub where sub->>'name' ilike $2 escape '\\'))
        order by ($2::text is not null and u.username::text ilike $2 escape '\\') desc, u.updated_at desc
        limit $4`,
-      [session.userId, pattern, platform, q ? 20 : 30],
+      [session.userId, pattern, platform, q ? 20 : 30, named.names, named.editions],
     );
     const gamesPromise: Promise<GameSearchResult[]> = q.length >= 2 ? searchGames(q) : Promise.resolve([]);
     const [users, games] = await Promise.all([usersPromise, gamesPromise]);
@@ -79,10 +81,11 @@ export async function discoverRoutes(app: FastifyInstance): Promise<void> {
     playersLimit.assert(session.userId);
     const game = sanitizeGameName(String(request.query.game ?? ""));
     if (!game) throw badRequest("game is required");
-    // Same title as search shows it: case, ™/® and punctuation aside ("Apex Legends™" lists the
-    // players of "Apex Legends"). SQL narrows by the longest word, gameKey() decides.
-    const key = gameKey(game);
-    const word = key.split(" ").reduce((longest, part) => (part.length > longest.length ? part : longest), "");
+    // Same game as search shows it: case, ™/® and punctuation aside ("Apex Legends™" lists the
+    // players of "Apex Legends"), alias table names ("гта 6") and store editions ("Grand Theft
+    // Auto V Enhanced"). SQL narrows by names and words, gameMatcher() decides.
+    const filter = gameFilter(game);
+    const matches = gameMatcher(game);
     const rows = await query<UserRow>(
       `select ${USER_COLUMNS}
        from users u
@@ -90,13 +93,14 @@ export async function discoverRoutes(app: FastifyInstance): Promise<void> {
          and u.onboarding_complete
          and u.account_state = 'active'
          and not ${blockedPair("$1", "u.uid")}
-         and exists (select 1 from unnest(u.games || u.wanted_games) as g where lower(g) = lower($2) or ($3 <> '' and strpos(lower(g), $3) > 0))
+         and exists (select 1 from unnest(u.games || u.wanted_games) as g
+           where lower(g) = any($2::text[]) or exists (select 1 from unnest($3::text[]) as w where strpos(lower(g), w) > 0))
        order by u.is_online desc, u.updated_at desc
        limit 500`,
-      [session.userId, game, word],
+      [session.userId, filter.names, filter.words],
     );
     return rows
-      .filter((row) => [...row.games, ...row.wanted_games].some((name) => (key ? gameKey(name) === key : normalizeGameName(name) === normalizeGameName(game))))
+      .filter((row) => [...row.games, ...row.wanted_games].some(matches))
       .slice(0, 50)
       .map(toProfileCard);
   });

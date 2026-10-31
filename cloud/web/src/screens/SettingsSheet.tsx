@@ -1,7 +1,7 @@
 // Port of UniShare/Features/Profile/SettingsSheet.swift (List, inset grouped),
 // plus the web-only rows: linked accounts, bot notifications, home screen.
 import { AnimatePresence } from "framer-motion";
-import { Bell, Check, ChevronRight, FileText, Hand, Info, Link2, LogOut, Mail, Smartphone, Trash2, UserRound } from "lucide-react";
+import { Bell, Bug, Check, ChevronRight, FileText, Hand, Info, Link2, LogOut, Mail, ShieldCheck, Smartphone, Trash2, UserRound } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { useApp, type ThemeMode } from "../app/store";
 import { api, setToken } from "../lib/api";
@@ -109,6 +109,15 @@ export function SettingsSheet() {
   return (
     <Sheet title={t("profile.settings")}>
       <div className="container form">
+        {profile.isAdmin && (
+          <>
+            <div className="group" style={{ marginTop: 12 }}>
+              <LinkRow icon={<ShieldCheck size={20} />} label={t("settings.admin")} onClick={() => push({ type: "admin" })} />
+            </div>
+            <div className="group-footer">{t("settings.admin.hint")}</div>
+          </>
+        )}
+
         <div className="group-title">{t("profile.theme")}</div>
         <div className="group">
           {themes.map((item) => (
@@ -178,6 +187,7 @@ export function SettingsSheet() {
           <LinkRow icon={<Info size={20} />} label={t("transparency.title")} onClick={() => push({ type: "transparency" })} />
           <LinkRow icon={<Hand size={20} />} label={t("settings.privacy")} onClick={() => platform.openLink(config?.privacyUrl ?? legalUrl("privacy.html"))} />
           <LinkRow icon={<FileText size={20} />} label={t("settings.terms")} onClick={() => platform.openLink(config?.termsUrl ?? legalUrl("terms.html"))} />
+          <LinkRow icon={<Bug size={20} />} label={t("settings.bug")} onClick={() => push({ type: "bug" })} />
           <LinkRow icon={<Mail size={20} />} label={t("settings.support")} onClick={() => platform.openLink(legalUrl("support.html"))} />
         </div>
 

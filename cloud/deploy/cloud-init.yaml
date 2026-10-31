@@ -12,4 +12,5 @@ runcmd:
     UNISHARE_VK_APP_ID=""
     UNISHARE_VK_APP_SECRET=""
     UNISHARE_RAWG_API_KEY=""
+    UNISHARE_STEAM_API_KEY=""
     bash /root/setup-vps.sh > /var/log/unishare-setup.log 2>&1

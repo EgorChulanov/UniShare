@@ -12,6 +12,8 @@ import {
   type ProfileCard,
   type PublicConfig,
   type RealtimeEvent,
+  type AdminBug,
+  type AdminReport,
 } from "@unishare/shared";
 import { ApiError, api, onUnauthorized, setToken } from "../lib/api";
 import { realtime } from "../lib/realtime";
@@ -19,6 +21,8 @@ import { platform } from "../platform/platform";
 import { detectLanguage, errorMessage, hasLanguagePreference, t, useI18n, type Language } from "../i18n/i18n";
 
 export type Tab = "feed" | "chats" | "profile" | "search";
+
+export type AdminView = { kind: "report"; report: AdminReport } | { kind: "bug"; bug: AdminBug } | { kind: "user"; uid: string };
 
 export type Overlay =
   | { type: "profile"; uid: string; card?: ProfileCard; source?: "feed" }
@@ -35,7 +39,8 @@ export type Overlay =
   | { type: "report"; uid: string; username: string }
   | { type: "rating"; chatId: string; uid: string; username: string }
   | { type: "transparency" }
-  | { type: "admin" }
+  /** The admin panel; with `view`, one report, bug or user opened over it (so Back closes just that). */
+  | { type: "admin"; view?: AdminView }
   | { type: "bug" }
   | { type: "steamImport" }
   | { type: "avatar" };
@@ -378,7 +383,10 @@ export const useApp = create<AppState>((set, get) => ({
       state.push({ type: "chat", chatId: link.chatId });
     } else if (link.kind === "screen") {
       if (link.screen === "nearby") state.push({ type: "airshare" });
-      else state.setTab(link.screen);
+      else if (link.screen === "admin") {
+        // From the bot's admin notifications; ignored for everyone else.
+        if (state.profile?.isAdmin) state.push({ type: "admin" });
+      } else state.setTab(link.screen);
     }
   },
 }));

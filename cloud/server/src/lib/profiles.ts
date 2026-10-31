@@ -4,6 +4,7 @@ import {
   isPlatform,
   normalizeGameName,
   sanitizeGameName,
+  sanitizePickedAvatar,
   sanitizeUsername,
   uniqueGameNames,
   type GameTag,
@@ -221,15 +222,27 @@ function sanitizeMetadata(value: unknown): Record<string, GameTag> {
   return result;
 }
 
+/**
+ * An avatar a profile patch may set: none, a preset or game art (the rule of POST /api/me/avatar/pick),
+ * or a photo the account owns (routes/avatar.ts ownAvatarMatcher). Anything else is refused, not dropped.
+ */
+function avatarColumn(value: unknown, isOwnAvatar: (url: string) => boolean): string | null {
+  if (value === null) return null;
+  const picked = sanitizePickedAvatar(value);
+  if (picked) return picked;
+  if (typeof value === "string" && isOwnAvatar(value)) return value;
+  throw badRequest("Pick a UniShare avatar, game art or your own photo", "invalid_avatar");
+}
+
 /** Validates a profile patch and converts it into column → value pairs. */
-export function profileUpdateToColumns(update: ProfileUpdate): Record<string, unknown> {
+export function profileUpdateToColumns(update: ProfileUpdate, isOwnAvatar: (url: string) => boolean = () => false): Record<string, unknown> {
   const columns: Record<string, unknown> = {};
   if (update.username !== undefined) {
     const username = typeof update.username === "string" ? sanitizeUsername(update.username) : null;
     if (!username) throw badRequest("Username must contain 3–30 letters, digits, '_', '.' or '-'", "invalid_username");
     columns.username = username;
   }
-  if (update.avatarUrl !== undefined) columns.avatar_url = update.avatarUrl === null ? null : httpsUrl(update.avatarUrl);
+  if (update.avatarUrl !== undefined) columns.avatar_url = avatarColumn(update.avatarUrl, isOwnAvatar);
   if (update.status !== undefined) columns.status = optionalText(update.status, LIMITS.statusMax, "status");
   if (update.platforms !== undefined) {
     if (!Array.isArray(update.platforms)) throw badRequest("platforms must be an array");

@@ -30,6 +30,14 @@ export function publish(userId: string, event: RealtimeEvent): void {
   }
 }
 
+/**
+ * Closes every open socket of a user (after a ban). Their sessions are deleted
+ * first, so the client's reconnect attempts are refused with 401.
+ */
+export function disconnectUser(userId: string): void {
+  for (const socket of sockets.get(userId) ?? []) socket.close(4003, "Account disabled");
+}
+
 export function onTyping(listener: (userId: string, chatId: string) => void): void {
   typingListeners.add(listener);
 }
