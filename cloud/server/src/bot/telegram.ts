@@ -6,6 +6,8 @@ import { decodeDeepLink, encodeDeepLink, webLink, type DeepLink, type ProfileCar
 import { config } from "../config";
 import { retryViaFallbackRoutes, selectTelegramRoute, telegramAgent, telegramRoute } from "./telegram-route";
 import { query, queryOne } from "../db";
+import { claimAdmin, moderateReport } from "../admin";
+import { HttpError } from "../lib/errors";
 
 type Lang = "ru" | "en" | "uk" | "be";
 
@@ -176,7 +178,7 @@ export function createTelegramBot(): Bot | null {
       // Answer webhook updates in the HTTP response itself, so replies to
       // /start and commands work even when the server cannot open outbound
       // connections to api.telegram.org (common for hosting inside Russia).
-      canUseWebhookReply: (method) => config.telegram.mode === "webhook" && method === "sendMessage",
+      canUseWebhookReply: (method) => config.telegram.mode === "webhook" && (method === "sendMessage" || method === "answerCallbackQuery"),
       // node-fetch agent that can pin a reachable Telegram address (see telegram-route.ts).
       baseFetchConfig: { agent: telegramAgent } as Record<string, unknown>,
     },
@@ -217,6 +219,36 @@ export function createTelegramBot(): Bot | null {
     await ctx.reply(`${t.support} ${config.supportEmail}`);
   });
 
+  // Not in the command menu: /admin <code> makes the linked UniShare account an admin.
+  bot.command("admin", async (ctx) => {
+    if (ctx.chat.type !== "private" || !ctx.from) return;
+    const a = ADMIN_COPY[await userLanguage(ctx)];
+    const result = await claimAdmin(String(ctx.from.id), String(ctx.match ?? "")).catch((error: Error) => {
+      console.error("admin claim failed:", error.message);
+      return { status: "invalid" as const };
+    });
+    if (result.status === "claimed" || result.status === "already_admin") {
+      await ctx.reply(result.status === "claimed" ? a.claimed : a.alreadyAdmin, { reply_markup: adminPanelKeyboard(a) });
+    } else {
+      const text = { invalid: a.invalidCode, no_account: a.noAccount, rate_limited: a.rateLimited }[result.status];
+      await ctx.reply(text);
+    }
+    // The code should not stay in the chat history (bots may delete incoming private messages).
+    await ctx.deleteMessage().catch(() => undefined);
+  });
+
+  // "Забанить" / "Отклонить" under a report notification.
+  bot.callbackQuery(/^adm:(ban|rej):([0-9a-f-]{36})$/, async (ctx) => {
+    const lang = await userLanguage(ctx);
+    const reportId = ctx.match[2];
+    const outcome = await adminReportButton(String(ctx.from.id), ctx.match[1] as "ban" | "rej", reportId, lang);
+    await ctx.answerCallbackQuery({ text: outcome.toast, show_alert: !outcome.ok }).catch(() => undefined);
+    if (outcome.html) {
+      const keyboard = notificationKeyboard(ADMIN_COPY[lang], outcome.open ? reportId : undefined);
+      await ctx.editMessageText(outcome.html, { parse_mode: "HTML", reply_markup: keyboard, link_preview_options: { is_disabled: true } }).catch(() => undefined);
+    }
+  });
+
   // Track whether the bot is allowed to message the user.
   bot.on("my_chat_member", async (ctx) => {
     if (ctx.chat.type !== "private") return;
@@ -236,6 +268,9 @@ export function createTelegramBot(): Bot | null {
 
 export function telegramWebhookHandler() {
   if (!bot) return null;
+  if (config.telegram.mode === "webhook" && !adminButtonsEnabled()) {
+    console.warn("TELEGRAM_WEBHOOK_SECRET is not set: /telegram/webhook accepts any request, so the admin buttons in Telegram are off");
+  }
   return webhookCallback(bot, "fastify", { secretToken: config.telegram.webhookSecret ?? undefined });
 }
 
@@ -380,7 +415,7 @@ async function applyTelegramSetup(log: (message: string) => void): Promise<void>
       const url = `${config.publicUrl}/telegram/webhook`;
       await api.setWebhook(url, {
         secret_token: config.telegram.webhookSecret ?? undefined,
-        allowed_updates: ["message", "my_chat_member"],
+        allowed_updates: ["message", "my_chat_member", "callback_query"],
         drop_pending_updates: false,
       });
       log(`webhook → ${url}`);
@@ -388,4 +423,374 @@ async function applyTelegramSetup(log: (message: string) => void): Promise<void>
   } else {
     log("PUBLIC_URL is not HTTPS: skipped menu button and webhook (Telegram requires HTTPS)");
   }
+}
+
+// ── Admin notifications ─────────────────────────────────────────────────────
+// New bug reports and user reports are sent to every admin with a linked
+// Telegram account, in the admin's app language.
+
+type AdminCopy = {
+  claimed: string;
+  alreadyAdmin: string;
+  invalidCode: string;
+  noAccount: string;
+  rateLimited: string;
+  openPanel: string;
+  open: string;
+  ban: string;
+  reject: string;
+  newBug: string;
+  newReport: string;
+  from: string;
+  reason: string;
+  reportsTotal: string;
+  screenshot: string;
+  banned: string;
+  suspended: string;
+  resolved: string;
+  rejected: string;
+  noAccess: string;
+  done: string;
+  failed: string;
+  cannotBanAdmin: string;
+  notFound: string;
+  alreadyHandled: string;
+  alreadyRestricted: string;
+  insecure: string;
+  reasons: Record<string, string>;
+};
+
+const ADMIN_COPY: Record<Lang, AdminCopy> = {
+  ru: {
+    claimed: "✅ Готово! Теперь вы администратор UniShare. Админ-панель открывается кнопкой ниже и в настройках приложения.",
+    alreadyAdmin: "Вы уже администратор UniShare.",
+    invalidCode: "Код не подошёл.",
+    noAccount: "Сначала откройте UniShare в Telegram: к этому аккаунту ещё не привязан профиль.",
+    rateLimited: "Слишком много попыток. Попробуйте позже.",
+    openPanel: "🛠 Админ-панель",
+    open: "Открыть",
+    ban: "🚫 Забанить",
+    reject: "Отклонить",
+    newBug: "🐞 <b>Сообщение о проблеме</b>",
+    newReport: "🚩 <b>Новая жалоба</b>",
+    from: "от",
+    reason: "Причина",
+    reportsTotal: "Всего жалоб на пользователя: {0}",
+    screenshot: "📎 Есть скриншот",
+    banned: "🚫 <b>Забанен</b> · {0}",
+    suspended: "❄️ <b>Заморожен</b> · {0}",
+    resolved: "✅ <b>Жалоба закрыта</b> · {0}",
+    rejected: "✖️ <b>Жалоба отклонена</b> · {0}",
+    noAccess: "Нет доступа: вы не администратор.",
+    done: "Готово",
+    failed: "Не получилось. Откройте админ-панель.",
+    cannotBanAdmin: "Это администратор, его нельзя забанить.",
+    notFound: "Жалоба не найдена.",
+    alreadyHandled: "Эту жалобу уже обработали.",
+    alreadyRestricted: "Пользователь уже заблокирован.",
+    insecure: "Кнопки отключены: на сервере не задан TELEGRAM_WEBHOOK_SECRET. Откройте админ-панель.",
+    reasons: {
+      "report.reason.spam": "Спам",
+      "report.reason.content": "Недопустимый контент",
+      "report.reason.harassment": "Оскорбления или травля",
+      "report.reason.fake": "Поддельный профиль",
+      "report.reason.underage": "Несовершеннолетний пользователь",
+      "report.reason.other": "Другая причина",
+    },
+  },
+  en: {
+    claimed: "✅ Done! You are now a UniShare admin. Open the admin panel with the button below or from the app settings.",
+    alreadyAdmin: "You are already a UniShare admin.",
+    invalidCode: "The code did not work.",
+    noAccount: "Open UniShare in Telegram first: this account has no profile yet.",
+    rateLimited: "Too many attempts. Try again later.",
+    openPanel: "🛠 Admin panel",
+    open: "Open",
+    ban: "🚫 Ban",
+    reject: "Dismiss",
+    newBug: "🐞 <b>Problem report</b>",
+    newReport: "🚩 <b>New user report</b>",
+    from: "from",
+    reason: "Reason",
+    reportsTotal: "Reports against this user: {0}",
+    screenshot: "📎 Screenshot attached",
+    banned: "🚫 <b>Banned</b> · {0}",
+    suspended: "❄️ <b>Suspended</b> · {0}",
+    resolved: "✅ <b>Report resolved</b> · {0}",
+    rejected: "✖️ <b>Report dismissed</b> · {0}",
+    noAccess: "No access: you are not an admin.",
+    done: "Done",
+    failed: "That did not work. Open the admin panel.",
+    cannotBanAdmin: "This is an admin and cannot be banned.",
+    notFound: "Report not found.",
+    alreadyHandled: "This report has already been handled.",
+    alreadyRestricted: "This user is already restricted.",
+    insecure: "Buttons are off: TELEGRAM_WEBHOOK_SECRET is not set on the server. Open the admin panel.",
+    reasons: {
+      "report.reason.spam": "Spam",
+      "report.reason.content": "Inappropriate content",
+      "report.reason.harassment": "Harassment or bullying",
+      "report.reason.fake": "Fake profile",
+      "report.reason.underage": "Underage user",
+      "report.reason.other": "Other reason",
+    },
+  },
+  uk: {
+    claimed: "✅ Готово! Тепер ви адміністратор UniShare. Адмін-панель відкривається кнопкою нижче та в налаштуваннях застосунку.",
+    alreadyAdmin: "Ви вже адміністратор UniShare.",
+    invalidCode: "Код не підійшов.",
+    noAccount: "Спершу відкрийте UniShare у Telegram: до цього акаунта ще не прив'язано профіль.",
+    rateLimited: "Забагато спроб. Спробуйте пізніше.",
+    openPanel: "🛠 Адмін-панель",
+    open: "Відкрити",
+    ban: "🚫 Забанити",
+    reject: "Відхилити",
+    newBug: "🐞 <b>Повідомлення про проблему</b>",
+    newReport: "🚩 <b>Нова скарга</b>",
+    from: "від",
+    reason: "Причина",
+    reportsTotal: "Усього скарг на користувача: {0}",
+    screenshot: "📎 Є знімок екрана",
+    banned: "🚫 <b>Забанено</b> · {0}",
+    suspended: "❄️ <b>Заморожено</b> · {0}",
+    resolved: "✅ <b>Скаргу закрито</b> · {0}",
+    rejected: "✖️ <b>Скаргу відхилено</b> · {0}",
+    noAccess: "Немає доступу: ви не адміністратор.",
+    done: "Готово",
+    failed: "Не вдалося. Відкрийте адмін-панель.",
+    cannotBanAdmin: "Це адміністратор, його не можна забанити.",
+    notFound: "Скаргу не знайдено.",
+    alreadyHandled: "Цю скаргу вже опрацювали.",
+    alreadyRestricted: "Користувача вже заблоковано.",
+    insecure: "Кнопки вимкнено: на сервері не задано TELEGRAM_WEBHOOK_SECRET. Відкрийте адмін-панель.",
+    reasons: {
+      "report.reason.spam": "Спам",
+      "report.reason.content": "Неприйнятний контент",
+      "report.reason.harassment": "Образи або цькування",
+      "report.reason.fake": "Підроблений профіль",
+      "report.reason.underage": "Неповнолітній користувач",
+      "report.reason.other": "Інша причина",
+    },
+  },
+  be: {
+    claimed: "✅ Гатова! Цяпер вы адміністратар UniShare. Адмін-панэль адкрываецца кнопкай ніжэй і ў наладах праграмы.",
+    alreadyAdmin: "Вы ўжо адміністратар UniShare.",
+    invalidCode: "Код не падышоў.",
+    noAccount: "Спачатку адкрыйце UniShare у Telegram: да гэтага акаўнта яшчэ не прывязаны профіль.",
+    rateLimited: "Занадта шмат спроб. Паспрабуйце пазней.",
+    openPanel: "🛠 Адмін-панэль",
+    open: "Адкрыць",
+    ban: "🚫 Забаніць",
+    reject: "Адхіліць",
+    newBug: "🐞 <b>Паведамленне пра праблему</b>",
+    newReport: "🚩 <b>Новая скарга</b>",
+    from: "ад",
+    reason: "Прычына",
+    reportsTotal: "Усяго скаргаў на карыстальніка: {0}",
+    screenshot: "📎 Ёсць здымак экрана",
+    banned: "🚫 <b>Забанены</b> · {0}",
+    suspended: "❄️ <b>Замарожаны</b> · {0}",
+    resolved: "✅ <b>Скарга закрыта</b> · {0}",
+    rejected: "✖️ <b>Скарга адхілена</b> · {0}",
+    noAccess: "Няма доступу: вы не адміністратар.",
+    done: "Гатова",
+    failed: "Не атрымалася. Адкрыйце адмін-панэль.",
+    cannotBanAdmin: "Гэта адміністратар, яго нельга забаніць.",
+    notFound: "Скаргу не знойдзена.",
+    alreadyHandled: "Гэтую скаргу ўжо апрацавалі.",
+    alreadyRestricted: "Карыстальнік ужо заблакаваны.",
+    insecure: "Кнопкі адключаныя: на серверы не зададзены TELEGRAM_WEBHOOK_SECRET. Адкрыйце адмін-панэль.",
+    reasons: {
+      "report.reason.spam": "Спам",
+      "report.reason.content": "Недапушчальны кантэнт",
+      "report.reason.harassment": "Абраза або цкаванне",
+      "report.reason.fake": "Падроблены профіль",
+      "report.reason.underage": "Непаўналетні карыстальнік",
+      "report.reason.other": "Іншая прычына",
+    },
+  },
+};
+
+/**
+ * Ban and dismiss buttons act on `from.id` of the update. Without a webhook secret
+ * anyone can post a forged update to /telegram/webhook, so the buttons are only
+ * offered (and obeyed) in polling mode or with TELEGRAM_WEBHOOK_SECRET set.
+ */
+export function adminButtonsEnabled(): boolean {
+  return config.telegram.mode !== "webhook" || Boolean(config.telegram.webhookSecret);
+}
+
+const ADMIN_PANEL_LINK: DeepLink = { kind: "screen", screen: "admin" };
+
+/** Reply to /admin: opens the app on the admin panel. */
+function adminPanelKeyboard(a: AdminCopy): InlineKeyboard {
+  return new InlineKeyboard().webApp(a.openPanel, appUrl(ADMIN_PANEL_LINK));
+}
+
+/** Under notifications: "Открыть" opens the admin panel; open reports also get ban and dismiss. */
+function notificationKeyboard(a: AdminCopy, openReportId?: string): InlineKeyboard {
+  const keyboard = new InlineKeyboard();
+  if (openReportId && adminButtonsEnabled()) {
+    keyboard.text(a.ban, `adm:ban:${openReportId}`).text(a.reject, `adm:rej:${openReportId}`).row();
+  }
+  return keyboard.webApp(a.open, appUrl(ADMIN_PANEL_LINK));
+}
+
+function clipText(text: string, max: number): string {
+  const chars = [...text.trim()];
+  return chars.length > max ? `${chars.slice(0, max - 1).join("")}…` : chars.join("");
+}
+
+function nameOf(username: string | null, uid: string | null): string {
+  if (username) return escapeHtml(username);
+  return uid ? `id ${uid.slice(0, 8)}` : "—";
+}
+
+/** The report as admins see it in Telegram, plus who closed it and how once it is closed. */
+async function reportMessage(reportId: string, lang: Lang): Promise<{ html: string; open: boolean } | null> {
+  const a = ADMIN_COPY[lang];
+  const row = await queryOne<{
+    reason: string; details: string; state: string; reporter: string | null; reporter_uid: string | null;
+    subject: string | null; subject_uid: string | null; subject_state: string | null; handler: string | null; handler_uid: string | null; total: number;
+  }>(
+    `select r.reason, r.details, r.state, rp.username as reporter, rp.uid as reporter_uid,
+            sb.username as subject, sb.uid as subject_uid, sb.account_state as subject_state,
+            h.username as handler, h.uid as handler_uid,
+            (select count(*)::int from reports x where x.subject_id = r.subject_id) as total
+     from reports r
+     left join users rp on rp.uid = r.reporter_id
+     left join users sb on sb.uid = r.subject_id
+     left join users h on h.uid = r.handled_by
+     where r.id = $1`,
+    [reportId],
+  );
+  if (!row) return null;
+  const open = row.state === "open" || row.state === "reviewing";
+  const outcome = open
+    ? null
+    : (row.state === "rejected" ? a.rejected : row.subject_state === "banned" ? a.banned : row.subject_state === "suspended" ? a.suspended : a.resolved)
+        .replace("{0}", nameOf(row.handler, row.handler_uid));
+  const lines = [
+    a.newReport,
+    `${nameOf(row.reporter, row.reporter_uid)} → <b>${nameOf(row.subject, row.subject_uid)}</b>`,
+    `${a.reason}: ${escapeHtml(a.reasons[row.reason] ?? row.reason)}`,
+    row.details ? `«${escapeHtml(clipText(row.details, 400))}»` : null,
+    a.reportsTotal.replace("{0}", String(row.total)),
+    outcome ? `\n${outcome}` : null,
+  ];
+  return { html: lines.filter(Boolean).join("\n"), open };
+}
+
+async function bugSummary(bugId: string, lang: Lang): Promise<string | null> {
+  const a = ADMIN_COPY[lang];
+  const row = await queryOne<{ text: string; context: Record<string, string>; screenshot_key: string | null; username: string | null; uid: string | null }>(
+    `select b.text, b.context, b.screenshot_key, u.username, u.uid
+     from bug_reports b left join users u on u.uid = b.user_id where b.id = $1`,
+    [bugId],
+  );
+  if (!row) return null;
+  const context = row.context ?? {};
+  const device = [context.client, context.platform, context.appVersion ? `v${context.appVersion}` : null].filter(Boolean).join(" · ");
+  return [
+    a.newBug,
+    `${a.from} <b>${nameOf(row.username, row.uid)}</b>${device ? ` · ${escapeHtml(device)}` : ""}`,
+    `«${escapeHtml(clipText(row.text, 600))}»`,
+    row.screenshot_key ? a.screenshot : null,
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+/** Active admins with a linked Telegram account. */
+async function adminRecipients(): Promise<{ telegram_id: string; language: string }[]> {
+  return query<{ telegram_id: string; language: string }>(
+    `select i.provider_user_id as telegram_id, u.language
+     from users u join user_identities i on i.user_id = u.uid and i.provider = 'telegram'
+     where u.is_admin and u.account_state = 'active'`,
+  );
+}
+
+async function sendToAdmins(render: (lang: Lang) => Promise<{ text: string; keyboard: InlineKeyboard } | null>): Promise<void> {
+  if (!bot) return;
+  const api = bot.api;
+  try {
+    const rendered = new Map<Lang, { text: string; keyboard: InlineKeyboard } | null>();
+    for (const admin of await adminRecipients()) {
+      const lang = pickLang(admin.language);
+      if (!rendered.has(lang)) rendered.set(lang, await render(lang));
+      const message = rendered.get(lang);
+      if (!message) continue;
+      await api
+        .sendMessage(admin.telegram_id, message.text, { parse_mode: "HTML", reply_markup: message.keyboard, link_preview_options: { is_disabled: true } })
+        .catch((error: Error) => console.warn("admin notification failed:", error.message));
+    }
+  } catch (error) {
+    console.warn("admin notification failed:", (error as Error).message);
+  }
+}
+
+/** Never throws; does nothing when the bot is not configured. */
+export async function notifyAdminsAboutBug(bugId: string): Promise<void> {
+  await sendToAdmins(async (lang) => {
+    const text = await bugSummary(bugId, lang);
+    return text ? { text, keyboard: notificationKeyboard(ADMIN_COPY[lang]) } : null;
+  });
+}
+
+/** Never throws; does nothing when the bot is not configured. */
+export async function notifyAdminsAboutReport(reportId: string): Promise<void> {
+  await sendToAdmins(async (lang) => {
+    const message = await reportMessage(reportId, lang);
+    return message ? { text: message.html, keyboard: notificationKeyboard(ADMIN_COPY[lang], message.open ? reportId : undefined) } : null;
+  });
+}
+
+export interface ReportButtonOutcome {
+  ok: boolean;
+  /** Text for answerCallbackQuery. */
+  toast: string;
+  /** New message text (the report and its current state), or null to leave the message as it is. */
+  html: string | null;
+  /** The report is still open: keep the ban and dismiss buttons. */
+  open: boolean;
+}
+
+/**
+ * Runs a report button pressed in Telegram through the same moderation code as
+ * the admin API (so it is checked and logged the same way). A report that was
+ * already handled (in the panel, or from another admin's copy of the message)
+ * is left alone, and the message is updated to show what happened to it.
+ */
+export async function adminReportButton(telegramId: string, kind: "ban" | "rej", reportId: string, lang: Lang = "ru"): Promise<ReportButtonOutcome> {
+  const a = ADMIN_COPY[lang];
+  const refusal = (toast: string): ReportButtonOutcome => ({ ok: false, toast, html: null, open: true });
+  if (!adminButtonsEnabled()) return refusal(a.insecure);
+  const admin = await queryOne<{ uid: string }>(
+    `select u.uid from user_identities i join users u on u.uid = i.user_id
+     where i.provider = 'telegram' and i.provider_user_id = $1 and u.is_admin and u.account_state = 'active'`,
+    [telegramId],
+  );
+  if (!admin) return refusal(a.noAccess);
+  let toast = a.done;
+  let ok = true;
+  try {
+    if (kind === "ban") {
+      const report = await queryOne<{ reason: string }>(`select reason from reports where id = $1`, [reportId]);
+      const reason = report ? a.reasons[report.reason] ?? report.reason : a.reasons["report.reason.other"];
+      await moderateReport(admin.uid, reportId, { action: "resolve", ban: { state: "banned", reason } });
+    } else {
+      await moderateReport(admin.uid, reportId, { action: "reject" });
+    }
+  } catch (error) {
+    const code = error instanceof HttpError ? error.code : undefined;
+    if (code !== "report_handled" && code !== "already_restricted") {
+      if (!(error instanceof HttpError)) console.error("admin button failed:", (error as Error).message);
+      return refusal(code === "cannot_ban_admin" || code === "cannot_ban_self" ? a.cannotBanAdmin : code === "not_found" ? a.notFound : a.failed);
+    }
+    // Nothing changed; show the report as it is now.
+    ok = false;
+    toast = code === "report_handled" ? a.alreadyHandled : a.alreadyRestricted;
+  }
+  const message = await reportMessage(reportId, lang);
+  return { ok, toast, html: message?.html ?? null, open: message?.open ?? false };
 }

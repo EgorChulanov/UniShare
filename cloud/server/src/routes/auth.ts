@@ -6,7 +6,7 @@ import { query, queryOne, transaction } from "../db";
 import { TelegramAuthError, verifyInitData, verifyLoginWidget, type LoginWidgetPayload } from "../auth/telegram";
 import { VkAuthError, verifyVkLaunchParams } from "../auth/vk";
 import { createSession, hashToken, requireSession } from "../auth/session";
-import { HttpError, badRequest, conflict, forbidden, unauthorized } from "../lib/errors";
+import { HttpError, badRequest, conflict, unauthorized } from "../lib/errors";
 import { loadMyProfile } from "./me";
 
 interface IdentityInput {
@@ -113,7 +113,7 @@ export async function signInWithIdentity(
 
     const state = (await db.query<{ account_state: string }>(`select account_state from users where uid = $1`, [userId])).rows[0];
     if (!state) throw unauthorized();
-    if (state.account_state !== "active") throw forbidden("This account is suspended");
+    if (state.account_state !== "active") throw new HttpError(403, "This account is suspended", "account_suspended");
 
     await upsertIdentity(db, userId, input);
     const token = await createSession(userId, client, db);

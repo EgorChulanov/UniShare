@@ -30,8 +30,11 @@ services:
       NODE_ENV: production
       DATABASE_URL: ${DATABASE_URL:-postgres://unishare:${POSTGRES_PASSWORD}@postgres:5432/unishare}
       STORAGE_LOCAL_DIR: /data/uploads
+      # The admin panel lists the nightly dumps (read-only) and warns when the latest is stale.
+      BACKUPS_DIR: /data/backups
     volumes:
       - uploads:/data/uploads
+      - backups:/data/backups:ro
     depends_on:
       postgres:
         condition: service_healthy

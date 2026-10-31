@@ -50,6 +50,7 @@ if [ ! -f .env ]; then
   vk_secret=""
   if [ -n "$vk_app_id" ]; then vk_secret="$(ask "VK app secure key (Защищённый ключ)" "" UNISHARE_VK_APP_SECRET)"; fi
   rawg_key="$(ask "RAWG API key for game covers (optional)" "" UNISHARE_RAWG_API_KEY)"
+  steam_key="$(ask "Steam Web API key for importing Steam libraries (optional; https://steamcommunity.com/dev/apikey, domain $domain)" "" UNISHARE_STEAM_API_KEY)"
 
   cat > .env <<EOF
 PUBLIC_URL=https://$domain
@@ -65,6 +66,7 @@ VK_APP_ID=$vk_app_id
 VK_APP_SECRET=$vk_secret
 STORAGE_DRIVER=local
 RAWG_API_KEY=$rawg_key
+STEAM_API_KEY=$steam_key
 SUPPORT_EMAIL=official@egorchulanov.ru
 EOF
   chmod 600 .env

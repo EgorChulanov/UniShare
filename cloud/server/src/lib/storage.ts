@@ -20,6 +20,8 @@ export interface Storage {
 const CONTENT_TYPES: Record<string, string> = { jpg: "image/jpeg", png: "image/png", webp: "image/webp" };
 
 function safeKey(key: string): string {
+  // Checked before normalize(): "avatars/../bugs/x.png" would otherwise become "bugs/x.png" and pass.
+  if (key.split(/[/\\]/).includes("..")) throw new Error("Invalid storage key");
   const cleaned = normalize(key).replace(/^([/\\])+/, "");
   if (cleaned.includes("..") || !/^[A-Za-z0-9/_.-]+$/.test(cleaned)) throw new Error("Invalid storage key");
   return cleaned;

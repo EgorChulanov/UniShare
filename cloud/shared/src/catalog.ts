@@ -156,7 +156,7 @@ export const SUGGESTED_SKILLS = [
   "Sound Design", "Concept Art", "Narrative Design", "VR/AR",
 ];
 
-/** Offline fallback catalog used when the RAWG proxy is unavailable. */
+/** Offline fallback catalog: what search finds when the stores do not answer, and "Popular now" evergreens. */
 export const POPULAR_GAMES = [
   "Fortnite", "Minecraft", "Roblox", "Grand Theft Auto V", "Counter-Strike 2",
   "Valorant", "Dota 2", "League of Legends", "Overwatch 2", "Apex Legends",
@@ -167,17 +167,24 @@ export const POPULAR_GAMES = [
   "Red Dead Redemption 2", "Cyberpunk 2077", "The Witcher 3: Wild Hunt",
   "Elden Ring", "Dark Souls III", "Bloodborne", "Sekiro: Shadows Die Twice",
   "Baldur's Gate 3", "Hades", "Hades II", "Hogwarts Legacy", "Helldivers 2",
-  "Death Stranding 2", "Clair Obscur: Expedition 33", "Monster Hunter Wilds",
+  "Death Stranding 2: On the Beach", "Clair Obscur: Expedition 33", "Monster Hunter Wilds",
   "The Last of Us Part II", "God of War Ragnarok", "Ghost of Tsushima",
   "Horizon Forbidden West", "Marvel's Spider-Man 2", "Astro Bot",
   "The Legend of Zelda: Tears of the Kingdom", "The Legend of Zelda: Breath of the Wild",
   "Super Mario Odyssey", "Mario Kart 8 Deluxe", "Super Smash Bros. Ultimate",
   "Animal Crossing: New Horizons", "Pokemon Scarlet", "Pokemon Violet",
-  "Splatoon 3", "Metroid Prime 4", "Palworld", "Fall Guys", "Among Us",
+  "Splatoon 3", "Metroid Prime 4: Beyond", "Palworld", "Fall Guys", "Among Us",
   "Terraria", "Stardew Valley", "No Man's Sky", "Sea of Thieves",
   "Dead by Daylight", "Phasmophobia", "Rust", "ARK: Survival Ascended",
   "World of Warcraft", "Final Fantasy XIV", "The Elder Scrolls Online",
   "Diablo IV", "Path of Exile 2", "Fallout 76", "The Sims 4",
+  // Unreleased, console, mobile and Russian titles the stores do not find, and
+  // the big games of Russia and the CIS.
+  "Grand Theft Auto VI", "The Witcher 4", "Мир танков", "Мир кораблей", "Tanks Blitz", "Смута",
+  "World of Tanks", "War Thunder", "Warface", "Escape from Tarkov", "Standoff 2", "Brawl Stars",
+  "Clash Royale", "Clash of Clans", "PUBG Mobile", "Call of Duty: Mobile", "Mobile Legends: Bang Bang",
+  "Free Fire", "Pokémon GO", "Pokémon Legends: Z-A", "Hearthstone", "StarCraft II", "Mario Kart World",
+  "Super Mario Bros. Wonder", "Donkey Kong Bananza", "The Legend of Zelda: Echoes of Wisdom", "Ghost of Yōtei",
 ];
 
 export const REPORT_REASONS = [

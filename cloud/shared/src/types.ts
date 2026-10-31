@@ -53,6 +53,10 @@ export interface MyProfile {
   reviewCount: number;
   createdAt: string;
   identities: LinkedIdentity[];
+  /** Can open the admin panel (users.is_admin). */
+  isAdmin: boolean;
+  /** Steam account linked for the library import, if any. */
+  steam: SteamAccount | null;
   /** Suggested values from the platform account for onboarding. */
   suggestions?: { username?: string | null; avatarUrl?: string | null };
 }
@@ -210,6 +214,8 @@ export interface PublicConfig {
   telegramAppShortName: string | null;
   /** Whether the website offers the Telegram Login Widget (the bot's domain is set in BotFather). */
   telegramLoginWidget: boolean;
+  /** Whether importing a Steam library is available (STEAM_API_KEY is set). */
+  steamImport: boolean;
   vkAppId: number | null;
   /** Community that sends VK notifications (VKWebAppAllowMessagesFromGroup). */
   vkGroupId: number | null;
@@ -233,6 +239,14 @@ export interface ApiErrorBody {
 }
 
 /** Server → client realtime events delivered over /api/ws. */
+/** A Steam account linked through Steam sign-in (OpenID); used only to import the game library. */
+export interface SteamAccount {
+  steamId: string;
+  personaName: string | null;
+  avatarUrl: string | null;
+  profileUrl: string;
+}
+
 export type RealtimeEvent =
   | { type: "message"; message: ChatMessage }
   | { type: "chat"; chat: ChatSummary }
@@ -241,7 +255,9 @@ export type RealtimeEvent =
   | { type: "request"; request: LikeRequestItem }
   | { type: "match"; chatId: string; partner: ProfileCard }
   | { type: "presence"; uid: string; isOnline: boolean }
-  | { type: "typing"; chatId: string; uid: string };
+  | { type: "typing"; chatId: string; uid: string }
+  /** The own profile changed on the server (e.g. Steam linked); the client reloads /api/me. */
+  | { type: "profile_updated" };
 
 /** Client → server realtime events. */
 export type RealtimeCommand =

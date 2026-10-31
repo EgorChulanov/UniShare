@@ -14,6 +14,10 @@ import { ProfileScreen } from "../screens/ProfileScreen";
 import { SearchScreen, GameSheet, PlatformSheet } from "../screens/SearchScreen";
 import { ProfileDetailSheet } from "../screens/ProfileDetail";
 import { ChatSheet } from "../screens/ChatView";
+import { AdminSheet } from "../screens/AdminSheet";
+import { BugReportSheet } from "../screens/BugReportSheet";
+import { SteamImportSheet } from "../screens/SteamImportSheet";
+import { AvatarPickerSheet } from "../screens/AvatarPickerSheet";
 import { StoryViewer } from "../screens/StoryViewer";
 import { SettingsSheet } from "../screens/SettingsSheet";
 import { EditProfileSheet, SubscriptionEditorSheet } from "../screens/EditProfileSheet";
@@ -152,6 +156,14 @@ function OverlayView({ overlay }: { overlay: Overlay }) {
       return <RatingSheet chatId={overlay.chatId} uid={overlay.uid} username={overlay.username} />;
     case "transparency":
       return <TransparencySheet />;
+    case "admin":
+      return <AdminSheet view={overlay.view} />;
+    case "bug":
+      return <BugReportSheet />;
+    case "steamImport":
+      return <SteamImportSheet />;
+    case "avatar":
+      return <AvatarPickerSheet />;
   }
 }
 

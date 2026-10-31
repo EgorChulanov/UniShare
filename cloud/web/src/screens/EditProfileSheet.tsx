@@ -1,11 +1,12 @@
 // Port of UniShare/Features/Profile/EditProfileSheet.swift (+ SubscriptionEditorSheet).
-import { AtSign, Camera, Circle, Hash, Sparkles } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
+import { AtSign, Camera, ChevronRight, Circle, Hash, Image as ImageIcon, Sparkles } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { create } from "zustand";
 import {
   CYCLES,
   LIMITS,
   PLATFORMS,
+  PLATFORM_INFO,
   SUBSCRIPTION_SERVICES,
   normalizeGameName,
   sanitizeUsername,
@@ -16,11 +17,11 @@ import {
   type Subscription,
 } from "@unishare/shared";
 import { useApp } from "../app/store";
-import { api, compressImage } from "../lib/api";
+import { api } from "../lib/api";
 import { errorMessage, useI18n, useT } from "../i18n/i18n";
 import { platform } from "../platform/platform";
-import { GamePicker } from "../components/GamePicker";
-import { Avatar, BrandIcon, PlatformBadge, PlatformMark, SelectedDot, Sheet, Spinner, Toggle, platformColor } from "../components/ui";
+import { GamePicker, GamePlatformTabs, type GameTab } from "../components/GamePicker";
+import { Avatar, BrandIcon, PlatformMark, SelectedDot, Sheet, Spinner, Toggle, platformColor } from "../components/ui";
 import { subscriptionProgress, tagFor } from "./ProfileScreen";
 
 /** A platform's games, or the wanted games tab after the platform tabs. */
@@ -36,8 +37,8 @@ interface EditDraft {
   subscriptions: Subscription[];
 }
 
-/** Shared between the edit sheet and the subscription editor pushed on top of it. */
-const useEditDraft = create<EditDraft>(() => ({ username: "", status: "", platforms: [], games: {}, wanted: [], active: null, subscriptions: [] }));
+/** Shared between the edit sheet and the sheets pushed on top of it (subscription editor, Steam import). */
+export const useEditDraft = create<EditDraft>(() => ({ username: "", status: "", platforms: [], games: {}, wanted: [], active: null, subscriptions: [] }));
 
 /** Calendar.date(byAdding: .day): adds local calendar days, so a DST change cannot shift the date. */
 function addDays(iso: string, days: number): string {
@@ -61,6 +62,7 @@ function normalizeSubscription(subscription: Subscription, recalculateExpiry: bo
 export function EditProfileSheet() {
   const t = useT();
   const profile = useApp((state) => state.profile)!;
+  const steamImport = useApp((state) => Boolean(state.config?.steamImport));
   const setProfile = useApp((state) => state.setProfile);
   const push = useApp((state) => state.push);
   const pop = useApp((state) => state.pop);
@@ -85,12 +87,38 @@ export function EditProfileSheet() {
   });
   const draft = useEditDraft();
   const [saving, setSaving] = useState(false);
-  const [avatar, setAvatar] = useState<{ blob: Blob; url: string } | null>(null);
-  const fileInput = useRef<HTMLInputElement>(null);
 
-  useEffect(() => () => {
-    if (avatar) URL.revokeObjectURL(avatar.url);
-  }, [avatar]);
+  // The profile can change while this sheet is open (another device, a realtime reload): fold
+  // games it gained into the draft, so saving this sheet afterwards does not drop them.
+  const seenProfile = useRef(profile);
+  useEffect(() => {
+    const before = seenProfile.current;
+    seenProfile.current = profile;
+    if (before === profile) return;
+    const state = useEditDraft.getState();
+    const games = { ...state.games };
+    let platforms = state.platforms;
+    let active = state.active;
+    let changed = false;
+    for (const id of PLATFORMS) {
+      const had = new Set((before.platformGames[id] ?? []).map(normalizeGameName));
+      const list = games[id] ?? [];
+      const keys = new Set(list.map((tag) => normalizeGameName(tag.name)));
+      const added = (profile.platformGames[id] ?? []).filter((name) => !had.has(normalizeGameName(name)) && !keys.has(normalizeGameName(name)));
+      if (!added.length) continue;
+      // Over the limit, unsaved picks of this draft go first: what the server already holds stays.
+      const saved = new Set((profile.platformGames[id] ?? []).map(normalizeGameName));
+      const merged = [...list, ...added.map((name) => tagFor(profile, name))];
+      for (let index = merged.length - 1; index >= 0 && merged.length > LIMITS.gamesPerPlatform; index--) {
+        if (!saved.has(normalizeGameName(merged[index].name))) merged.splice(index, 1);
+      }
+      games[id] = merged.slice(0, LIMITS.gamesPerPlatform);
+      platforms = PLATFORMS.filter((item) => item === id || platforms.includes(item));
+      active = id;
+      changed = true;
+    }
+    if (changed) useEditDraft.setState({ games, platforms, active });
+  }, [profile]);
 
   const username = useMemo(() => sanitizeUsername(draft.username), [draft.username]);
   const canSave = Boolean(username) && draft.platforms.length > 0 && draft.status.length <= LIMITS.statusMax;
@@ -114,14 +142,6 @@ export function EditProfileSheet() {
     useEditDraft.setState(tab === "wanted" ? { wanted: next } : { games: { ...draft.games, [tab]: next } });
   };
 
-  const onAvatar = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file) return;
-    const blob = await compressImage(file, 800);
-    setAvatar({ blob, url: URL.createObjectURL(blob) });
-  };
-
   const openSubscription = (name: string) => {
     platform.haptic("light");
     if (!draft.subscriptions.some((item) => item.name === name)) {
@@ -138,7 +158,7 @@ export function EditProfileSheet() {
     if (draft.status.length > LIMITS.statusMax) return toast(t("profile.error.status.length"), "error");
     setSaving(true);
     try {
-      const gameMetadata = { ...profile.gameMetadata };
+      const gameMetadata = { ...useApp.getState().profile!.gameMetadata };
       const addMetadata = (tags: GameTag[]) => {
         for (const tag of tags) {
           const key = normalizeGameName(tag.name);
@@ -168,12 +188,6 @@ export function EditProfileSheet() {
         subscriptions: draft.subscriptions,
       });
       setProfile(updated);
-      // Upload the avatar only once the profile is saved, so a rejected save never replaces it.
-      // If the upload fails the saved profile stays and the sheet stays open with the error.
-      if (avatar) {
-        const { avatarUrl } = await api.uploadAvatar(avatar.blob);
-        setProfile({ ...updated, avatarUrl });
-      }
       platform.haptic("success");
       pop();
     } catch (error) {
@@ -182,6 +196,11 @@ export function EditProfileSheet() {
       setSaving(false);
     }
   };
+
+  const tabs: GameTab[] = [
+    ...draft.platforms.map((id) => ({ id, label: id, count: draft.games[id]?.length ?? 0 })),
+    { id: "wanted" as const, label: t("profile.wanted"), count: draft.wanted.length },
+  ];
 
   return (
     <Sheet
@@ -197,74 +216,91 @@ export function EditProfileSheet() {
         </button>
       }
     >
-      <div className="container col" style={{ gap: 24, padding: "8px 16px 32px" }}>
-        <div className="col" style={{ alignItems: "center", gap: 10 }}>
-          <button style={{ position: "relative" }} onClick={() => fileInput.current?.click()} aria-label={t("profile.change.avatar")}>
-            {avatar ? <img src={avatar.url} alt="" style={{ width: 90, height: 90, borderRadius: "50%", objectFit: "cover" }} /> : <Avatar url={profile.avatarUrl} size={90} />}
-            <span className="center" style={{ position: "absolute", right: -4, bottom: -2, width: 32, height: 32, borderRadius: "50%", background: "var(--accent-grad)", color: "#fff", border: "3px solid var(--sheet-bg)" }}>
-              <Camera size={14} strokeWidth={2.4} />
+      <div className="container col edit-profile">
+        <div className="edit-avatar">
+          <span className="glow" aria-hidden />
+          <button className="pic" onClick={() => push({ type: "avatar" })} aria-label={t("profile.change.avatar")}>
+            <Avatar url={profile.avatarUrl} size={104} />
+            <span className="camera">
+              <Camera size={15} strokeWidth={2.4} />
             </span>
           </button>
-          <button className="btn-plain" style={{ fontSize: 14, padding: 0 }} onClick={() => fileInput.current?.click()}>
-            {t("profile.change.avatar")}
+          <button className="capsule-btn change" onClick={() => push({ type: "avatar" })}>
+            <ImageIcon size={13} strokeWidth={2.6} /> {t("profile.change.avatar")}
           </button>
-          <input ref={fileInput} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={onAvatar} />
         </div>
 
-        <EditField title={t("profile.username")}>
-          <label className="field glass">
-            <AtSign size={18} className="secondary" />
-            <input
-              value={draft.username}
-              maxLength={LIMITS.usernameMax}
-              autoComplete="off"
-              autoCapitalize="off"
-              spellCheck={false}
-              placeholder={t("profile.username")}
-              onChange={(event) => useEditDraft.setState({ username: event.target.value })}
-            />
-          </label>
-          {draft.username.trim() && !username && <span style={{ fontSize: 13, color: "var(--red)" }}>{t("error.invalid_username")}</span>}
+        <EditField title={t("edit.about")}>
+          <div className="edit-card">
+            <label className="edit-row">
+              <span className="ico">
+                <AtSign size={17} strokeWidth={2.4} />
+              </span>
+              <span className="col grow" style={{ gap: 2, minWidth: 0 }}>
+                <span className="label">{t("profile.username")}</span>
+                <input
+                  value={draft.username}
+                  maxLength={LIMITS.usernameMax}
+                  autoComplete="off"
+                  autoCapitalize="off"
+                  spellCheck={false}
+                  placeholder={t("profile.username")}
+                  onChange={(event) => useEditDraft.setState({ username: event.target.value })}
+                />
+              </span>
+            </label>
+            <label className="edit-row">
+              <span className="ico">
+                <Hash size={17} strokeWidth={2.4} />
+              </span>
+              <span className="col grow" style={{ gap: 2, minWidth: 0 }}>
+                <span className="label">{t("profile.status")}</span>
+                <input value={draft.status} maxLength={LIMITS.statusMax} placeholder={t("profile.status.placeholder")} onChange={(event) => useEditDraft.setState({ status: event.target.value })} />
+              </span>
+              {draft.status.length > LIMITS.statusMax * 0.7 && (
+                <span className={`edit-counter ${draft.status.length >= LIMITS.statusMax ? "full" : ""}`}>
+                  {draft.status.length}/{LIMITS.statusMax}
+                </span>
+              )}
+            </label>
+          </div>
+          {draft.username.trim() && !username && <span style={{ fontSize: 13, color: "var(--red)", margin: "0 4px" }}>{t("error.invalid_username")}</span>}
         </EditField>
 
-        <EditField title={t("profile.status")}>
-          <label className="field glass">
-            <Hash size={18} className="secondary" />
-            <input value={draft.status} maxLength={LIMITS.statusMax} placeholder={t("profile.status.placeholder")} onChange={(event) => useEditDraft.setState({ status: event.target.value })} />
-          </label>
-        </EditField>
-
-        <EditField title={t("profile.platforms")}>
-          <div className="col" style={{ gap: 8 }}>
+        <EditField title={t("profile.platforms")} hint={t("edit.platforms.hint")}>
+          <div className="platform-picks">
             {PLATFORMS.map((id) => {
               const selected = draft.platforms.includes(id);
               return (
-                <button key={id} className={`check-row glass ${selected ? "selected" : ""}`} style={{ padding: "12px 16px", borderRadius: 16, minHeight: 60 }} onClick={() => togglePlatform(id)} aria-pressed={selected}>
-                  <PlatformMark platform={id} size={36} />
-                  <span className="grow ellipsis" style={{ fontSize: 16, fontWeight: 600 }}>
-                    {id}
+                <button key={id} className={`platform-pick ${selected ? "selected" : ""}`} style={{ ["--brand" as string]: PLATFORM_INFO[id].color }} onClick={() => togglePlatform(id)} aria-pressed={selected}>
+                  <span className="top">
+                    <PlatformMark platform={id} size={36} />
+                    <CheckMark on={selected} />
                   </span>
-                  <CheckMark on={selected} />
+                  <span className="name">{id}</span>
                 </button>
               );
             })}
           </div>
         </EditField>
 
-        {(draft.platforms.length > 0 || profile.wantedGames.length > 0) && (
-          <EditField title={t("profile.games")}>
-            <div className="col" style={{ gap: 12 }}>
-              <div className="h-scroll" style={{ margin: 0, padding: 0, gap: 8 }}>
-                {draft.platforms.map((id) => (
-                  <button key={id} className={`platform-tab ${gamesTab === id ? "active" : ""}`} onClick={() => useEditDraft.setState({ active: id })}>
-                    <PlatformBadge platform={id} size={18} />
-                    {id}
-                  </button>
-                ))}
-                <button className={`platform-tab ${gamesTab === "wanted" ? "active" : ""}`} onClick={() => useEditDraft.setState({ active: "wanted" })}>
-                  {t("profile.wanted")}
+        {(draft.platforms.length > 0 || profile.wantedGames.length > 0 || steamImport) && (
+          <EditField title={t("profile.games")} hint={t("edit.games.hint")}>
+            <div className="col" style={{ gap: 14 }}>
+              {/* Above the tabs, so it is there whichever tab is open; the import adds Steam itself if needed. */}
+              {steamImport && (
+                <button className="steam-import-row" onClick={() => push({ type: "steamImport" })}>
+                  <span className="mark">
+                    <BrandIcon file="steam.svg" size={20} />
+                  </span>
+                  <span className="col grow" style={{ gap: 2, minWidth: 0 }}>
+                    <span className="t">{t("game.picker.steam")}</span>
+                    <span className="s">{t("game.picker.steam.hint")}</span>
+                  </span>
+                  <ChevronRight size={18} strokeWidth={2.4} className="secondary" />
                 </button>
-              </div>
+              )}
+              <GamePlatformTabs tabs={tabs} active={gamesTab} onChange={(id) => useEditDraft.setState({ active: id })} label={t("profile.games")} />
               <GamePicker
                 key={gamesTab}
                 selected={gamesTab === "wanted" ? draft.wanted : (draft.games[gamesTab] ?? [])}
@@ -282,9 +318,7 @@ export function EditProfileSheet() {
               const existing = draft.subscriptions.find((item) => item.name === service.name);
               return (
                 <button key={service.name} className={`check-row sub-row ${existing ? "selected" : ""}`} onClick={() => openSubscription(service.name)}>
-                  <span style={{ width: 26, display: "flex", justifyContent: "center", color: "var(--accent-text)" }}>
-                    {service.brand ? <BrandIcon file={service.brand} size={22} /> : <Sparkles size={20} />}
-                  </span>
+                  <span className="sub-icon">{service.brand ? <BrandIcon file={service.brand} size={20} /> : <Sparkles size={18} />}</span>
                   <span className="grow col" style={{ gap: 2, minWidth: 0 }}>
                     <span className="ellipsis" style={{ fontSize: 16, fontWeight: 600 }}>
                       {service.name}
@@ -318,14 +352,15 @@ function SubscriptionSummary({ subscription }: { subscription: Subscription }) {
   );
 }
 
-function EditField({ title, children }: { title: string; children: React.ReactNode }) {
+function EditField({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
   return (
-    <div className="col" style={{ gap: 8 }}>
-      <span className="group-title" style={{ margin: "0 4px" }}>
-        {title}
-      </span>
+    <section className="col" style={{ gap: 10 }}>
+      <div className="col" style={{ gap: 3, margin: "0 4px" }}>
+        <h3 className="edit-title">{title}</h3>
+        {hint && <p className="edit-hint">{hint}</p>}
+      </div>
       {children}
-    </div>
+    </section>
   );
 }
 

@@ -4,6 +4,7 @@ import {
   isPlatform,
   normalizeGameName,
   sanitizeGameName,
+  sanitizePickedAvatar,
   sanitizeUsername,
   uniqueGameNames,
   type GameTag,
@@ -12,6 +13,7 @@ import {
   type Platform,
   type ProfileCard,
   type ProfileUpdate,
+  type SteamAccount,
   type Subscription,
 } from "@unishare/shared";
 import { badRequest } from "./errors";
@@ -38,6 +40,8 @@ export interface UserRow {
   rating: number;
   review_count: number;
   account_state: string;
+  /** Added by migration 004_admin.sql. */
+  is_admin?: boolean;
   created_at: string;
   updated_at: string;
   providers?: string[] | null;
@@ -54,7 +58,7 @@ export interface IdentityRow {
 
 /** Selects a user row plus the list of linked providers (for platform icons). */
 export const USER_COLUMNS = `u.*,
-  array(select i.provider from user_identities i where i.user_id = u.uid and i.provider <> 'dev' order by i.provider) as providers`;
+  array(select i.provider from user_identities i where i.user_id = u.uid and i.provider not in ('dev', 'steam') order by i.provider) as providers`;
 
 export function identityUrl(identity: Pick<IdentityRow, "provider" | "provider_user_id" | "username">): string | null {
   if (identity.provider === "telegram") return identity.username ? `https://t.me/${identity.username}` : null;
@@ -72,6 +76,17 @@ export function toLinkedIdentities(rows: IdentityRow[]): LinkedIdentity[] {
       url: identityUrl(row),
       canMessage: row.can_message,
     }));
+}
+
+function toSteamAccount(rows: IdentityRow[]): SteamAccount | null {
+  const steam = rows.find((row) => row.provider === "steam");
+  if (!steam) return null;
+  return {
+    steamId: steam.provider_user_id,
+    personaName: steam.display_name,
+    avatarUrl: steam.photo_url,
+    profileUrl: `https://steamcommunity.com/profiles/${steam.provider_user_id}`,
+  };
 }
 
 function platformsOf(row: UserRow): Platform[] {
@@ -105,6 +120,8 @@ export function toMyProfile(row: UserRow, identities: IdentityRow[]): MyProfile 
     reviewCount: row.review_count,
     createdAt: row.created_at,
     identities: toLinkedIdentities(identities),
+    isAdmin: Boolean(row.is_admin),
+    steam: toSteamAccount(identities),
     suggestions: row.onboarding_complete
       ? undefined
       : {
@@ -205,15 +222,27 @@ function sanitizeMetadata(value: unknown): Record<string, GameTag> {
   return result;
 }
 
+/**
+ * An avatar a profile patch may set: none, a preset or game art (the rule of POST /api/me/avatar/pick),
+ * or a photo the account owns (routes/avatar.ts ownAvatarMatcher). Anything else is refused, not dropped.
+ */
+function avatarColumn(value: unknown, isOwnAvatar: (url: string) => boolean): string | null {
+  if (value === null) return null;
+  const picked = sanitizePickedAvatar(value);
+  if (picked) return picked;
+  if (typeof value === "string" && isOwnAvatar(value)) return value;
+  throw badRequest("Pick a UniShare avatar, game art or your own photo", "invalid_avatar");
+}
+
 /** Validates a profile patch and converts it into column → value pairs. */
-export function profileUpdateToColumns(update: ProfileUpdate): Record<string, unknown> {
+export function profileUpdateToColumns(update: ProfileUpdate, isOwnAvatar: (url: string) => boolean = () => false): Record<string, unknown> {
   const columns: Record<string, unknown> = {};
   if (update.username !== undefined) {
     const username = typeof update.username === "string" ? sanitizeUsername(update.username) : null;
     if (!username) throw badRequest("Username must contain 3–30 letters, digits, '_', '.' or '-'", "invalid_username");
     columns.username = username;
   }
-  if (update.avatarUrl !== undefined) columns.avatar_url = update.avatarUrl === null ? null : httpsUrl(update.avatarUrl);
+  if (update.avatarUrl !== undefined) columns.avatar_url = avatarColumn(update.avatarUrl, isOwnAvatar);
   if (update.status !== undefined) columns.status = optionalText(update.status, LIMITS.statusMax, "status");
   if (update.platforms !== undefined) {
     if (!Array.isArray(update.platforms)) throw badRequest("platforms must be an array");

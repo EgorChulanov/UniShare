@@ -223,6 +223,21 @@ svg { flex-shrink: 0; }
 .avatar { border-radius: 50%; overflow: hidden; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; background: color-mix(in srgb, var(--primary) 18%, var(--card)); color: var(--accent-text); position: relative; }
 .swipe-card .avatar, .card-face .avatar, .detail-hero .avatar, .profile-hero .avatar, .phone-avatar .avatar { background: linear-gradient(160deg, #3a3170, #1b1927); color: rgba(255, 255, 255, 0.62); }
 .avatar img { width: 100%; height: 100%; object-fit: cover; }
+/* Game art (portrait library art or a cover): keep the characters' faces in the circle. */
+.avatar img.art { object-position: 50% 22%; }
+/* Original UniShare avatars ("preset:<id>"): gradient disc, gloss, a faded echo of the emblem and the emblem. */
+.preset-avatar {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; border-radius: 50%; color: var(--ink);
+  background: radial-gradient(110% 80% at 24% 8%, rgba(255, 255, 255, 0.42), transparent 52%), linear-gradient(150deg, var(--a), var(--b));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2), inset 0 calc(var(--s) * -0.12) calc(var(--s) * 0.24) rgba(0, 0, 0, 0.24);
+}
+.preset-avatar .echo { position: absolute; right: -28%; bottom: -30%; opacity: 0.13; transform: rotate(-16deg); }
+.preset-avatar .emblem { position: relative; filter: drop-shadow(0 calc(var(--s) * 0.03) calc(var(--s) * 0.06) rgba(0, 0, 0, 0.3)); }
+/* A game without artwork: its initials on a gradient tinted per title. */
+.game-art-blank {
+  display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; font-weight: 800; letter-spacing: 0.02em; color: rgba(255, 255, 255, 0.85);
+  background: radial-gradient(90% 90% at 18% 0%, hsl(var(--hue, 250) 70% 62% / 0.55), transparent 62%), linear-gradient(140deg, hsl(var(--hue, 250) 42% 30%), #16132a);
+}
 .avatar.ring::after { content: ""; position: absolute; inset: 0; border-radius: 50%; padding: 2px; background: linear-gradient(135deg, var(--primary), var(--tertiary)); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
 /* Unclipped wrapper: the online dot sits outside the circular .avatar (overflow: hidden). */
 .avatar-wrap { position: relative; display: inline-flex; flex-shrink: 0; }
@@ -236,6 +251,22 @@ svg { flex-shrink: 0; }
 .game-item span { font-size: 9px; font-weight: 500; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; }
 .games-row { display: flex; gap: 10px; overflow-x: auto; scrollbar-width: none; padding: 0 16px; scroll-behavior: smooth; }
 .games-row::-webkit-scrollbar { display: none; }
+/* GameCirclesRow in motion: three identical periods slide by one period, so the loop is seamless
+   (offsets in px from the component). Same pause rules as the search rail: a real mouse hover or
+   a finger held on the row, never a sticky :hover after a tap. */
+.games-marquee {
+  overflow: hidden; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 18px, #000 calc(100% - 18px), transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 18px, #000 calc(100% - 18px), transparent);
+}
+.games-track { display: flex; width: max-content; animation: games-marquee var(--dur, 20s) linear infinite; will-change: transform; }
+.games-track > .game-item { margin-right: var(--gap, 10px); }
+@keyframes games-marquee { from { transform: translateX(var(--from)); } to { transform: translateX(var(--to)); } }
+@media (hover: hover) and (pointer: fine) { .games-marquee:hover .games-track { animation-play-state: paused; } }
+/* data-held: a finger or pen is down on the row (holdMarquee in ui.tsx). */
+.games-marquee[data-held] .games-track { animation-play-state: paused; }
+/* Nothing moves behind a sheet or on the cards waiting under the top one. */
+body:has(.sheet) .games-track, .swipe-card[aria-hidden="true"] .games-track { animation-play-state: paused; }
 .badge { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; background: var(--primary); color: #fff; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
 .badge.red { background: var(--red); }
 .type-badge { font-size: 10px; font-weight: 600; color: var(--text-2); padding: 3px 7px; border-radius: 999px; background: var(--card); border: 1px solid color-mix(in srgb, var(--text) 8%, transparent); }
@@ -281,7 +312,9 @@ svg { flex-shrink: 0; }
 .swipe-card .status, .card-face .status { margin-top: 3px; font-size: 13px; font-weight: 600; color: rgba(255, 255, 255, 0.68); }
 .swipe-card h4, .card-face h4 { margin: 0 0 12px; font-size: 15px; font-weight: 800; color: rgba(255, 255, 255, 0.92); }
 /* Vertical room so the white ring and drop shadow of the covers are not clipped by the scroller. */
-.swipe-card .games-row, .card-face .games-row { margin: -4px -22px -14px; padding-top: 4px; padding-bottom: 14px; }
+.swipe-card .games-row, .card-face .games-row, .swipe-card .games-marquee, .card-face .games-marquee { margin: -4px -22px -14px; padding-top: 4px; padding-bottom: 14px; }
+/* The row only clips (it never scrolls by touch), so a swipe that starts on it still drags the card. */
+.swipe-card .games-marquee { touch-action: none; }
 .card-avatar { display: flex; border-radius: 50%; box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.85), 0 8px 18px rgba(0, 0, 0, 0.35); }
 .card-muted { font-size: 13px; font-weight: 600; color: rgba(255, 255, 255, 0.5); }
 .swipe-card .game-circle, .card-face .game-circle { box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.9), 0 6px 14px rgba(0, 0, 0, 0.35) !important; background: rgba(255, 255, 255, 0.12) !important; }
@@ -441,6 +474,8 @@ svg { flex-shrink: 0; }
    :hover sticks after a tap, which used to freeze the row until the next tap elsewhere. */
 @media (hover: hover) and (pointer: fine) { .marquee:hover .marquee-track { animation-play-state: paused; } }
 .marquee-track:active { animation-play-state: paused; }
+/* A held finger, set by holdMarquee (components/ui.tsx) when the rail passes it as onPointerDown: touches do not reliably get :active. */
+.marquee[data-held] .marquee-track { animation-play-state: paused; }
 /* Nothing moves behind an open sheet. */
 body:has(.sheet) .marquee-track { animation-play-state: paused; }
 .marquee, .game-card { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
@@ -488,21 +523,156 @@ body:has(.sheet) .marquee-track { animation-play-state: paused; }
 .check-row { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; transition: box-shadow 0.2s, transform 0.15s; }
 .check-row:active { transform: scale(0.99); }
 .check-row.selected { box-shadow: inset 0 0 0 1.5px var(--primary); }
-.sub-row { padding: 12px 16px; min-height: 60px; border-radius: 16px; background: var(--card); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text) 16%, transparent); }
-.platform-tab { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px 10px 10px; border-radius: 999px; background: var(--card); font-size: 15px; font-weight: 800; white-space: nowrap; flex-shrink: 0; transition: background 0.2s, color 0.2s; }
-.platform-tab.active { color: #fff; background: var(--accent-grad); }
-.platform-tab .count { font-size: 11px; font-weight: 700; color: var(--accent-text); }
-.platform-tab.active .count { color: rgba(255,255,255,0.8); }
-.game-chip { display: inline-flex; align-items: center; gap: 4px; padding: 6px 10px; border-radius: 16px; font-size: 13px; font-weight: 500; background: color-mix(in srgb, var(--primary) 15%, transparent); max-width: 220px; flex-shrink: 0; }
-.game-chip.colored { color: #fff; gap: 6px; padding: 9px 14px; font-size: 15px; font-weight: 700; border-radius: 999px; }
-.game-chip.colored svg { opacity: 0.8; }
-.game-result { display: flex; align-items: center; gap: 14px; padding: 10px 14px; min-height: 56px; border-radius: 16px; width: 100%; text-align: left; transition: box-shadow 0.2s; }
-.game-result.selected { box-shadow: inset 0 0 0 1.5px var(--primary); }
-.result-cover { width: 56px; height: 36px; border-radius: 8px; overflow: hidden; background: var(--card); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.result-cover img { width: 100%; height: 100%; object-fit: cover; }
-.game-tag { display: inline-flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 10px; font-size: 13px; font-weight: 500; max-width: 100%; }
-.game-tag .cover { width: 32px; height: 32px; border-radius: 6px; overflow: hidden; background: var(--card); display: flex; align-items: center; justify-content: center; color: color-mix(in srgb, var(--primary) 70%, transparent); flex-shrink: 0; }
-.game-tag .cover img { width: 100%; height: 100%; object-fit: cover; }
+.sub-row { padding: 10px 14px; min-height: 62px; border-radius: 18px; background: var(--card); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text) 12%, transparent); }
+.sub-row.selected { box-shadow: inset 0 0 0 1.5px var(--primary); }
+
+/* Edit profile: avatar header, grouped fields with floating labels, platform tiles. */
+.edit-profile { gap: 30px; padding: 4px 16px 36px; }
+.edit-avatar { position: relative; display: flex; flex-direction: column; align-items: center; gap: 14px; padding-top: 6px; }
+.edit-avatar .glow { position: absolute; top: -26px; left: 50%; width: 240px; height: 170px; margin-left: -120px; border-radius: 50%; pointer-events: none; background: radial-gradient(closest-side, color-mix(in srgb, var(--primary) 34%, transparent), transparent); }
+.edit-avatar .pic { position: relative; display: block; border-radius: 50%; box-shadow: 0 0 0 3px var(--sheet-bg), 0 0 0 5.5px color-mix(in srgb, var(--primary) 60%, transparent), 0 14px 28px rgba(20, 10, 60, 0.3); transition: transform 0.18s var(--spring); }
+.edit-avatar .pic:active { transform: scale(0.96); }
+.edit-avatar .camera { position: absolute; right: -4px; bottom: -2px; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; background: var(--accent-grad); border: 3px solid var(--sheet-bg); }
+.edit-avatar .change { position: relative; color: var(--accent-text); font-size: 13px; font-weight: 700; padding: 8px 14px; }
+.edit-title { margin: 0; font-size: 17px; font-weight: 800; letter-spacing: -0.01em; }
+.edit-hint { margin: 0; font-size: 13px; font-weight: 500; line-height: 1.35; color: var(--text-2); }
+.edit-card { border-radius: 20px; background: var(--card); box-shadow: inset 0 0 0 1px var(--material-stroke); overflow: hidden; }
+.edit-row { position: relative; display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 10px 16px; cursor: text; }
+.edit-row + .edit-row::before { content: ""; position: absolute; top: 0; left: 60px; right: 0; height: 0.5px; background: var(--separator); }
+.edit-row .ico { width: 32px; height: 32px; border-radius: 10px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: var(--accent-text); background: color-mix(in srgb, var(--primary) 13%, transparent); transition: background 0.2s, color 0.2s; }
+.edit-row:focus-within .ico { color: #fff; background: var(--accent-grad); }
+.edit-row .label { font-size: 12px; font-weight: 700; color: var(--text-2); }
+.edit-row input { width: 100%; min-width: 0; border: 0; outline: 0; background: none; padding: 0; font-size: 16px; font-weight: 600; color: var(--text); }
+.edit-row input::placeholder { color: var(--text-3); font-weight: 500; }
+.edit-counter { font-size: 12px; font-weight: 700; color: var(--text-2); font-variant-numeric: tabular-nums; flex-shrink: 0; }
+.edit-counter.full { color: var(--orange); }
+.platform-picks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.platform-pick {
+  position: relative; overflow: hidden; display: flex; flex-direction: column; gap: 12px; min-height: 96px; padding: 12px 12px 13px; border-radius: 20px; text-align: left;
+  background: var(--card); box-shadow: inset 0 0 0 1px var(--material-stroke); transition: box-shadow 0.2s, transform 0.15s var(--spring);
+}
+.platform-pick::before { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity 0.25s; background: radial-gradient(120% 140% at 0% 0%, color-mix(in srgb, var(--brand) 32%, transparent), transparent 64%); }
+.platform-pick > * { position: relative; }
+.platform-pick .top { display: flex; align-items: center; justify-content: space-between; }
+.platform-pick .name { font-size: 15px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.platform-pick.selected { box-shadow: inset 0 0 0 1.5px var(--primary), 0 6px 16px color-mix(in srgb, var(--brand) 22%, transparent); }
+.platform-pick.selected::before { opacity: 1; }
+.platform-pick:active { transform: scale(0.97); }
+/* The last tile of an odd row spans the grid as a row, so the block ends evenly. */
+.platform-picks > .platform-pick:last-child:nth-child(odd) { grid-column: 1 / -1; flex-direction: row; align-items: center; min-height: 64px; }
+.platform-picks > .platform-pick:last-child:nth-child(odd) .top { display: contents; }
+.platform-picks > .platform-pick:last-child:nth-child(odd) .top > :last-child { order: 2; }
+.platform-picks > .platform-pick:last-child:nth-child(odd) .name { flex: 1; min-width: 0; order: 1; }
+.steam-import-row {
+  display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 14px; border-radius: 18px; text-align: left; color: #fff;
+  background: linear-gradient(120deg, #1b2838, #2a475e); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08), 0 6px 16px rgba(27, 40, 56, 0.25); transition: transform 0.15s;
+}
+.steam-import-row:active { transform: scale(0.98); }
+.steam-import-row .mark { width: 38px; height: 38px; border-radius: 12px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: rgba(255, 255, 255, 0.1); }
+.steam-import-row .t { font-size: 15px; font-weight: 800; }
+.steam-import-row .s { font-size: 12px; font-weight: 600; color: rgba(255, 255, 255, 0.68); }
+.steam-import-row .secondary { color: rgba(255, 255, 255, 0.6); }
+
+/* Platform tabs above the game picker: the selected one is filled with its brand colour. */
+.game-tabs { gap: 8px; padding-top: 2px; padding-bottom: 8px; }
+.game-tab {
+  position: relative; display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 14px 0 8px; border-radius: 999px; flex-shrink: 0; white-space: nowrap;
+  font-size: 14px; font-weight: 800; color: var(--text); background: var(--card); box-shadow: inset 0 0 0 1px var(--material-stroke); transition: color 0.2s;
+}
+.game-tab > :not(.pill) { position: relative; z-index: 1; }
+.game-tab .pill { position: absolute; inset: 0; border-radius: inherit; background: var(--brand, var(--primary)); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18), 0 4px 10px rgba(0, 0, 0, 0.18); }
+.game-tab.wanted .pill { background: var(--accent-grad); }
+.game-tab .glyph { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; background: var(--brand, var(--primary)); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16); transition: background 0.2s; }
+.game-tab.wanted .glyph { background: var(--accent-grad); }
+.game-tab .count { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; font-size: 11px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; color: var(--accent-text); background: color-mix(in srgb, var(--primary) 14%, transparent); }
+.game-tab.active { color: #fff; }
+.game-tab.active .glyph { background: rgba(255, 255, 255, 0.18); }
+.game-tab.active .count { color: #fff; background: rgba(255, 255, 255, 0.24); }
+
+/* Game picker: picked games as cover tiles, popular games and results as a cover grid. */
+.game-picker { display: flex; flex-direction: column; gap: 20px; container-type: inline-size; }
+.picker-search { height: 52px; }
+.picker-section { display: flex; flex-direction: column; gap: 10px; }
+.picker-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0 2px; }
+.picker-head .title { display: inline-flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 800; }
+.picker-counter { padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--accent-text); background: color-mix(in srgb, var(--primary) 14%, transparent); transition: color 0.2s, background 0.2s; }
+.picker-counter.full { color: var(--orange); background: color-mix(in srgb, var(--orange) 16%, transparent); }
+.picked-strip { display: flex; gap: 10px; overflow-x: auto; scrollbar-width: none; margin: 0 -16px; padding: 4px 16px 8px; }
+.picked-strip::-webkit-scrollbar { display: none; }
+.picked-tile { position: relative; flex-shrink: 0; width: 136px; height: 84px; border-radius: 16px; overflow: hidden; color: #fff; background: #16132a; box-shadow: 0 0 0 2px var(--pick), 0 6px 14px rgba(0, 0, 0, 0.18); }
+.picked-tile .art { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; font-size: 22px; }
+.picked-tile .shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0, 0, 0, 0.05) 25%, rgba(0, 0, 0, 0.84)); }
+.picked-tile .name { position: absolute; left: 10px; right: 10px; bottom: 8px; font-size: 12px; font-weight: 800; line-height: 1.15; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5); }
+.picked-tile .remove {
+  position: absolute; top: 6px; right: 6px; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff;
+  background: rgba(13, 11, 25, 0.62); border: 1px solid rgba(255, 255, 255, 0.24); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+}
+/* A 40px target around the small button. */
+.picked-tile .remove::before { content: ""; position: absolute; inset: -8px; }
+.picked-empty { padding: 16px; border-radius: 16px; font-size: 13px; font-weight: 600; line-height: 1.35; text-align: center; color: var(--text-2); border: 1.5px dashed color-mix(in srgb, var(--text) 18%, transparent); }
+.cover-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 12px; transition: opacity 0.2s; }
+@container (min-width: 460px) { .cover-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@container (min-width: 640px) { .cover-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.cover-card { display: flex; flex-direction: column; gap: 3px; min-width: 0; text-align: left; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+.cover-card .cover {
+  position: relative; display: block; width: 100%; aspect-ratio: 16 / 9; margin-bottom: 6px; border-radius: 16px; overflow: hidden;
+  background: var(--card); box-shadow: inset 0 0 0 1px var(--material-stroke); transition: transform 0.18s var(--spring), box-shadow 0.2s;
+}
+.cover-card .cover > img, .cover-card .cover > .game-art-blank { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; font-size: 24px; }
+.cover-card:active .cover { transform: scale(0.96); }
+@media (hover: hover) and (pointer: fine) { .cover-card:hover .cover { transform: translateY(-2px); } }
+.cover-card.selected .cover { box-shadow: 0 0 0 2.5px var(--pick), 0 8px 18px rgba(0, 0, 0, 0.2); }
+.cover-card .mark { position: absolute; top: 7px; right: 7px; display: flex; }
+.cover-card .mark .selected-dot { background: var(--pick); box-shadow: 0 0 0 2px #fff; }
+.cover-card .add { width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; background: rgba(13, 11, 25, 0.55); border: 1px solid rgba(255, 255, 255, 0.32); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+.cover-card .title { font-size: 14px; font-weight: 700; line-height: 1.2; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+.cover-card .meta { font-size: 12px; font-weight: 600; color: var(--text-2); }
+.cover-card.custom .custom-art {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; border-radius: inherit; color: var(--accent-text);
+  background: color-mix(in srgb, var(--primary) 9%, var(--card)); border: 1.5px dashed color-mix(in srgb, var(--primary) 45%, transparent);
+}
+.cover-card.skeleton .cover { box-shadow: none; }
+.cover-card.skeleton .line { display: block; height: 11px; width: 82%; margin-top: 3px; border-radius: 6px; }
+.cover-card.skeleton .line.short { width: 46%; }
+.cover-card.skeleton .shimmer, .avatar-tile .disc.shimmer {
+  background: linear-gradient(100deg, var(--fill) 30%, color-mix(in srgb, var(--text) 14%, transparent) 50%, var(--fill) 70%);
+  background-size: 220% 100%; animation: shimmer 1.3s ease-in-out infinite;
+}
+@keyframes shimmer { from { background-position: 120% 0; } to { background-position: -120% 0; } }
+.picker-note { display: flex; align-items: center; gap: 6px; margin: 0 2px; font-size: 12px; font-weight: 500; line-height: 1.35; color: var(--text-2); }
+.picker-note.warn { color: var(--orange); font-weight: 600; }
+
+/* Avatar picker (AvatarPickerSheet) and the avatar step of onboarding. */
+.avatar-picker { display: flex; flex-direction: column; gap: 28px; padding: 0 16px 28px; }
+.avatar-preview { position: relative; display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 10px 0 0; }
+.avatar-preview .glow { position: absolute; top: -26px; left: 50%; width: 270px; height: 200px; margin-left: -135px; border-radius: 50%; pointer-events: none; background: radial-gradient(closest-side, color-mix(in srgb, var(--primary) 40%, transparent), transparent); }
+.avatar-preview .ring { position: relative; display: flex; border-radius: 50%; box-shadow: 0 0 0 4px var(--sheet-bg), 0 0 0 6.5px color-mix(in srgb, var(--primary) 62%, transparent), 0 18px 36px rgba(20, 10, 60, 0.35); }
+.avatar-preview .caption { position: relative; }
+.avatar-section { display: flex; flex-direction: column; gap: 14px; }
+.avatar-head h3 { margin: 0; font-size: 19px; font-weight: 800; letter-spacing: -0.01em; }
+.avatar-head p { margin: 3px 0 0; font-size: 13px; font-weight: 500; color: var(--text-2); }
+.avatar-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 16px 10px; justify-items: center; transition: opacity 0.2s; }
+.avatar-tile { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; width: 76px; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+.avatar-tile .disc { position: relative; display: block; width: 68px; height: 68px; border-radius: 50%; overflow: hidden; background: var(--card); box-shadow: inset 0 0 0 1px var(--material-stroke); transition: transform 0.18s var(--spring), box-shadow 0.2s; }
+.avatar-tile .disc img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 22%; }
+.avatar-tile:active .disc { transform: scale(0.93); }
+.avatar-tile.selected .disc { box-shadow: 0 0 0 3px var(--sheet-bg), 0 0 0 5.5px var(--primary); }
+.avatar-tile .tick { position: absolute; top: -3px; right: 1px; display: flex; border-radius: 50%; box-shadow: 0 0 0 2.5px var(--sheet-bg); }
+.avatar-tile .label { width: 100%; font-size: 11px; font-weight: 600; text-align: center; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (hover: hover) and (pointer: fine) { .avatar-tile:hover .disc { transform: scale(1.04); } }
+.avatar-note { margin: 0; padding: 14px 16px; border-radius: 16px; font-size: 13px; font-weight: 600; line-height: 1.35; color: var(--text-2); background: var(--card); box-shadow: inset 0 0 0 1px var(--material-stroke); }
+.avatar-upload { display: flex; align-items: center; gap: 14px; width: 100%; padding: 14px 16px; border-radius: 20px; text-align: left; background: var(--card); box-shadow: inset 0 0 0 1px var(--material-stroke); transition: transform 0.15s, box-shadow 0.2s; }
+.avatar-upload.selected { box-shadow: inset 0 0 0 1.5px var(--primary); }
+.avatar-upload:active { transform: scale(0.98); }
+.avatar-upload .ico { width: 42px; height: 42px; border-radius: 14px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: #fff; background: var(--accent-grad); }
+.avatar-upload .t { font-size: 16px; font-weight: 700; }
+.avatar-upload .s { font-size: 12px; font-weight: 600; color: var(--text-2); }
+.onboarding-avatar { position: relative; display: flex; border-radius: 50%; transition: transform 0.18s var(--spring); }
+.onboarding-avatar:active { transform: scale(0.97); }
+.onboarding-avatar .camera { position: absolute; right: 6px; bottom: 6px; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; background: var(--accent-grad); border: 3px solid var(--bg); }
+.quick-presets { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
+.quick-presets .avatar-tile { width: auto; }
+.quick-presets .avatar-tile .disc { width: 52px; height: 52px; }
 .form { padding-bottom: 24px; }
 .form-select { appearance: none; -webkit-appearance: none; border: 0; outline: 0; background: none; color: var(--text-2); font: inherit; font-size: 16px; text-align: right; padding-right: 18px; max-width: 60%; cursor: pointer;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='14' viewBox='0 0 10 14' fill='none' stroke='%238e8e93' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 5l3-3 3 3M2 9l3 3 3-3'/%3E%3C/svg%3E");
@@ -549,18 +719,24 @@ body:has(.sheet) .marquee-track { animation-play-state: paused; }
 /* The card preview on My Profile: same face as the feed, at a fixed height. */
 .card-face {
   position: relative; margin: 0 16px; border-radius: 34px; overflow: hidden; color: #fff; cursor: pointer;
-  background: #16132a; border: 1px solid rgba(255, 255, 255, 0.12); box-shadow: 0 16px 30px rgba(0, 0, 0, 0.3); transition: transform 0.2s var(--spring);
+  background: #16132a; border: 1px solid rgba(255, 255, 255, 0.12); box-shadow: 0 16px 30px rgba(0, 0, 0, 0.3);
 }
-.card-face:active { transform: scale(0.985); }
+.card-face:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
+.card-hint { margin: 0; font-size: 13px; font-weight: 600; line-height: 1.4; }
+/* My Profile, Skills card without a skills profile: an invitation in the card's own language. */
+.skills-invite {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 14px; padding: 18px; border-radius: 24px;
+  background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.16); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+}
+.skills-invite .emblem { width: 46px; height: 46px; border-radius: 15px; display: flex; align-items: center; justify-content: center; color: #fff; background: linear-gradient(135deg, #8a7bff, #5c48df); box-shadow: 0 8px 18px rgba(92, 72, 223, 0.45); }
+.skills-invite .title { font-size: 19px; font-weight: 800; color: #fff; }
+.skills-invite .text { font-size: 13px; font-weight: 600; line-height: 1.4; color: rgba(255, 255, 255, 0.72); }
+.skills-invite .cta { display: inline-flex; align-items: center; gap: 6px; padding: 10px 16px; border-radius: 999px; font-size: 14px; font-weight: 800; color: #1a1440; background: linear-gradient(90deg, #c8bfff, #9a8af5); box-shadow: 0 10px 22px rgba(140, 120, 245, 0.3); }
+.sub-icon { width: 38px; height: 38px; border-radius: 12px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: var(--accent-text); background: color-mix(in srgb, var(--primary) 14%, transparent); }
 .card-face .content { height: auto; padding-bottom: 26px; }
 @media (min-width: 760px) { .card-face { max-width: 560px; margin: 0 auto; } }
-.games-card { margin: 0 16px; cursor: pointer; transition: transform 0.2s var(--spring); }
-.games-card:active { transform: scale(0.985); }
 .progress-bar { height: 4px; border-radius: 2px; background: color-mix(in srgb, var(--text) 10%, transparent); overflow: hidden; }
 .progress-bar span { display: block; height: 100%; border-radius: inherit; background: var(--primary); }
-.skills-cta { display: flex; align-items: center; gap: 14px; padding: 14px; margin: 0 16px; border-radius: 20px; background: linear-gradient(90deg, color-mix(in srgb, var(--primary) 12%, transparent), color-mix(in srgb, var(--tertiary) 8%, transparent)); border: 1px solid color-mix(in srgb, var(--primary) 30%, transparent); width: calc(100% - 32px); transition: transform 0.15s; }
-.skills-cta:active { transform: scale(0.98); }
-.skills-cta .ico { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; background: linear-gradient(135deg, var(--primary), var(--tertiary)); flex-shrink: 0; }
 .settings-row { display: flex; align-items: center; gap: 14px; padding: 16px; margin: 0 16px 32px; border-radius: 20px; width: calc(100% - 32px); }
 .settings-row:active { opacity: 0.7; }
 
@@ -743,7 +919,7 @@ body:has(.sheet) .marquee-track { animation-play-state: paused; }
   .platform-badge { background: var(--fill); }
   .list-row.active { background: rgba(92, 72, 223, 0.16); }
   .progress-caps span { background: var(--fill); }
-  .chip.primary, .game-chip { background: rgba(92, 72, 223, 0.16); }
+  .chip.primary { background: rgba(92, 72, 223, 0.16); }
   .tab-pill { background: var(--fill); }
   .tab-avatar { box-shadow: 0 0 0 1.5px var(--separator); }
   .chip.tertiary { background: rgba(164, 150, 247, 0.3); }
@@ -757,10 +933,17 @@ body:has(.sheet) .marquee-track { animation-play-state: paused; }
   .platform-tile::before { background: none; }
   @media (hover: hover) and (pointer: fine) { .platform-tile:hover { border-color: var(--brand); } }
   .platform-tile .mark { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14); }
-  .sub-row, .skill-option { box-shadow: inset 0 0 0 1px var(--separator); }
+  .sub-row:not(.selected), .skill-option { box-shadow: inset 0 0 0 1px var(--separator); }
   .portfolio-add { box-shadow: inset 0 0 0 1px rgba(92, 72, 223, 0.3); }
-  .game-tag .cover { color: var(--primary); }
-  .skills-cta { background: linear-gradient(90deg, rgba(92, 72, 223, 0.12), rgba(164, 150, 247, 0.08)); border: 1px solid rgba(92, 72, 223, 0.3); }
+  .sub-icon, .edit-row .ico, .picker-counter, .game-tab .count { background: rgba(92, 72, 223, 0.14); }
+  .picker-counter.full { background: rgba(255, 149, 0, 0.16); }
+  .picked-empty { border-color: var(--separator); }
+  .cover-card.custom .custom-art { background: var(--card); border-color: rgba(92, 72, 223, 0.45); }
+  .cover-card.skeleton .shimmer, .avatar-tile .disc.shimmer { background: var(--fill); }
+  .edit-avatar .glow, .avatar-preview .glow { background: radial-gradient(closest-side, rgba(92, 72, 223, 0.36), transparent); }
+  .edit-avatar .pic, .avatar-preview .ring { box-shadow: 0 0 0 3px var(--sheet-bg), 0 0 0 5.5px rgba(92, 72, 223, 0.6), 0 14px 28px rgba(20, 10, 60, 0.3); }
+  .platform-pick::before { background: none; }
+  .platform-pick.selected { box-shadow: inset 0 0 0 1.5px var(--primary); }
   .airshare-row { border: 1px solid rgba(92, 72, 223, 0.25); }
   .airshare-glow { background: radial-gradient(circle, rgba(92, 72, 223, 0.3), transparent 70%); }
   .login { background: linear-gradient(135deg, rgba(164, 150, 247, 0), rgba(164, 150, 247, 0.28)) var(--bg); }
@@ -775,4 +958,8 @@ body:has(.sheet) .marquee-track { animation-play-state: paused; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+  /* A near-zero duration would make endless loops jitter: they stand still instead
+     (GameCirclesRow already renders a still row; the search rail scrolls by hand). */
+  .marquee-track, .games-track, .cover-card.skeleton .shimmer, .avatar-tile .disc.shimmer { animation: none !important; }
+  .marquee { overflow-x: auto; scrollbar-width: none; }
 }

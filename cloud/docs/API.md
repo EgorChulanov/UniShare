@@ -62,6 +62,7 @@ Every client understands the same compact payloads (`shared/src/links.ts`):
 | `c_<chatId without dashes>` | A chat |
 | `l_<link token>` | Account linking |
 | `s_feed`, `s_chats`, `s_profile`, `s_nearby` | A screen |
+| `s_admin` | The admin panel (admins only; others see the feed) |
 
 They travel as `t.me/<bot>[/<app>]?startapp=<payload>`, `vk.com/app<id>#<payload>`, or on the web as `PUBLIC_URL/?startapp=<payload>` and `PUBLIC_URL/u/<uid>`. Telegram bot notifications open `PUBLIC_URL/?startapp=<payload>` through a Mini App button. Universal links (iOS) and App Links (Android) on `PUBLIC_URL` would let the native apps open these too.
 
@@ -243,6 +244,7 @@ Details and errors are in [section 2](#2-authentication).
 | PATCH | `/api/me` | `ProfileUpdate` | `MyProfile` |
 | GET | `/api/me/username-available` | `?username=` | `{ available: boolean }` |
 | POST | `/api/me/avatar` | Raw image | `{ avatarUrl: string }` |
+| POST | `/api/me/avatar/pick` | `{ avatarUrl }` | `{ avatarUrl: string }` |
 | DELETE | `/api/me` | no body | `{ ok: true }` |
 | POST | `/api/me/link-token` | no body | `LinkTokenResponse` |
 | DELETE | `/api/me/identities/:provider` | `telegram` or `vk` | `MyProfile` |
@@ -262,7 +264,7 @@ Every field is optional, so send only what changed. The full profile comes back.
 | Field | Rules |
 | --- | --- |
 | `username` | 3 to 30 letters (any script), digits, `_`, `.` or `-`. A leading `@` is removed. Unique, ignoring case (`409 username_taken`). Cannot be cleared. Otherwise `400 invalid_username` |
-| `avatarUrl` | `null` clears it. Otherwise an http(s) URL or a `/media/...` path, up to 2048 characters. Any other value is saved as `null` without an error |
+| `avatarUrl` | `null` clears it. Otherwise a value `/api/me/avatar/pick` accepts, the user's own upload URL, a photo of a linked Telegram/VK/Steam account, or the value already stored. Anything else gets `400 invalid_avatar` |
 | `status` | String or `null`, trimmed, up to 180 characters (`status_too_long`). Empty becomes `null` |
 | `platforms` | Array of `Platform`. Unknown values are dropped and the order becomes the `PLATFORMS` order |
 | `platformGames` | Object `Platform -> string[]`. Replaces the whole map and rebuilds `games`. Game names: whitespace collapsed, 2 to 80 characters, no control characters, duplicates removed (ignoring case and accents), at most 30 per platform |
@@ -285,6 +287,11 @@ Every field is optional, so send only what changed. The full profile comes back.
 
 **POST /api/me/avatar**
 - Raw image body up to 5 MiB, see [section 5](#5-uploads-and-media). The new avatar is saved to the profile right away and the previous file is deleted.
+
+**POST /api/me/avatar/pick**
+- `avatarUrl` is `preset:<id>` (an original UniShare avatar; ids in `AVATAR_PRESETS`, `shared/src/avatars.ts`) or game art: an https URL on shared.akamai.steamstatic.com, cdn.akamai.steamstatic.com, cdn.cloudflare.steamstatic.com, steamcdn-a.akamaihd.net, media.rawg.io or upload.wikimedia.org, ending in .jpg, .jpeg, .png, .webp or .gif, without credentials or port, up to 2048 characters.
+- Saves `users.avatar_url` and deletes the previous file only when it was the caller's own upload. Clients draw `preset:` avatars themselves.
+- Errors: `400 invalid_avatar`, `429 rate_limited` (30 per 10 minutes).
 
 **DELETE /api/me**
 - Deletes the account with its identities, sessions, swipes, requests, chats, messages, reviews and reports. Media is removed in the background. Chat partners get no realtime event; the chat disappears on their next refresh. This cannot be undone.
@@ -406,7 +413,7 @@ All chat routes answer `404 Chat is unavailable` when the id is not a UUID, you 
 - Limit: 60 requests per minute.
 
 **GET /api/players**
-- Players who own or want this game, online first, at most 50. Titles match when they differ only in case, accents, ™/® or punctuation ("Apex Legends™" = "Apex Legends", "Counter-Strike 2" = "Counter Strike 2"), the same rule search uses to show one card per game. A longer or shorter title ("Hollow Knight: Silksong", "Hollow") is a different game.
+- Players who own or want this game, online first, at most 50. Spellings ("Apex Legends™"), alias-table names ("гта 6", "GTA VI") and store editions ("Grand Theft Auto V Enhanced", "…Skyrim Special Edition") are the same game, the same rule search uses to show one card per game. A different title ("Hollow Knight: Silksong", "Hollow", "Left 4 Dead 2") is a different game.
 - `game` is required: 2 to 80 characters after whitespace is collapsed (`400 game is required`).
 - Limit: 60 requests per minute. Invalid requests count too.
 
@@ -418,7 +425,8 @@ All chat routes answer `404 Chat is unavailable` when the id is not a UUID, you 
 | GET | `/api/games/popular` | | `GameSearchResult[]` |
 | GET | `/api/games/details` | `?name=&steamAppId=&rawgId=` | `GameDetails` |
 
-- **Search:** at most 12 results. The curated catalog comes first, then RAWG (when the server has a key) or Steam plus a built-in list. A `q` shorter than 2 or longer than 80 characters returns `[]`. No rate limit.
+- **Search:** at most 12 results. Case, accents, punctuation, and Roman vs Arabic numerals are ignored. Russian names, slang and abbreviations work ("гта 6", "кс2", "ведьмак"; table in `shared/src/aliases.ts`). The card whose title is exactly what was typed comes first. Then: curated catalog (also matched by the canonical title an alias names), the games the query names (covers within about 1.5 s), RAWG (when the server has a key) or Steam searched by real names, then the built-in list. A sequel the table doesn't have ("fallout 2") is asked for by its series' name and comes before the rest of the series. Add-ons are dropped, exact and prefix matches go first, and store editions show under the table's title. A `q` shorter than 2 or longer than 80 characters returns `[]`. No rate limit.
+- **Covers:** set `game_catalog_overrides.background_image` (enabled row; `name` = canonical title) to give a game without free art a cover in search, profile cards and Popular now.
 - **Ids:** `GameSearchResult.id` is a RAWG id, a Steam app id when `source` is `steam`, a negative id for catalog entries, or `0` in some popular entries. Profiles store games by name, so use the name as the key.
 - **Popular:** at most 24 titles, each with a cover image. Cached on the server.
 - **Details:** `name` is required (2 to 160 characters, `400 name is required`). Pass `steamAppId` or `rawgId` from a `GameTag` when you have them. When nothing is found the answer is still `200`, with `source: "catalog"` and empty fields. Limit: 30 requests per minute.
@@ -453,6 +461,46 @@ Find people who have AirShare open nearby at the same moment.
 - Active, published, unexpired stories, at most 20, highest priority first. Users with `ru`, `uk` or `be` get Russian stories, everyone else English, and everyone gets stories without a language.
 - `symbol` is a glyph name (for example `shield`, `heart`, `sparkles`). `accentHex` is 6 hex digits without `#`. `ctaUrl` can be a deep link payload such as `s_feed` instead of a web URL. `isSeen` turns true after a view.
 - The view call always returns `{ ok: true }`, even for an unknown id.
+
+### Steam library import
+
+Every endpoint answers `503 { code: "steam_not_configured" }` without `STEAM_API_KEY` (then `PublicConfig.steamImport` is `false`). The Steam account appears as `MyProfile.steam`; it is never a sign-in method.
+
+| Method | Path | Body | Response |
+| --- | --- | --- | --- |
+| POST | `/api/steam/connect` | no body | `{ url, expiresAt }` |
+| GET | `/api/steam/callback` | Steam OpenID redirect | HTML page |
+| GET | `/api/steam/library` | | `SteamLibrary` |
+| POST | `/api/steam/resolve` | `{ profile }` | `SteamLibrary` |
+| DELETE | `/api/steam` | | `MyProfile` |
+
+- **Connect:** open `url` (the Steam sign-in page; valid 15 minutes, works once). Steam redirects to the callback, which checks the answer with Steam (`check_authentication`), links the account, sends `profile_updated` over realtime and shows a page naming the UniShare profile that received it. A Steam account linked to another user is refused (409 page) and the requester's current link stays.
+- **Library:** `{ steamId, personaName, avatarUrl, profileUrl, private, gameCount, games: [{ appId, name, playtimeMinutes, lastPlayedAt, coverUrl, portraitUrl }] }`, most played first. `private: true` when the profile hides game details. `409 steam_not_linked`, `502 steam_unavailable`. Cached 10 minutes.
+- **Resolve:** a public profile link (`/profiles/<id>` or `/id/<name>`), SteamID64 or custom URL name, without linking; cached 3 minutes. `400 steam_profile_invalid`, `404 steam_profile_not_found`.
+- The server needs api.steampowered.com, and steamcommunity.com to confirm sign-ins; when the latter is unreachable, the page suggests pasting the profile link.
+
+### Bug reports and the admin panel
+
+| Method | Path | Body or query | Response |
+| --- | --- | --- | --- |
+| POST | `/api/bugs` | `{ text, context?, screenshot? }` | `{ ok, id }` |
+| GET | `/api/admin/overview` | | `AdminOverview` |
+| GET | `/api/admin/reports` | `?state=open\|resolved\|rejected\|all&offset=` | `{ items, nextOffset }` |
+| GET / POST | `/api/admin/reports/:id` | `{ action: resolve\|reject\|reopen, note?, ban?: { state, reason } }` | item |
+| GET | `/api/admin/bugs` | `?state=&offset=` | `{ items, nextOffset }` |
+| GET / POST | `/api/admin/bugs/:id` | `{ state, note? }` | item |
+| GET | `/api/admin/users` | `?q=&filter=all\|restricted\|admins&offset=` | `{ items, nextOffset }` |
+| GET | `/api/admin/users/:uid` | | `AdminUserDetail` |
+| POST | `/api/admin/users/:uid/ban` | `{ state: banned\|suspended, reason }` | `AdminUserDetail` |
+| POST | `/api/admin/users/:uid/unban` | no body | `AdminUserDetail` |
+| POST | `/api/admin/users/:uid/admin` | `{ isAdmin }` | `AdminUserDetail` |
+| GET | `/api/admin/actions` | `?offset=` | `{ items, nextOffset }` |
+
+- **Bug reports:** any signed-in user; text 5–2000 characters; context keys client, platform, appVersion, url (origin and path only), userAgent, screen, language, theme, timezone; screenshot a JPEG/PNG/WebP data URL up to 3 MB. 5 per hour. Codes `invalid_text`, `unsupported_image`, `image_too_large`, `rate_limited`. Screenshots are served at `/api/media/bugs/<id>.<ext>?exp&sig`, and only the admin API hands out those links.
+- **Admin routes** require `users.is_admin` (`403 forbidden`). Becoming admin: send `/admin <ADMIN_CLAIM_CODE>` to the bot from the Telegram account linked to your profile; each code value works once.
+- **Bans** sign the user out everywhere, close their realtime sockets (close code 4003) and their other open reports. Signing in again answers `403 account_suspended`. Codes: `cannot_ban_self`, `cannot_ban_admin`, `last_admin`, `already_restricted` (409), `report_handled` (409), `bug_handled` (409), `reason_required`.
+- **Telegram:** admins with a Telegram identity get a message about each new report and bug report. Report messages carry Ban / Reject buttons, which go through the same checks and the audit log; they are only sent when `TELEGRAM_WEBHOOK_SECRET` is set.
+- Every admin action is in `GET /api/admin/actions` and the `admin_actions` table. For DataGrip, migration 004 adds the views `admin_overview`, `admin_report_inbox`, `admin_bug_inbox` and `admin_restricted_users`.
 
 ### Reports, blocks and reviews
 
@@ -510,7 +558,7 @@ Server-to-server only: clients never call these.
 | POST | `/telegram/webhook` | Telegram Bot API | Header `X-Telegram-Bot-Api-Secret-Token` must equal `TELEGRAM_WEBHOOK_SECRET`, only when that is set. Mounted only when `TELEGRAM_BOT_TOKEN` is set and `TELEGRAM_BOT_MODE=webhook` (the production default) |
 | POST | `/vk/callback` | VK Callback API | `secret` must equal `VK_CALLBACK_SECRET` and `group_id` must equal `VK_GROUP_ID`, each when set. Replies in plain text: the confirmation string, `ok`, or `403 forbidden` |
 
-- `TELEGRAM_WEBHOOK_SECRET` is optional, also in production. Without it the Telegram webhook accepts every request. With it, a missing or wrong header gets `401` with the plain body `secret token is wrong`.
+- `TELEGRAM_WEBHOOK_SECRET` is optional, but without it the webhook accepts every request, so the Ban / Reject buttons under admin notifications are not sent and presses are refused; the server logs a warning at startup. With it, a missing or wrong header gets `401` with the plain body `secret token is wrong`.
 - The bot handles `/start` (with a deep link payload), `/feed`, `/chats`, `/profile`, `/nearby`, `/help`, `/privacy` and `/support`, and tracks whether it may message the user.
 - The VK callback handles `confirmation`, `message_allow` and `message_deny` (whether the community may message the user).
 

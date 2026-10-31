@@ -77,6 +77,18 @@ export const config = {
 
   rawgApiKey: optional("RAWG_API_KEY"),
   supportEmail: optional("SUPPORT_EMAIL") ?? "official@egorchulanov.ru",
+
+  admin: {
+    /** One-time code that turns the account sending it (bot command /admin <code>) into an admin. */
+    claimCode: optional("ADMIN_CLAIM_CODE"),
+    /** Folder with the nightly pg_dump files (the compose "backups" volume, mounted read-only). */
+    backupsDir: optional("BACKUPS_DIR"),
+  },
+
+  steam: {
+    /** Steam Web API key (https://steamcommunity.com/dev/apikey); enables importing a Steam library. */
+    apiKey: optional("STEAM_API_KEY"),
+  },
   privacyUrl: optional("PRIVACY_URL") ?? `${publicUrl}/legal/privacy.html`,
   termsUrl: optional("TERMS_URL") ?? `${publicUrl}/legal/terms.html`,
   /** Comma-separated origins allowed for CORS (empty = same origin only). */

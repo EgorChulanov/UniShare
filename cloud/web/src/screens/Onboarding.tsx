@@ -1,22 +1,29 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { AtSign, ChevronLeft, Circle, Image as ImageIcon, PlusCircle, X } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { AtSign, Camera, ChevronLeft, Circle, PlusCircle, Sparkles, X } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import {
+  AVATAR_PRESETS,
+  AVATAR_PRESET_PREFIX,
   LIMITS,
   PLATFORMS,
   SUBSCRIPTION_SERVICES,
   normalizeGameName,
+  sanitizePickedAvatar,
   sanitizeUsername,
   suggestUsername,
   type GameTag,
   type Platform,
 } from "@unishare/shared";
 import { useApp } from "../app/store";
-import { api, compressImage } from "../lib/api";
+import { api } from "../lib/api";
 import { errorMessage, useT } from "../i18n/i18n";
 import { platform } from "../platform/platform";
-import { Avatar, BrandIcon, PlatformBadge, SelectedDot, Spinner } from "../components/ui";
-import { GamePicker } from "../components/GamePicker";
+import { Avatar, BrandIcon, PlatformBadge, PresetAvatar, SelectedDot, Spinner, platformColor } from "../components/ui";
+import { GamePicker, GamePlatformTabs } from "../components/GamePicker";
+import { AvatarPickerSheet, type AvatarChoice } from "./AvatarPickerSheet";
+
+/** One-tap picks on the avatar step; the picker has the rest. */
+const QUICK_PRESETS = AVATAR_PRESETS.slice(0, 5);
 
 const STEPS = ["username", "avatar", "platform", "games", "skills", "subscriptions"] as const;
 type Step = (typeof STEPS)[number];
@@ -53,7 +60,7 @@ export function Onboarding() {
   const [skillInput, setSkillInput] = useState("");
   const [subscriptions, setSubscriptions] = useState<string[]>(profile.subscriptions.map((sub) => sub.name));
   const [saving, setSaving] = useState(false);
-  const fileInput = useRef<HTMLInputElement>(null);
+  const [avatarPicker, setAvatarPicker] = useState(false);
 
   const step = STEPS[stepIndex];
   const isLast = stepIndex === STEPS.length - 1;
@@ -102,8 +109,14 @@ export function Onboarding() {
   const finish = async () => {
     setSaving(true);
     try {
-      let finalAvatar = avatarUrl;
-      if (avatarFile) finalAvatar = (await api.uploadAvatar(await compressImage(avatarFile, 800))).avatarUrl;
+      // Presets and game art are saved through their own endpoint; PATCH only takes photo URLs.
+      const avatarPatch: { avatarUrl?: string | null } = {};
+      // The picker already compressed the photo.
+      if (avatarFile) avatarPatch.avatarUrl = (await api.uploadAvatar(avatarFile)).avatarUrl;
+      else if (avatarUrl !== profile.avatarUrl) {
+        if (avatarUrl && sanitizePickedAvatar(avatarUrl)) await api.pickAvatar(avatarUrl);
+        else avatarPatch.avatarUrl = avatarUrl;
+      }
       const platformGames: Partial<Record<Platform, string[]>> = {};
       const gameMetadata: Record<string, GameTag> = {};
       for (const selected of platforms) {
@@ -113,7 +126,7 @@ export function Onboarding() {
       }
       const updated = await api.updateMe({
         username: sanitizeUsername(username)!,
-        avatarUrl: finalAvatar,
+        ...avatarPatch,
         platforms,
         platformGames,
         gameMetadata,
@@ -144,6 +157,13 @@ export function Onboarding() {
       const exists = list.some((game) => normalizeGameName(game.name) === key);
       return { ...current, [activePlatform]: exists ? list.filter((game) => normalizeGameName(game.name) !== key) : [...list, tag] };
     });
+  };
+
+  const chooseAvatar = (choice: AvatarChoice) => {
+    if (choice.kind === "file") return setAvatarFile(choice.blob);
+    setAvatarFile(null);
+    setAvatarPreview(null);
+    setAvatarUrl(choice.url);
   };
 
   const addSkill = () => {
@@ -206,23 +226,39 @@ export function Onboarding() {
             )}
 
             {step === "avatar" && (
-              <div className="col" style={{ alignItems: "center", gap: 24 }}>
-                <span className="gradient-border" style={{ borderRadius: "50%", padding: 3 }}>
-                  <Avatar url={avatarPreview ?? avatarUrl} size={140} />
-                </span>
-                <input
-                  ref={fileInput}
-                  type="file"
-                  accept="image/*"
-                  hidden
-                  onChange={(event) => {
-                    const file = event.target.files?.[0];
-                    if (file) setAvatarFile(file);
-                    event.target.value = "";
-                  }}
-                />
-                <button className="glass row" style={{ gap: 8, padding: "14px 24px", borderRadius: 14, color: "var(--accent-text)", fontSize: 15, fontWeight: 500 }} onClick={() => fileInput.current?.click()}>
-                  <ImageIcon size={18} /> {t("profile.change.avatar")}
+              <div className="col" style={{ alignItems: "center", gap: 22 }}>
+                <button className="onboarding-avatar" onClick={() => setAvatarPicker(true)} aria-label={t("avatar.choose")}>
+                  <span className="gradient-border" style={{ borderRadius: "50%", padding: 3, display: "flex" }}>
+                    <Avatar url={avatarPreview ?? avatarUrl} size={140} />
+                  </span>
+                  <span className="camera">
+                    <Camera size={17} strokeWidth={2.4} />
+                  </span>
+                </button>
+                <div className="quick-presets" role="group" aria-label={t("avatar.presets")}>
+                  {QUICK_PRESETS.map((preset) => {
+                    const value = `${AVATAR_PRESET_PREFIX}${preset.id}`;
+                    const selected = !avatarFile && avatarUrl === value;
+                    return (
+                      <button
+                        key={preset.id}
+                        className={`avatar-tile ${selected ? "selected" : ""}`}
+                        aria-pressed={selected}
+                        aria-label={t(`avatar.preset.${preset.id}`)}
+                        onClick={() => {
+                          platform.haptic("selection");
+                          chooseAvatar({ kind: "url", url: value });
+                        }}
+                      >
+                        <span className="disc">
+                          <PresetAvatar preset={preset} size={52} />
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <button className="glass row" style={{ gap: 8, padding: "14px 24px", borderRadius: 16, color: "var(--accent-text)", fontSize: 15, fontWeight: 700 }} onClick={() => setAvatarPicker(true)}>
+                  <Sparkles size={18} /> {t("avatar.choose")}
                 </button>
                 {platformPhoto && (avatarFile || avatarUrl !== platformPhoto) && (
                   <button
@@ -238,7 +274,7 @@ export function Onboarding() {
                   </button>
                 )}
                 <span className="secondary" style={{ fontSize: 13, textAlign: "center" }}>
-                  {t("onboarding.title.avatar")}
+                  {t("avatar.onboarding.hint")}
                 </span>
               </div>
             )}
@@ -270,15 +306,13 @@ export function Onboarding() {
 
             {step === "games" && activePlatform && (
               <div className="col" style={{ gap: 16 }}>
-                <div className="h-scroll" style={{ margin: 0, padding: "0 2px", gap: 8 }}>
-                  {platformTabs.map((id) => (
-                    <button key={id} className={`platform-tab ${id === activePlatform ? "active" : ""}`} style={{ padding: "9px 14px" }} onClick={() => setActivePlatform(id)}>
-                      <PlatformBadge platform={id} size={16} /> {id}
-                      {(games[id]?.length ?? 0) > 0 && <span className="count">{games[id]!.length}</span>}
-                    </button>
-                  ))}
-                </div>
-                <GamePicker key={activePlatform} selected={games[activePlatform] ?? []} onToggle={toggleGame} limit={LIMITS.gamesPerPlatform} />
+                <GamePlatformTabs
+                  tabs={platformTabs.map((id) => ({ id, label: id, count: games[id]?.length ?? 0 }))}
+                  active={activePlatform}
+                  onChange={(id) => id !== "wanted" && setActivePlatform(id)}
+                  label={t("onboarding.title.games")}
+                />
+                <GamePicker key={activePlatform} selected={games[activePlatform] ?? []} onToggle={toggleGame} limit={LIMITS.gamesPerPlatform} chipColor={platformColor(activePlatform)} />
               </div>
             )}
 
@@ -352,6 +386,11 @@ export function Onboarding() {
           </button>
         )}
       </div>
+
+      {/* Overlays live in the main shell, which onboarding does not have yet: the picker is drawn here. */}
+      <AnimatePresence>
+        {avatarPicker && <AvatarPickerSheet current={avatarPreview ?? avatarUrl} onChoose={chooseAvatar} onClose={() => setAvatarPicker(false)} />}
+      </AnimatePresence>
     </div>
   );
 }

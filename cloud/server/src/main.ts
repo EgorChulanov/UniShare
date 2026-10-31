@@ -40,7 +40,7 @@ export async function start(): Promise<void> {
     if (!(await setupBot())) scheduleRetry(0);
     if (config.telegram.mode === "polling") {
       await bot.api.deleteWebhook().catch(() => undefined);
-      void bot.start({ allowed_updates: ["message", "my_chat_member"], onStart: () => console.log("Telegram bot polling") });
+      void bot.start({ allowed_updates: ["message", "my_chat_member", "callback_query"], onStart: () => console.log("Telegram bot polling") });
     }
   }
 

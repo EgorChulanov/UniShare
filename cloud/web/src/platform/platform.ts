@@ -229,7 +229,8 @@ function telegramAdapter(): PlatformAdapter {
       return { provider: "telegram", data: tg.initData };
     },
     startParam() {
-      return tg?.initDataUnsafe.start_param ?? startFromHash;
+      // Bot inline buttons (web_app) open the URL as is: their deep link is the ?startapp= query.
+      return tg?.initDataUnsafe.start_param ?? startFromHash ?? new URLSearchParams(window.location.search).get("startapp");
     },
     languageCode() {
       return tg?.initDataUnsafe.user?.language_code ?? null;

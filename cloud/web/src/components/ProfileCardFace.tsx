@@ -3,7 +3,7 @@
 // the featured platform and round game covers. Used by the feed and by the
 // "Your profile card" preview on My Profile, so both always look the same.
 import { Maximize2, Star } from "lucide-react";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { PLATFORM_INFO, type DiscoveryKind, type GameTag, type Platform } from "@unishare/shared";
 import { useT } from "../i18n/i18n";
 import { Avatar, BrandIcon, GameCirclesRow, PlatformGlyph } from "./ui";
@@ -28,7 +28,18 @@ export function featuredPlatform(card: CardFaceData): Platform | null {
   return card.platforms.find((id) => (card.platformGames[id]?.length ?? 0) > 0) ?? card.platforms[0] ?? null;
 }
 
-export function ProfileCardFace({ card, kind, footer = true }: { card: CardFaceData; kind: DiscoveryKind; footer?: boolean }) {
+export function ProfileCardFace({
+  card,
+  kind,
+  footer = true,
+  skillsInvite,
+}: {
+  card: CardFaceData;
+  kind: DiscoveryKind;
+  footer?: boolean;
+  /** My Profile without a skills profile: shown in place of the skills. */
+  skillsInvite?: ReactNode;
+}) {
   const t = useT();
   const featured = featuredPlatform(card);
   const playing = featured && card.platformGames[featured]?.length ? card.platformGames[featured]! : card.games;
@@ -67,7 +78,9 @@ export function ProfileCardFace({ card, kind, footer = true }: { card: CardFaceD
           </div>
         )}
 
-        {kind === "skills" ? (
+        {kind === "skills" && skillsInvite ? (
+          skillsInvite
+        ) : kind === "skills" ? (
           <div>
             <h4>{t("profile.skills")}</h4>
             {card.skills.length ? (
@@ -88,7 +101,8 @@ export function ProfileCardFace({ card, kind, footer = true }: { card: CardFaceD
             {playing.length ? (
               <GameCirclesRow games={playing} color="#ffffff" size={footer ? 76 : 66} padding={22} />
             ) : (
-              <div className="card-muted">{t("profile.games.add.hint")}</div>
+              // Someone else's card in the feed has no "tap to add" to offer.
+              <div className="card-muted">{t(footer ? "profile.card.games.none" : "profile.games.add.hint")}</div>
             )}
             {card.wantedGames.length > 0 && (
               <div style={{ marginTop: 20 }}>

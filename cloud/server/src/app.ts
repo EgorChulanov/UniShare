@@ -17,6 +17,9 @@ import { feedRoutes } from "./routes/feed";
 import { chatRoutes } from "./routes/chats";
 import { socialRoutes } from "./routes/social";
 import { discoverRoutes } from "./routes/discover";
+import { adminRoutes } from "./routes/admin";
+import { steamRoutes } from "./routes/steam";
+import { avatarRoutes } from "./routes/avatar";
 import { telegramStatus, telegramWebhookHandler } from "./bot/telegram";
 
 function webDistDir(): string | null {
@@ -107,6 +110,7 @@ export async function buildApp(): Promise<FastifyInstance> {
     telegramBotUsername: config.telegram.botUsername,
     telegramAppShortName: config.telegram.appShortName,
     telegramLoginWidget: config.telegram.loginWidget && Boolean(config.telegram.botUsername),
+    steamImport: Boolean(config.steam.apiKey),
     vkAppId: config.vk.appId,
     vkGroupId: config.vk.groupId,
     publicUrl: config.publicUrl,
@@ -122,10 +126,15 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(chatRoutes);
   await app.register(socialRoutes);
   await app.register(discoverRoutes);
+  await app.register(adminRoutes);
+  await app.register(steamRoutes);
+  await app.register(avatarRoutes);
 
   // ── Media ─────────────────────────────────────────────────────────────────
 
   app.get<{ Params: { file: string } }>("/media/avatars/:file", async (request, reply) => {
+    // A plain file name only: the decoded parameter may contain "/" or "..".
+    if (!/^[A-Za-z0-9_-]+\.(jpg|png|webp)$/.test(request.params.file)) return reply.status(404).send({ error: "Not found" });
     const object = await storage.get(`avatars/${request.params.file}`);
     if (!object) return reply.status(404).send({ error: "Not found" });
     return reply.header("Cache-Control", "public, max-age=31536000, immutable").type(object.contentType).send(object.body);
