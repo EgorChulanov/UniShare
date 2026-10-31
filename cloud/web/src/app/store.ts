@@ -34,7 +34,11 @@ export type Overlay =
   | { type: "link" }
   | { type: "report"; uid: string; username: string }
   | { type: "rating"; chatId: string; uid: string; username: string }
-  | { type: "transparency" };
+  | { type: "transparency" }
+  | { type: "admin" }
+  | { type: "bug" }
+  | { type: "steamImport" }
+  | { type: "avatar" };
 
 export type ThemeMode = "system" | "light" | "dark";
 
@@ -494,6 +498,9 @@ function handleEvent(event: RealtimeEvent) {
           return { typing };
         });
       }, 4000);
+      break;
+    case "profile_updated":
+      void api.me().then((profile) => useApp.getState().setProfile(profile)).catch(() => undefined);
       break;
     case "presence":
       break;

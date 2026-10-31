@@ -12,6 +12,7 @@ import {
   type Platform,
   type ProfileCard,
   type ProfileUpdate,
+  type SteamAccount,
   type Subscription,
 } from "@unishare/shared";
 import { badRequest } from "./errors";
@@ -38,6 +39,8 @@ export interface UserRow {
   rating: number;
   review_count: number;
   account_state: string;
+  /** Added by migration 004_admin.sql. */
+  is_admin?: boolean;
   created_at: string;
   updated_at: string;
   providers?: string[] | null;
@@ -54,7 +57,7 @@ export interface IdentityRow {
 
 /** Selects a user row plus the list of linked providers (for platform icons). */
 export const USER_COLUMNS = `u.*,
-  array(select i.provider from user_identities i where i.user_id = u.uid and i.provider <> 'dev' order by i.provider) as providers`;
+  array(select i.provider from user_identities i where i.user_id = u.uid and i.provider not in ('dev', 'steam') order by i.provider) as providers`;
 
 export function identityUrl(identity: Pick<IdentityRow, "provider" | "provider_user_id" | "username">): string | null {
   if (identity.provider === "telegram") return identity.username ? `https://t.me/${identity.username}` : null;
@@ -72,6 +75,17 @@ export function toLinkedIdentities(rows: IdentityRow[]): LinkedIdentity[] {
       url: identityUrl(row),
       canMessage: row.can_message,
     }));
+}
+
+function toSteamAccount(rows: IdentityRow[]): SteamAccount | null {
+  const steam = rows.find((row) => row.provider === "steam");
+  if (!steam) return null;
+  return {
+    steamId: steam.provider_user_id,
+    personaName: steam.display_name,
+    avatarUrl: steam.photo_url,
+    profileUrl: `https://steamcommunity.com/profiles/${steam.provider_user_id}`,
+  };
 }
 
 function platformsOf(row: UserRow): Platform[] {
@@ -105,6 +119,8 @@ export function toMyProfile(row: UserRow, identities: IdentityRow[]): MyProfile 
     reviewCount: row.review_count,
     createdAt: row.created_at,
     identities: toLinkedIdentities(identities),
+    isAdmin: Boolean(row.is_admin),
+    steam: toSteamAccount(identities),
     suggestions: row.onboarding_complete
       ? undefined
       : {
