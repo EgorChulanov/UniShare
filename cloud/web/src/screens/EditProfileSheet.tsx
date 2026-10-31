@@ -37,8 +37,8 @@ interface EditDraft {
   subscriptions: Subscription[];
 }
 
-/** Shared between the edit sheet and the subscription editor pushed on top of it. */
-const useEditDraft = create<EditDraft>(() => ({ username: "", status: "", platforms: [], games: {}, wanted: [], active: null, subscriptions: [] }));
+/** Shared between the edit sheet and the sheets pushed on top of it (subscription editor, Steam import). */
+export const useEditDraft = create<EditDraft>(() => ({ username: "", status: "", platforms: [], games: {}, wanted: [], active: null, subscriptions: [] }));
 
 /** Calendar.date(byAdding: .day): adds local calendar days, so a DST change cannot shift the date. */
 function addDays(iso: string, days: number): string {
@@ -88,8 +88,8 @@ export function EditProfileSheet() {
   const draft = useEditDraft();
   const [saving, setSaving] = useState(false);
 
-  // The Steam import opened from here saves straight to the profile: fold the games it
-  // added into the draft, so saving this sheet afterwards does not drop them.
+  // The profile can change while this sheet is open (another device, a realtime reload): fold
+  // games it gained into the draft, so saving this sheet afterwards does not drop them.
   const seenProfile = useRef(profile);
   useEffect(() => {
     const before = seenProfile.current;
@@ -106,7 +106,13 @@ export function EditProfileSheet() {
       const keys = new Set(list.map((tag) => normalizeGameName(tag.name)));
       const added = (profile.platformGames[id] ?? []).filter((name) => !had.has(normalizeGameName(name)) && !keys.has(normalizeGameName(name)));
       if (!added.length) continue;
-      games[id] = [...list, ...added.map((name) => tagFor(profile, name))].slice(0, LIMITS.gamesPerPlatform);
+      // Over the limit, unsaved picks of this draft go first: what the server already holds stays.
+      const saved = new Set((profile.platformGames[id] ?? []).map(normalizeGameName));
+      const merged = [...list, ...added.map((name) => tagFor(profile, name))];
+      for (let index = merged.length - 1; index >= 0 && merged.length > LIMITS.gamesPerPlatform; index--) {
+        if (!saved.has(normalizeGameName(merged[index].name))) merged.splice(index, 1);
+      }
+      games[id] = merged.slice(0, LIMITS.gamesPerPlatform);
       platforms = PLATFORMS.filter((item) => item === id || platforms.includes(item));
       active = id;
       changed = true;

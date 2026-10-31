@@ -246,14 +246,17 @@ export type ClaimResult =
  * owner grants rights from the panel (or sets a new code).
  */
 export async function claimAdmin(telegramId: string, code: string): Promise<ClaimResult> {
-  if (!claimsPerTelegramUser.take(telegramId) || !claimsOverall.take("all")) return { status: "rate_limited" };
+  if (!claimsPerTelegramUser.take(telegramId)) return { status: "rate_limited" };
   const user = await queryOne<{ uid: string; is_admin: boolean; account_state: string }>(
     `select u.uid, u.is_admin, u.account_state from user_identities i join users u on u.uid = i.user_id
      where i.provider = 'telegram' and i.provider_user_id = $1`,
     [telegramId],
   );
   if (!user) return { status: "no_account" };
-  if (!claimCodeMatches(code) || user.account_state !== "active") return { status: "invalid" };
+  if (user.account_state !== "active") return { status: "invalid" };
+  // Only senders with a UniShare account can test the code, so strangers cannot use up the shared budget.
+  if (!claimsOverall.take("all")) return { status: "rate_limited" };
+  if (!claimCodeMatches(code)) return { status: "invalid" };
   if (user.is_admin) return { status: "already_admin", userId: user.uid };
 
   const fingerprint = codeDigest(config.admin.claimCode!).toString("hex").slice(0, 16);

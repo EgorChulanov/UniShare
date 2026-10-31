@@ -86,6 +86,7 @@ export const GAME_ALIASES: readonly AliasRow[] = [
   ["Deadlock", "дедлок|дэдлок|deadlock"],
   ["The Finals", "файналс|финалс|зе файналс|finals"],
   ["Helldivers 2", "хеллдайверс|хелдайверс|хеллдайверс 2|хелдайверс 2|хд2|hd2|helldivers|адские десантники|адские десантники 2"],
+  ["HELLDIVERS", "helldivers 1|хеллдайверс 1"],
   ["Arena Breakout: Infinite", "арена брейкаут|арена брейкаут инфинит|abi|arena breakout"],
   ["Delta Force", "дельта форс|дельта|delta force"],
   ["Hunt: Showdown 1896", "хант|хант шоудаун|hunt|hunt showdown"],
@@ -115,6 +116,7 @@ export const GAME_ALIASES: readonly AliasRow[] = [
   ["World of Warcraft", "вов|wow|вовка|варкрафт|ворлд оф варкрафт|world of warcraft|вов классик|wow classic", "other"],
   ["Hearthstone", "хартстоун|хартстон|харстоун|хс|hs|hearthstone", "other"],
   ["StarCraft II", "старкрафт|старкрафт 2|старик|sc2|starcraft|starcraft 2", "other"],
+  ["StarCraft", "старкрафт 1|starcraft 1|starcraft remastered|старкрафт ремастер", "other"],
   ["Warcraft III: Reforged", "варкрафт|варкрафт 3|варик|варик 3|wc3|warcraft|warcraft 3|рефордж|reforged", "other"],
   ["Diablo IV", "диабло|диабла|диабло 4|д4|d4|diablo|diablo 4"],
   ["Diablo II: Resurrected", "диабло|диабло 2|диабло 2 воскрешение|д2р|d2r|diablo|diablo 2|diablo 2 resurrected", "other"],
@@ -170,6 +172,7 @@ export const GAME_ALIASES: readonly AliasRow[] = [
   ["SCUM", "скам|scum"],
   ["Deep Rock Galactic", "дрг|drg|дип рок|дип рок галактик|deep rock"],
   ["Don't Starve Together", "донт старв|донт старв тугезер|не голодай|dst|dont starve|dont starve together"],
+  ["Don't Starve", "донт старв 1|dont starve 1"],
   ["Grounded", "граундед|граундид|grounded"],
   ["Enshrouded", "аншраудед|еншраудед|аншрудед|enshrouded"],
   ["V Rising", "ви райзинг|в райзинг|v rising"],
@@ -177,6 +180,7 @@ export const GAME_ALIASES: readonly AliasRow[] = [
   ["Dune: Awakening", "дюна|дюна пробуждение|dune|dune awakening"],
   ["The Sims 4", "симс|симс 4|симсы|симки|зе симс|sims|sims 4|the sims"],
   ["Cities: Skylines II", "ситис скайлайнс|ситис скайлайнс 2|ситис|скайлайнс|cities skylines|cities skylines 2"],
+  ["Cities: Skylines", "ситис скайлайнс 1|cities skylines 1"],
   ["Euro Truck Simulator 2", "етс|етс 2|ets|ets 2|euro truck|евро трак|евротрак|евро трак симулятор|дальнобой|трак симулятор"],
   ["American Truck Simulator", "атс|ats|американ трак|american truck"],
   ["SnowRunner", "сноураннер|сноуранер|сноу раннер|snowrunner|snow runner"],
@@ -295,6 +299,7 @@ export const GAME_ALIASES: readonly AliasRow[] = [
   ["Payday 2", "пейдей|пэйдэй|пейдей 2|пд2|pd2|payday"],
   ["Payday 3", "пейдей|пэйдэй|пейдей 3|пд3|pd3|payday"],
   ["Dead Island 2", "дед айленд|дэд айленд|дед айленд 2|dead island"],
+  ["Dead Island", "дед айленд 1|dead island 1"],
   ["Dying Light: The Beast", "дайн лайт|даинг лайт|дайинг лайт|умирающий свет|дайн лайт бист|dying light|the beast"],
   ["Dying Light 2 Stay Human", "дайн лайт|даинг лайт|дайинг лайт|умирающий свет|дайн лайт 2|dying light|dying light 2|dl2"],
   ["Dying Light", "дайн лайт|даинг лайт|дайинг лайт|умирающий свет|дайн лайт 1|dying light 1"],
@@ -309,9 +314,11 @@ export const GAME_ALIASES: readonly AliasRow[] = [
   ["Portal 2", "портал|портал 2|portal|portal 2"],
   ["Portal", "портал|портал 1|portal|portal 1"],
   ["Left 4 Dead 2", "лефт фо дед|лефт 4 дед|л4д|л4д2|l4d|l4d2|left 4 dead|left for dead"],
+  ["Left 4 Dead", "лефт 4 дед 1|л4д 1|l4d 1|left 4 dead 1"],
   ["Team Fortress 2", "тф2|tf2|тим фортресс|тим фортресс 2|team fortress"],
   ["Garry's Mod", "гмод|гаррис мод|гарис мод|gmod|garrys mod|garry mod"],
   ["Destiny 2", "дестини|дестени|дестини 2|destiny"],
+  ["Destiny", "дестини 1|destiny 1", "other"],
   ["Warframe", "варфрейм|варфрем|варфрэйм|warframe"],
   ["Sea of Thieves", "си оф тивз|си оф сивз|море воров|sot|sea of thieves"],
   ["No Man's Sky", "но мэнс скай|ноу мэнс скай|нмс|nms|ничье небо|no mans sky"],
@@ -324,12 +331,14 @@ export const GAME_ALIASES: readonly AliasRow[] = [
   ["Arma Reforger", "арма|арма реформер|реформер|arma|reforger|arma reforger"],
   ["Hell Let Loose", "хелл лет лус|хел лет лус|hll|hell let loose"],
   ["Insurgency: Sandstorm", "инсургенси|инсурдженси|инсурженси|сэндсторм|insurgency|insurgency sandstorm"],
+  ["Insurgency", "инсургенси 2014|insurgency 2014"],
   ["Ready or Not", "реди ор нот|реди ор нат|рон|ready or not"],
   ["Gray Zone Warfare", "грей зон|грей зон варфейр|gzw|gray zone|grey zone"],
 
   // Strategy
   ["Warhammer 40,000: Space Marine 2", "спейс марин|спейс марин 2|спейс марине|вархаммер|вархамер|ваха|см2|sm2|space marine|space marine 2|warhammer|warhammer 40000"],
   ["Total War: Warhammer III", "тотал вар|тотал вар вархаммер|тотал вар вархаммер 3|вархаммер|вархамер|ваха|твв3|twwh3|total war|total war warhammer|warhammer"],
+  ["Total War: WARHAMMER", "total war warhammer 1|тотал вар вархаммер 1"],
   ["Warhammer 40,000: Darktide", "дарктайд|вархаммер дарктайд|ваха|darktide"],
   ["Sid Meier's Civilization VII", "цива|цивилизация|сид мейер|цива 7|цивилизация 7|civ|civilization|civ 7|civilization 7"],
   ["Sid Meier's Civilization VI", "цива|цивилизация|сид мейер|цива 6|цивилизация 6|civ|civilization|civ 6|civilization 6"],
@@ -347,6 +356,7 @@ export const GAME_ALIASES: readonly AliasRow[] = [
   ["Mount & Blade: Warband", "варбанд|маунт энд блейд|маунт и блейд|warband|mount and blade|mount and blade warband"],
   ["Kenshi", "кенши|kenshi"],
   ["Frostpunk 2", "фростпанк|фростпанк 2|frostpunk|frostpunk 2"],
+  ["Frostpunk", "фростпанк 1|frostpunk 1"],
   ["Manor Lords", "манор лордс|манор лорд|manor lords"],
   ["XCOM 2", "икском|икском 2|xcom|xcom 2"],
   ["Stronghold Crusader", "стронгхолд|стронгхолд крусейдер|стронгхолд крестоносец|крепость|stronghold|stronghold crusader"],
@@ -365,6 +375,7 @@ export const GAME_ALIASES: readonly AliasRow[] = [
   ["Deltarune", "дельтарун|дельтарюн|deltarune"],
   ["Brawlhalla", "бравлхалла|бравлхала|brawlhalla"],
   ["Overcooked! 2", "оверкукед|оверкукд|оверкукед 2|overcooked|overcooked 2"],
+  ["Overcooked!", "оверкукед 1|overcooked 1"],
   ["The Outlast Trials", "аутласт|аутласт триалс|outlast|outlast trials"],
   ["Outlast", "аутласт|аутласт 1|outlast|outlast 1"],
 
@@ -562,7 +573,12 @@ export function canonicalGame(name: string): { title: string; store: GameStore }
   if (!key) return null;
   const rows = aliasIndex().rows.get(key) ?? [];
   const own = rows.find((row) => gameSearchKey(GAME_ALIASES[row][0]) === key);
-  const row = own ?? (rows.length === 1 ? rows[0] : undefined);
+  // A name never stands for its own numbered sequel: "Left 4 Dead" is not "Left 4 Dead 2".
+  const sequelOf = (row: number) => {
+    const title = gameSearchKey(GAME_ALIASES[row][0]);
+    return title.startsWith(`${key} `) && /^\d+$/.test(title.slice(key.length + 1));
+  };
+  const row = own ?? (rows.length === 1 && !sequelOf(rows[0]) ? rows[0] : undefined);
   if (row === undefined) return null;
   return { title: GAME_ALIASES[row][0], store: GAME_ALIASES[row][2] ?? "steam" };
 }

@@ -14,6 +14,7 @@ import {
   type SteamLibraryGame,
 } from "@unishare/shared";
 import { useApp } from "../app/store";
+import { useEditDraft } from "./EditProfileSheet";
 import { api } from "../lib/api";
 import { errorMessage, useI18n, useT } from "../i18n/i18n";
 import { platform } from "../platform/platform";
@@ -71,7 +72,14 @@ export function SteamImportSheet() {
   const request = useRef(0);
 
   const library = steam ? (load?.status === "ready" ? load.library : null) : (manual?.library ?? null);
-  const steamGames = profile.platformGames.Steam ?? [];
+  // Opened from the edit sheet, the picks go into its draft (saved with its Save button), so
+  // the list and the free room are the draft's, including games added or removed there.
+  const fromEdit = useApp((state) => state.overlays.some((overlay) => overlay.type === "edit"));
+  const draftSteam = useEditDraft((state) => state.games.Steam);
+  const steamGames = useMemo(
+    () => (fromEdit ? (draftSteam ?? []).map((tag) => tag.name) : (profile.platformGames.Steam ?? [])),
+    [fromEdit, draftSteam, profile.platformGames.Steam],
+  );
   const owned = useMemo(() => new Set(steamGames.map(looseKey)), [steamGames]);
   const room = Math.max(0, LIMITS.gamesPerPlatform - steamGames.length);
 
@@ -165,6 +173,21 @@ export function SteamImportSheet() {
         const key = normalizeGameName(name);
         const known = gameMetadata[key];
         gameMetadata[key] = { name, coverUrl: known?.coverUrl ?? game.coverUrl, rawgId: known?.rawgId ?? null, steamAppId: game.appId };
+      }
+      if (fromEdit) {
+        const draft = useEditDraft.getState();
+        const tags = [...(draft.games.Steam ?? [])];
+        const listed = new Set(tags.map((tag) => looseKey(tag.name)));
+        for (const name of names) if (!listed.has(looseKey(name))) tags.push(gameMetadata[normalizeGameName(name)] ?? { name, coverUrl: null, rawgId: null });
+        useEditDraft.setState({
+          games: { ...draft.games, Steam: tags },
+          platforms: PLATFORMS.filter((id) => id === "Steam" || draft.platforms.includes(id)),
+          active: "Steam",
+        });
+        platform.haptic("success");
+        toast(t("steam.added.draft", names.length - steamGames.length), "success");
+        pop();
+        return;
       }
       const updated = await api.updateMe({
         platforms: PLATFORMS.filter((id) => id === "Steam" || profile.platforms.includes(id)),

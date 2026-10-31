@@ -41,6 +41,8 @@ const BUGS_PER_HOUR = 5;
 const startedAt = new Date().toISOString();
 
 const adminReads = new SlidingWindowLimit(240, 60_000);
+// Checked synchronously before any await, so parallel requests cannot all pass the database count below.
+const bugReportLimit = new SlidingWindowLimit(BUGS_PER_HOUR, 60 * 60_000);
 const adminWrites = new SlidingWindowLimit(60, 60_000);
 
 /** Signed-in admin, else 401/403; also rate-limits the admin per minute. */
@@ -431,12 +433,15 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
       throw badRequest(`Describe the problem in ${BUG_TEXT_MIN}–${BUG_TEXT_MAX} characters`, "invalid_text");
     }
     const context = sanitizeBugContext(body.context);
+    const screenshot = body.screenshot ? decodeScreenshot(body.screenshot) : null;
+    // Only valid reports use a slot.
+    bugReportLimit.assert(session.userId);
+    // The database count keeps the limit across restarts.
     const recent = await queryOne<{ count: number }>(
       `select count(*)::int as count from bug_reports where user_id = $1 and created_at > now() - interval '1 hour'`,
       [session.userId],
     );
     if ((recent?.count ?? 0) >= BUGS_PER_HOUR) throw tooMany("Too many reports, please try again later");
-    const screenshot = body.screenshot ? decodeScreenshot(body.screenshot) : null;
 
     const id = randomUUID();
     const key = screenshot ? `bugs/${id}.${screenshot.extension}` : null;

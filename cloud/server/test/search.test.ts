@@ -301,6 +301,22 @@ test("canonicalGame maps one-game aliases, not series", () => {
   assert.equal(canonicalGame("кс 1.6")?.title, "Counter-Strike");
 });
 
+test("an earlier game is never its sequel: 'Left 4 Dead' stays Left 4 Dead", () => {
+  for (const title of ["Left 4 Dead", "Cities: Skylines", "Frostpunk", "Don't Starve", "Insurgency", "Overcooked!", "HELLDIVERS", "Dead Island", "Destiny", "StarCraft"]) {
+    assert.equal(canonicalGame(title)?.title, title, title);
+  }
+  assert.equal(canonicalGame("Left 4 Dead 2")?.title, "Left 4 Dead 2");
+  const matches = games.gameMatcher("Left 4 Dead");
+  assert.ok(matches("left 4 dead"));
+  assert.ok(!matches("Left 4 Dead 2"), "players of the sequel are not players of the first game");
+});
+
+test("the exact title typed goes first, before its sequel", async () => {
+  mockFetch((url) => (isSearch(url) ? { items: [app(1, "Hollow Knight: Silksong"), app(2, "Hollow Knight"), app(3, "Left 4 Dead 2"), app(4, "Left 4 Dead")] } : undefined));
+  assert.equal(names(await games.searchGames("Hollow Knight"))[0], "Hollow Knight");
+  assert.equal(names(await games.searchGames("left 4 dead"))[0], "Left 4 Dead");
+});
+
 test("one game, one name: aliases, editions and spellings match for /api/players and the people search", () => {
   const gta6 = games.gameMatcher("Grand Theft Auto VI");
   for (const name of ["Grand Theft Auto VI", "гта 6", "ГТА 6", "GTA VI", "gta6", "GTA-6", "Grand Theft Auto 6"]) assert.ok(gta6(name), name);

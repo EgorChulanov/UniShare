@@ -28,6 +28,9 @@ function optionalNumber(value: unknown): number | null {
   return Number.isSafeInteger(number) ? number : null;
 }
 
+const PLAYERS_PAGE_SIZE = 500;
+const PLAYERS_PAGES = 20;
+
 export async function discoverRoutes(app: FastifyInstance): Promise<void> {
   // Per-user limits: these reads scan users and call Steam/RAWG/Wikipedia.
   const searchLimit = new SlidingWindowLimit(60, 60_000);
@@ -86,23 +89,27 @@ export async function discoverRoutes(app: FastifyInstance): Promise<void> {
     // Auto V Enhanced"). SQL narrows by names and words, gameMatcher() decides.
     const filter = gameFilter(game);
     const matches = gameMatcher(game);
-    const rows = await query<UserRow>(
-      `select ${USER_COLUMNS}
-       from users u
-       where u.uid <> $1
-         and u.onboarding_complete
-         and u.account_state = 'active'
-         and not ${blockedPair("$1", "u.uid")}
-         and exists (select 1 from unnest(u.games || u.wanted_games) as g
-           where lower(g) = any($2::text[]) or exists (select 1 from unnest($3::text[]) as w where strpos(lower(g), w) > 0))
-       order by u.is_online desc, u.updated_at desc
-       limit 500`,
-      [session.userId, filter.names, filter.words],
-    );
-    return rows
-      .filter((row) => [...row.games, ...row.wanted_games].some(matches))
-      .slice(0, 50)
-      .map(toProfileCard);
+    // The SQL filter is wider than the match, so read pages until 50 players match: a page full
+    // of near misses ("Hollow Knight" profiles for "Hollow Knight: Silksong") never hides real ones.
+    const found: UserRow[] = [];
+    for (let page = 0; page < PLAYERS_PAGES && found.length < 50; page++) {
+      const rows = await query<UserRow>(
+        `select ${USER_COLUMNS}
+         from users u
+         where u.uid <> $1
+           and u.onboarding_complete
+           and u.account_state = 'active'
+           and not ${blockedPair("$1", "u.uid")}
+           and exists (select 1 from unnest(u.games || u.wanted_games) as g
+             where lower(g) = any($2::text[]) or exists (select 1 from unnest($3::text[]) as w where strpos(lower(g), w) > 0))
+         order by u.is_online desc, u.updated_at desc, u.uid
+         limit ${PLAYERS_PAGE_SIZE} offset $4`,
+        [session.userId, filter.names, filter.words, page * PLAYERS_PAGE_SIZE],
+      );
+      found.push(...rows.filter((row) => [...row.games, ...row.wanted_games].some(matches)));
+      if (rows.length < PLAYERS_PAGE_SIZE) break;
+    }
+    return found.slice(0, 50).map(toProfileCard);
   });
 
   app.get("/api/games/popular", async (request): Promise<GameSearchResult[]> => {

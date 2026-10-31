@@ -104,3 +104,21 @@ test("players of a game: aliases, spellings and store editions list the same peo
   assert.ok((await people("скайрим")).includes("skyrim_fan"));
   assert.deepEqual(await people("кс 1.6"), ["cs_original"]);
 });
+
+test("players of a game are found behind hundreds of profiles that only look similar", { skip: !hasDatabase }, async () => {
+  const me = await player("paging_seeker", ["Dota 2"]);
+  // Two players saved Overwatch 2 a month ago; 520 newer profiles hold games whose names
+  // contain short alias words of it ("ow" in Rainbow Six Siege).
+  await pool.query(
+    `insert into users (username, platforms, games, platform_games, onboarding_complete, updated_at)
+     select 'ow_fan_' || i, '{PC}', '{"Overwatch 2"}', '{"PC": ["Overwatch 2"]}', true, now() - interval '30 days'
+     from generate_series(1, 2) as i`,
+  );
+  await pool.query(
+    `insert into users (username, platforms, games, platform_games, onboarding_complete)
+     select 'siege_' || i, '{PC}', array['Tom Clancy''s Rainbow Six Siege', 'Payday 2'], '{"PC": ["Tom Clancy''s Rainbow Six Siege", "Payday 2"]}', true
+     from generate_series(1, 520) as i`,
+  );
+  const found = (await call("GET", `/api/players?game=${encodeURIComponent("Overwatch 2")}`, me)).body as { username: string }[];
+  assert.deepEqual(found.map((user) => user.username).sort(), ["ow_fan_1", "ow_fan_2"]);
+});

@@ -7,6 +7,7 @@ type Listener = (event: RealtimeEvent) => void;
 
 const listeners = new Set<Listener>();
 const statusListeners = new Set<(connected: boolean) => void>();
+const disabledListeners = new Set<() => void>();
 let socket: WebSocket | null = null;
 let attempts = 0;
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
@@ -39,10 +40,16 @@ function connect() {
       /* ignore malformed frames */
     }
   };
-  socket.onclose = () => {
+  socket.onclose = (event) => {
     socket = null;
     setStatus(false);
     if (stopped) return;
+    // 4003: the account was banned or suspended; reconnecting would only be refused.
+    if (event.code === 4003) {
+      stopped = true;
+      disabledListeners.forEach((listener) => listener());
+      return;
+    }
     attempts += 1;
     const delay = Math.min(30_000, 800 * 2 ** Math.min(attempts, 6)) + Math.random() * 500;
     reconnectTimer = setTimeout(connect, delay);
@@ -67,6 +74,11 @@ export const realtime = {
   subscribe(listener: Listener) {
     listeners.add(listener);
     return () => listeners.delete(listener);
+  },
+  /** The server closed the connection because the account is no longer active. */
+  onDisabled(listener: () => void) {
+    disabledListeners.add(listener);
+    return () => disabledListeners.delete(listener);
   },
   onStatus(listener: (connected: boolean) => void) {
     statusListeners.add(listener);

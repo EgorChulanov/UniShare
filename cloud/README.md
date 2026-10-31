@@ -46,6 +46,16 @@ cloud/
 - Message notifications are throttled and skipped while the recipient is online.
 - **VK** notifications go out through community messages, after `VKWebAppAllowMessagesFromGroup`.
 
+### Games, avatars and Steam
+- **Game search** understands Russian names, slang and abbreviations ("гта 6", "кс 2", "ведьмак"; `shared/src/aliases.ts`) and shows one card per game.
+- **Steam import:** a player signs in through Steam (or pastes a profile link) and picks games from their library. Needs `STEAM_API_KEY`. PlayStation, Xbox, Nintendo and Epic have no public library API.
+- **Avatars:** art from the player's own games, an original UniShare set, or an uploaded photo.
+
+### Moderation and admin panel
+- **Settings → Report a problem** sends a bug report with device details and an optional screenshot.
+- Admins open **Settings → Admin panel**: users and activity, database size and the latest backup, user reports, bug reports, user search with ban / suspend / unban, and an audit log. Admins also get a Telegram message for every new report, with Ban / Reject buttons.
+- To become the first admin, set `ADMIN_CLAIM_CODE` and send `/admin <code>` to the bot from your Telegram account (it must have opened the Mini App once).
+
 ### Telegram features used
 - **Display:** full-screen mode (Bot API 8.0), safe areas, swipe-to-close disabled, theme colors.
 - **Native controls:** the BackButton, haptics, and closing confirmation during onboarding.
@@ -105,6 +115,12 @@ sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/EgorChulanov/UniSha
 | `STORAGE_DRIVER=s3`, `S3_*` | Yandex Object Storage instead of the local disk |
 | `DATABASE_URL`, `DATABASE_SSL` | External database (for example, Yandex Managed PostgreSQL) |
 | `RAWG_API_KEY` | Game covers. Without it, a built-in list of titles is used |
+| `TELEGRAM_WEBHOOK_SECRET` | Random string checked on every webhook call. Without it the Ban / Reject buttons in admin notifications are off |
+| `ADMIN_CLAIM_CODE` | Long random code; send `/admin <code>` to the bot once to become admin (each value works once) |
+| `STEAM_API_KEY` | Steam Web API key (https://steamcommunity.com/dev/apikey, domain = `PUBLIC_URL` host). Turns on "Import from Steam" |
+| `BACKUPS_DIR` | Folder with the nightly `*.sql.gz` dumps shown in the admin panel (compose mounts it at `/data/backups`) |
+
+Any of these can also be set without shell access as `KEY=value` lines in the Yandex Cloud VM metadata attribute `unishare-env`; the server reads it at startup.
 
 ## Future native apps
 

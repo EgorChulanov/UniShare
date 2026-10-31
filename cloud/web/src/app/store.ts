@@ -516,6 +516,8 @@ function handleEvent(event: RealtimeEvent) {
 }
 
 realtime.subscribe(handleEvent);
+// A ban closes the socket: signing in again shows the "account suspended" screen.
+realtime.onDisabled(() => void useApp.getState().boot());
 realtime.onStatus((connected) => {
   useApp.setState({ online: connected });
   // Catch up on anything missed while disconnected.

@@ -158,6 +158,11 @@ test("the bot code claims admin rights once, with attempt limits", { skip: !hasD
   for (let attempt = 0; attempt < 5; attempt++) assert.equal((await adminModule.claimAdmin("900003", `guess-${attempt}`)).status, "invalid");
   assert.deepEqual(await adminModule.claimAdmin("900003", CLAIM_CODE), { status: "rate_limited" });
 
+  // Telegram accounts without a UniShare profile cannot use up the shared budget.
+  adminModule.resetClaimLimits();
+  for (let id = 0; id < 60; id++) assert.equal((await adminModule.claimAdmin(String(910000 + id), `guess-${id}`)).status, "no_account");
+  assert.deepEqual(await adminModule.claimAdmin("900002", CLAIM_CODE), { status: "already_admin", userId: owner.uid });
+
   const claims = (await auditActions()).filter((entry) => entry.action === "claim_admin");
   assert.equal(claims.length, 1);
   assert.equal(claims[0].admin_id, owner.uid);
@@ -239,7 +244,9 @@ test("a report resolved with a ban signs the user out and hides them; unban rest
 
   // Every session of the banned user is gone, and others no longer see them.
   assert.equal((await call("GET", "/api/me", bad.token)).status, 401);
-  assert.equal((await call("POST", "/api/auth/dev", undefined, { name: "bad_bob" })).status, 403);
+  const suspended = await call("POST", "/api/auth/dev", undefined, { name: "bad_bob" });
+  assert.equal(suspended.status, 403);
+  assert.equal(suspended.body.code, "account_suspended");
   assert.ok(!(await feedNames(witness.token)).includes("bad_bob"));
   assert.ok(!(await searchNames(witness.token, "bad_b")).includes("bad_bob"));
   // The second report about Bob was closed by the ban.
@@ -388,6 +395,13 @@ test("bug reports: create, validate, rate limit, admin list, screenshot and stat
   const limited = await call("POST", "/api/bugs", user.token, { text: "Шестая за час" });
   assert.equal(limited.status, 429);
   assert.equal(limited.body.code, "rate_limited");
+
+  // Parallel requests cannot get past the hourly limit.
+  const racer = await player("bug_racer");
+  const burst = await Promise.all(Array.from({ length: 12 }, (_, index) => call("POST", "/api/bugs", racer.token, { text: `Параллельный отчёт ${index}` })));
+  assert.equal(burst.filter((response) => response.status === 200).length, 5);
+  assert.equal(burst.filter((response) => response.status === 429).length, 7);
+  await pool.query(`delete from bug_reports where user_id = $1`, [racer.uid]);
 
   const list = await call("GET", "/api/admin/bugs?state=open", admin.token);
   assert.equal(list.status, 200);

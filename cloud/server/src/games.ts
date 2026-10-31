@@ -630,7 +630,8 @@ export function gameFilter(title: string): { names: string[]; words: string[] } 
   const names = gameSpellings(title);
   const longest = (text: string) => text.split(/[^\p{L}\p{N}]+/u).reduce((best, word) => (word.length > best.length ? word : best), "");
   const words = names.flatMap((name) => [longest(name), longest(normalizeGameName(name)), longest(gameSearchKey(name))]);
-  return { names, words: [...new Set(words.filter((word) => word.length >= 2))] };
+  // Short alias words ("ow", "bo", "cs") would pull in most profiles; those spellings match exactly through names.
+  return { names: [...new Set(names.flatMap(typedForms))], words: [...new Set(words.filter((word) => word.length >= 4))] };
 }
 
 /** "gta 6" -> also "gta6", "gta vi" and "gtavi": the ways a saved name is typed, for exact SQL matching. */
@@ -771,7 +772,10 @@ export async function searchGames(input: string): Promise<GameSearchResult[]> {
   const games = listed.filter((entry) => entry.named || !dlcOf(entry.game.name, titles)).map(({ game }) => game);
   // Catalog titles a store result is an edition of are already on the list.
   const catalog = offline(plan.keys).filter((game) => !games.some((store) => isEditionOf(store.name, game.name)));
-  const results = merge(curated, [...first, ...games, ...catalog]);
+  // The card whose title is exactly what was typed goes first ("Hollow Knight" before Silksong).
+  const typed = gameSearchKey(sanitized);
+  const isTyped = (game: GameSearchResult) => gameSearchKey(game.name) === typed;
+  const results = merge(curated, [...first, ...games, ...catalog]).sort((a, b) => Number(isTyped(b)) - Number(isTyped(a)));
 
   const pending = results.filter((game) => !game.backgroundImage && game.source === "catalog");
   const budget = Math.max(COVER_GRACE_MS, COVER_BUDGET_MS - (Date.now() - started));
