@@ -1,0 +1,15 @@
+#cloud-config
+# Paste into "User data" when creating a Yandex Cloud VM (Ubuntu 24.04).
+# UniShare installs itself on first boot; fill in the values below first.
+# Progress: sudo tail -f /var/log/unishare-setup.log
+runcmd:
+  - >-
+    curl -fsSL https://raw.githubusercontent.com/EgorChulanov/UniShare/main/cloud/deploy/setup-vps.sh -o /root/setup-vps.sh &&
+    NONINTERACTIVE=1
+    UNISHARE_DOMAIN=""
+    UNISHARE_TELEGRAM_BOT_TOKEN=""
+    UNISHARE_TELEGRAM_BOT_USERNAME="UniversalShareBot"
+    UNISHARE_VK_APP_ID=""
+    UNISHARE_VK_APP_SECRET=""
+    UNISHARE_RAWG_API_KEY=""
+    bash /root/setup-vps.sh > /var/log/unishare-setup.log 2>&1

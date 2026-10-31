@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no" />
+    <title>UniShare — тиммейты и обмен играми в Telegram и ВКонтакте</title>
+    <meta name="description" content="UniShare — найди тиммейтов и обменивайся игровыми библиотеками PlayStation, Xbox, Nintendo, Steam и Epic Games. Анкеты игроков, мэтчи и чаты в Telegram, ВКонтакте и в браузере." />
+    <meta name="keywords" content="тиммейты, поиск тиммейтов, обмен играми, игровые аккаунты, PlayStation, Xbox, Nintendo, Steam, Epic Games, геймеры, Telegram мини-приложение, VK mini apps" />
+    <meta name="theme-color" content="#0D0B19" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#F6F5FA" media="(prefers-color-scheme: light)" />
+    <meta name="color-scheme" content="dark light" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="UniShare" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="UniShare" />
+    <meta property="og:title" content="UniShare — тиммейты и обмен играми" />
+    <meta property="og:description" content="Анкеты игроков, мэтчи и чаты для PlayStation, Xbox, Nintendo, Steam и Epic Games. Работает в Telegram, ВКонтакте и в браузере." />
+    <meta property="og:image" content="/icons/icon-512.png" />
+    <meta name="twitter:card" content="summary" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="64x64" href="/icons/favicon-64.png" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="preload" href="/fonts/Manrope-Bold.ttf" as="font" type="font/ttf" crossorigin />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "UniShare",
+        "applicationCategory": "SocialNetworkingApplication",
+        "operatingSystem": "Web, Telegram, VK, iOS, Android",
+        "description": "Поиск тиммейтов и обмен игровыми библиотеками для PlayStation, Xbox, Nintendo, Steam и Epic Games.",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "RUB" },
+        "inLanguage": ["ru", "en", "uk", "be"]
+      }
+    </script>
+    <script>
+      // Paint the right background before the bundle loads (no white flash in dark mode).
+      (function () {
+        try {
+          var stored = localStorage.getItem("unishare.theme");
+          var dark = stored ? stored === "dark" : window.matchMedia("(prefers-color-scheme: dark)").matches;
+          if (/tgWebAppThemeParams/.test(location.hash)) {
+            var bg = decodeURIComponent(location.hash).match(/"bg_color":"(#[0-9a-fA-F]{6})"/);
+            if (bg) {
+              var hex = bg[1].slice(1);
+              var lum = (parseInt(hex.slice(0, 2), 16) * 299 + parseInt(hex.slice(2, 4), 16) * 587 + parseInt(hex.slice(4, 6), 16) * 114) / 1000;
+              dark = stored ? dark : lum < 128;
+            }
+          }
+          document.documentElement.dataset.theme = dark ? "dark" : "light";
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <noscript>
+      <main style="font-family: sans-serif; max-width: 640px; margin: 40px auto; padding: 0 16px">
+        <h1>UniShare — тиммейты и обмен играми</h1>
+        <p>Анкеты игроков с играми и платформами (PlayStation, Xbox, Nintendo, Steam, Epic Games), взаимные лайки, личные чаты, отзывы и QR-код для друзей рядом.</p>
+        <p>Откройте UniShare в Telegram (@UniversalShareBot), во ВКонтакте или включите JavaScript в браузере.</p>
+      </main>
+    </noscript>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

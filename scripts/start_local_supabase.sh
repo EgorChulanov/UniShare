@@ -34,6 +34,10 @@ cleanup_start() {
 }
 trap cleanup_start HUP INT TERM
 
+# The first start on a clean CI runner also pulls every Supabase image, which
+# can take several minutes; allow overriding the wait for slow networks.
+TIMEOUT=${SUPABASE_START_TIMEOUT:-420}
+
 attempt=0
 while kill -0 "$START_PID" 2>/dev/null; do
     if services_ready; then
@@ -43,9 +47,9 @@ while kill -0 "$START_PID" 2>/dev/null; do
         exit 0
     fi
     attempt=$((attempt + 1))
-    if [ "$attempt" -ge 120 ]; then
+    if [ "$attempt" -ge "$TIMEOUT" ]; then
         cleanup_start
-        echo "Supabase did not become healthy within 120 seconds." >&2
+        echo "Supabase did not become healthy within $TIMEOUT seconds." >&2
         exit 1
     fi
     sleep 1

@@ -1,0 +1,24 @@
+{
+  "name": "unishare-cloud",
+  "private": true,
+  "version": "1.0.0",
+  "description": "UniShare cross-platform app: Telegram Mini App, VK Mini App, web/PWA and the shared API server.",
+  "workspaces": [
+    "shared",
+    "server",
+    "web"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "npm run dev --workspace server & npm run dev --workspace web",
+    "build": "npm run build --workspace web && npm run build --workspace server",
+    "start": "npm run start --workspace server",
+    "migrate": "npm run migrate --workspace server",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspace server",
+    "bot:setup": "npm run bot:setup --workspace server",
+    "i18n": "node scripts/import-ios-strings.mjs"
+  }
+}

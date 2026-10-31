@@ -1,0 +1,77 @@
+# Production stack for a single VM (Yandex Cloud Compute, Timeweb, Selectel…):
+# PostgreSQL + UniShare + Caddy (automatic HTTPS from Let's Encrypt).
+#   cd cloud/deploy && docker compose --env-file ../.env up -d --build
+name: unishare
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: unishare
+      POSTGRES_USER: unishare
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U unishare -d unishare"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    image: unishare-app:latest
+    restart: unless-stopped
+    env_file: ../.env
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL:-postgres://unishare:${POSTGRES_PASSWORD}@postgres:5432/unishare}
+      STORAGE_LOCAL_DIR: /data/uploads
+    volumes:
+      - uploads:/data/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      DOMAIN: ${DOMAIN:?Set DOMAIN in .env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+
+  # Nightly compressed database dumps kept for 14 days in the "backups" volume.
+  backup:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - backups:/backups
+    entrypoint: >
+      sh -c 'while true; do
+        pg_dump -h postgres -U unishare -d unishare | gzip > /backups/unishare-$$(date +%F).sql.gz;
+        find /backups -name "*.sql.gz" -mtime +14 -delete;
+        sleep 86400; done'
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres:
+  uploads:
+  backups:
+  caddy_data:
+  caddy_config:

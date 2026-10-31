@@ -1,0 +1,37 @@
+-- Default community stories. CTA links use UniShare deep links (s_<screen>)
+-- so they open the right screen in Telegram, VK and the web app.
+
+insert into stories (id, title, subtitle, body, symbol, accent_hex, cta_title, cta_url, language, priority) values
+    ('10000000-0000-4000-8000-000000000001',
+     'Безопасная игра', 'Защищайте аккаунт при поиске тиммейтов',
+     'Не отправляйте пароли, коды безопасности и платёжные данные. UniShare помогает находить игроков и общаться, но не передаёт аккаунты и не хранит доступы.',
+     'shield', 'E94560', null, null, 'ru', 100),
+    ('10000000-0000-4000-8000-000000000002',
+     'Как работает мэтч', 'Чат появляется после взаимного лайка',
+     'Листайте анкеты на Главной. Когда интерес взаимный, UniShare создаёт личный чат, а бот присылает уведомление прямо в Telegram или ВКонтакте.',
+     'heart', 'F28C52', 'Открыть ленту', 's_feed', 'ru', 90),
+    ('10000000-0000-4000-8000-000000000003',
+     'Заполните анкету', 'Игры и платформы улучшают подбор',
+     'Добавьте платформы, любимые игры и навыки. Чем точнее анкета, тем релевантнее профили в ленте.',
+     'user', '2F7CF6', 'Открыть профиль', 's_profile', 'ru', 80),
+    ('10000000-0000-4000-8000-000000000004',
+     'Один аккаунт везде', 'Telegram, ВКонтакте и сайт',
+     'Привяжите Telegram и ВКонтакте к одному профилю UniShare в настройках. Мэтчи и переписка будут доступны на любой платформе.',
+     'link', '0057FF', 'Привязать', 's_profile', 'ru', 70),
+    ('20000000-0000-4000-8000-000000000001',
+     'Play Safely', 'Protect your account while meeting other players',
+     'Never send passwords, recovery codes, verification codes, or payment details. UniShare supports discovery and communication, not credential or account transfers.',
+     'shield', 'E94560', null, null, 'en', 100),
+    ('20000000-0000-4000-8000-000000000002',
+     'How Matching Works', 'A like becomes a chat only after mutual interest',
+     'Browse profiles in the feed. When both people like each other, UniShare creates a private chat and the bot notifies you in Telegram or VK.',
+     'heart', 'F28C52', 'Open Feed', 's_feed', 'en', 90),
+    ('20000000-0000-4000-8000-000000000003',
+     'Complete Your Profile', 'Games and platforms improve recommendations',
+     'Add your platforms, favorite games, and skills. A more complete profile produces more relevant recommendations.',
+     'user', '2F7CF6', 'Edit Profile', 's_profile', 'en', 80),
+    ('20000000-0000-4000-8000-000000000004',
+     'One Account Everywhere', 'Telegram, VK and the web',
+     'Link Telegram and VK to a single UniShare profile in Settings. Matches and conversations follow you on every platform.',
+     'link', '0057FF', 'Link accounts', 's_profile', 'en', 70)
+on conflict (id) do nothing;
